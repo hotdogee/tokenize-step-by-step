@@ -1,7 +1,8 @@
 /**
  * Real-Worker tests (Vitest browser mode, chromium; 07 WP07): the production entry and a test entry over the same host,
- * loading the BUILT `.bin` files that Vite serves from `data/vocab/dist`. Skipped with a message without chromium or
- * without a built manifest (`pnpm vocab:build`).
+ * loading the BUILT `.bin` files that Vite serves from `data/vocab/dist`, with the real engines (WP05A/WP05B) — every
+ * asset of the manifest is loaded through the production entry and checked against its committed fixture. Skipped with a
+ * message without chromium or without a built manifest (`pnpm vocab:build`).
  */
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_OPTIONS, type TokenizerId } from '@tsbs/core';
@@ -15,13 +16,28 @@ const O200K: TokenizerId = 'openai-o200k_base';
 const CL100K: TokenizerId = 'openai-cl100k_base';
 const IN_BROWSER = typeof (globalThis as { document?: unknown }).document !== 'undefined';
 
-/** The built manifest through the project's `vocabManifest` browser command (vitest.browser.config.ts). */
+/** One committed fixture case: text, ids and `[start, end)` byte spans (the `fixtureCases` browser command). */
+interface FixtureCaseLite {
+  readonly name: string;
+  readonly text: string;
+  readonly ids: readonly number[];
+  readonly spans: ReadonlyArray<readonly [number, number]>;
+}
+
+/** The project's browser commands (vitest.browser.config.ts). */
+interface Commands {
+  vocabManifest: () => Promise<{ schema?: unknown } | null>;
+  fixtureCases: (id: string) => Promise<FixtureCaseLite[] | null>;
+}
+
+/** `vitest/browser` exists only in browser mode, hence the dynamic import behind IN_BROWSER. */
+async function browserCommands(): Promise<Commands> {
+  return ((await import('vitest/browser')) as unknown as { commands: Commands }).commands;
+}
+
+/** The built manifest through the project's `vocabManifest` browser command. */
 async function builtManifest(): Promise<VocabManifest | null> {
-  // `vitest/browser` exists only in browser mode, hence the dynamic import behind IN_BROWSER.
-  const { commands } = (await import('vitest/browser')) as unknown as {
-    commands: { vocabManifest: () => Promise<{ schema?: unknown } | null> };
-  };
-  const manifest = await commands.vocabManifest();
+  const manifest = await (await browserCommands()).vocabManifest();
   return manifest?.schema === 1 ? (manifest as VocabManifest) : null;
 }
 
@@ -268,4 +284,30 @@ describe.skipIf(!READY)('real Worker (chromium)', () => {
     expect(latency).toBeLessThan(50);
     client.terminate();
   });
+
+  it('the production entry loads every built asset and reproduces its fixture (ids and byte spans, real engines)', async () => {
+    const ids = Object.keys(manifest().assets) as TokenizerId[];
+    expect(ids).toHaveLength(9);
+    const commands = await browserCommands();
+    const client = new TokenizerClient(
+      () => new Worker(new URL('../../src/entry.ts', import.meta.url), { type: 'module', name: WORKER_NAME }),
+    );
+    for (const id of ids) {
+      const cases = await commands.fixtureCases(id);
+      if (cases === null) throw new Error(`no fixture for ${id}`);
+      const loaded = await client.load(id);
+      expect(loaded.info.id).toBe(id);
+      expect(client.resident).toBe(id);
+      let checked = 0;
+      for (const c of cases) {
+        const result = await client.encode(c.text, DEFAULT_OPTIONS);
+        expect({ id, name: c.name, ids: [...result.tokens.id] }).toEqual({ id, name: c.name, ids: c.ids });
+        const spans = [...result.tokens.id].map((_, i) => [result.tokens.byteStart[i], result.tokens.byteStart[i + 1]]);
+        expect({ id, name: c.name, spans }).toEqual({ id, name: c.name, spans: c.spans });
+        checked += 1;
+      }
+      console.info(`[worker-browser] ${id}: ${String(checked)} fixture cases through the real Worker`);
+    }
+    client.terminate();
+  }, 180_000);
 });

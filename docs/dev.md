@@ -28,6 +28,21 @@ Package tests live in `packages/<name>/test/` with their own `tsconfig.json` (No
 Node APIs where `docs/design/02-architecture.md` §4 requires it. `tsc -b` writes declaration output for project
 references to `node_modules/.cache/tsbuild/`.
 
+## Tokenizer client (`?mock=1`)
+
+The page tokenizes in a Web Worker (`@tsbs/worker`, PA-8): `apps/web/src/app/bootstrap.ts` builds
+`new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }))` from the Vite worker import
+`@tsbs/worker/entry?worker`, behind `DeferredClient`, so the client code, the Worker's host chunk (`assets/entry-*.js`)
+and the first engine chunk (`assets/bytelevel-*.js` or `assets/spm-*.js`, plus the shared `assets/engine-core-*.js`)
+load after first paint, followed by the tokenizer's `/tok/<id>/<sha12>.bin`. Typed text is tokenized live.
+
+Append `?mock=1` to the URL (`http://localhost:5173/?mock=1`, or `/?lang=ja&mock=1`) to use the precomputed-examples
+client instead (`ExamplesClient` over WP01's `MockTokenizerClient`): no Worker and no vocabulary download; the example
+chips answer from the lazy `examples/<id>.<sha8>.json` files (the oracle's results), and any other text shows "waiting
+for the tokenizer". E2E specs that need deterministic precomputed results open `/?mock=1`
+(`e2e/specs/live-worker.spec.ts` covers both modes); the Worker's generated inputs
+(`packages/worker/src/generated/{vocab-manifest,engine-config}.json`) come from `pnpm generate` or any Vite run.
+
 ## Windows
 
 - Always run wrangler through the workspace: `pnpm exec wrangler …`, never `npx wrangler` (research §6.4).

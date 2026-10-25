@@ -1,7 +1,7 @@
 /**
  * The host and the real loader on the BUILT o200k asset (`data/vocab/dist`, read through its manifest): gzip layer,
- * SHA-256, `DecompressionStream`, `readTsbv1`, the engine factory of `src/engines/bytelevel.ts` (the stand-in until
- * WP05A, the real engine after integration), a cache hit on the second load, and — opt-in — the Node heap delta of one
+ * SHA-256, `DecompressionStream`, `readTsbv1`, the real engine factory of `src/engines/bytelevel.ts` (WP05A's, re-exported
+ * from `@tsbs/core`), a cache hit on the second load, and — opt-in — the Node heap delta of one
  * resident tokenizer (06 §3: o200k ≤ 8 MB; AD-19: released on unload; `pong.heapHint` from the bench):
  *   TSBS_PERF=1 NODE_OPTIONS=--expose-gc pnpm exec vitest run --project worker test/integration.test.ts
  * Skipped with a message when `data/vocab/dist` has no manifest (`pnpm vocab:build`; CI's unit job has it).
@@ -92,6 +92,8 @@ describe.skipIf(!HAVE_DIST)('host + loader on the built o200k asset', () => {
     await waitFor(() => posted.some((m) => m.type === 'result'));
     const result = posted.find((m) => m.type === 'result');
     expect(result?.type === 'result' && result.result.text).toBe('台灣台南');
+    // The real Engine A (research anchor, 04 §7): 台灣台南 → 3735 133072 3735 14609 on o200k_base.
+    expect(result?.type === 'result' && [...result.result.tokens.id]).toEqual([3735, 133072, 3735, 14609]);
 
     host.handle({ type: 'lookup', reqId: 3, bytes: new TextEncoder().encode('台') });
     const lookup = posted.find((m) => m.type === 'lookupResult');

@@ -238,7 +238,9 @@ export default defineConfig(
                 'Engines, the TSBV1 format, the agenda loop and the Unicode tables (engine chunk) must not reach the main bundle (02 §2.1).',
             },
             {
-              group: ['@tsbs/worker/*', '!@tsbs/worker/client'],
+              // The one exception is the Vite worker import `@tsbs/worker/entry?worker` (02 §5, PA-8): it yields a Worker
+              // constructor, and the entry is bundled as its own Worker chunk, never into the main bundle.
+              group: ['@tsbs/worker/*', '!@tsbs/worker/client', '!@tsbs/worker/entry?worker'],
               message: 'apps/web imports @tsbs/worker/client only (02 §2.1).',
             },
             { group: TOOLING_PACKAGES, message: 'Node-only packages never reach the browser (02 §2.1).' },

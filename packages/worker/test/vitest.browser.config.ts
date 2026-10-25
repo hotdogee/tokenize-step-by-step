@@ -2,7 +2,8 @@
  * Vitest project `worker-browser` (07 WP07): the real-Worker tests in chromium through Vitest browser mode (Playwright
  * provider). Vite serves `data/vocab/dist` as the public directory, so `/tok/<id>/<sha12>.bin` resolves on the test
  * origin exactly as on the site; the browser command `vocabManifest` returns the built manifest (or null when nothing
- * was built); `/tok-corrupt/<path>` serves `/tok/<path>` with one byte flipped for the integrity test.
+ * was built), `fixtureCases` a tokenizer's committed non-fuzz fixture cases (text, ids, byte spans);
+ * `/tok-corrupt/<path>` serves `/tok/<path>` with one byte flipped for the integrity test.
  *
  * Without a Playwright chromium build (`pnpm exec playwright install chromium`) the project runs in Node and every
  * test skips with that message, so `pnpm test` stays usable on a machine (or CI job) without browsers.
@@ -18,6 +19,7 @@ import { defineProject, type Plugin } from 'vitest/config';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = fileURLToPath(new URL('../../../data/vocab/dist/', import.meta.url));
+const FIXTURES = fileURLToPath(new URL('../../../fixtures/', import.meta.url));
 const HAVE_CHROMIUM = existsSync(chromium.executablePath());
 
 if (!HAVE_CHROMIUM) {
@@ -28,6 +30,42 @@ if (!HAVE_CHROMIUM) {
 const vocabManifest = defineBrowserCommand(async () => {
   try {
     return JSON.parse(await readFile(join(DIST, 'vocab-manifest.generated.json'), 'utf8')) as unknown;
+  } catch {
+    return null;
+  }
+});
+
+/** One fixture case as the browser tests compare it: the text, the ids and each token's `[start, end)` byte span. */
+interface FixtureCaseLite {
+  readonly name: string;
+  readonly text: string;
+  readonly ids: readonly number[];
+  readonly spans: ReadonlyArray<readonly [number, number]>;
+}
+
+/**
+ * `commands.fixtureCases(id)`: the non-fuzz cases of `fixtures/<id>.json` (the 70 core cases and the paragraphs), or
+ * null when the tokenizer has no committed fixture.
+ */
+const fixtureCases = defineBrowserCommand<[string]>(async (_context, id) => {
+  if (!/^[a-z0-9_.-]+$/.test(id)) return null;
+  try {
+    const fixture = JSON.parse(await readFile(join(FIXTURES, `${id}.json`), 'utf8')) as {
+      cases: Array<{
+        name: string;
+        text: string;
+        ids: number[];
+        tokens: Array<{ start: number; end: number }>;
+      }>;
+    };
+    return fixture.cases
+      .filter((c) => !c.name.startsWith('fuzz-'))
+      .map((c): FixtureCaseLite => ({
+        name: c.name,
+        text: c.text,
+        ids: c.ids,
+        spans: c.tokens.map((t) => [t.start, t.end] as const),
+      }));
   } catch {
     return null;
   }
@@ -81,7 +119,7 @@ export default defineProject({
             provider: playwright(),
             headless: true,
             screenshotFailures: false,
-            commands: { vocabManifest },
+            commands: { vocabManifest, fixtureCases },
             instances: [{ browser: 'chromium' }],
           },
         }

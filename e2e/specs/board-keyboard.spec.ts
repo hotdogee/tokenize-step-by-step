@@ -1,6 +1,6 @@
 /**
- * WP08 E2E keyboard tour (05 §8, AD-22, AD-34) on the precomputed examples (arbitrary typed text needs the live engine,
- * which lands at integration): the board is one tab stop; ←/→/↑/↓/Home/End/PageUp/PageDown move as the APG layout grid
+ * WP08 E2E keyboard tour (05 §8, AD-22, AD-34) on the example chips (tokenized live by the Worker since the wave 2
+ * integration; the expected cells are the fixtures'): the board is one tab stop; ←/→/↑/↓/Home/End/PageUp/PageDown move as the APG layout grid
  * says, ↑ on the top tier and ↓ on the bottom tier are no-ops; a span wrapped over rows is one cell; Enter pins and
  * announces, `i` moves into the inspector and Esc returns, Esc unpins, Esc again returns to the textarea; focus keeps its
  * byte anchor when a stage change remounts the tiers, across re-tokenization (picker: o200k → cl100k) and across a

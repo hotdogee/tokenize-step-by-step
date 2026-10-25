@@ -289,8 +289,9 @@ describe('inspected slice on a partial token (05 §4.1, AD-35)', () => {
     chip: HTMLElement;
   } {
     const cell = board.grid.querySelector<HTMLElement>('[data-tier="token"][data-index="1"]');
-    const vis = cell?.querySelector<HTMLElement>('.bd-chip.hatch-end');
-    if (cell === null || cell === undefined || vis === null || vis === undefined) throw new Error('no partial chip');
+    if (cell === null) throw new Error('no token cell');
+    const vis = cell.querySelector<HTMLElement>('.bd-chip.hatch-end');
+    if (vis === null) throw new Error('no partial chip');
     expect(cell.hasAttribute('data-slice')).toBe(true);
     return {
       hatch: getComputedStyle(vis, '::after'),

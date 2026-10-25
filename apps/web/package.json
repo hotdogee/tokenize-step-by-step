@@ -15,6 +15,7 @@
     "@tsbs/core": "workspace:*",
     "@tsbs/registry": "workspace:*",
     "@tsbs/ui-tokens": "workspace:*",
+    "@tsbs/worker": "workspace:*",
     "svelte": "5.57.2"
   },
   "devDependencies": {

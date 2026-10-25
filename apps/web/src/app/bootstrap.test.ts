@@ -5,7 +5,7 @@
 import type { TiktokenFixture } from '@tsbs/core';
 import { checkInvariants } from '@tsbs/core/model/invariants';
 import { describe, expect, it } from 'vitest';
-import { createAppState, defaultResult } from './bootstrap.ts';
+import { createAppState, defaultResult, wantsMockClient } from './bootstrap.ts';
 import { DEFAULT_EXAMPLE } from './constants.ts';
 import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
 import { DEFAULT_TOKENIZER, EXAMPLES, EXAMPLES_INDEX } from './registry.ts';
@@ -34,5 +34,15 @@ describe('default example (examples-default.json → fromFixtureCase)', () => {
     expect(app.resultSource).toBe('precomputed');
     expect(app.currentResult?.stats.tokens).toBe(4);
     expect(app.resident).toBeNull();
+  });
+});
+
+describe('client choice', () => {
+  it('uses the Worker client unless the URL asks for the precomputed examples with ?mock=1', () => {
+    expect(wantsMockClient('?mock=1')).toBe(true);
+    expect(wantsMockClient('?lang=ja&mock=1')).toBe(true);
+    expect(wantsMockClient('?mock=0')).toBe(false);
+    expect(wantsMockClient('')).toBe(false);
+    expect(wantsMockClient()).toBe(false); // no location in Node
   });
 });

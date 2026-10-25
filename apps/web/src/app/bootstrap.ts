@@ -1,8 +1,12 @@
 /**
  * Builds the page's AppState: the precomputed default example on screen (AD-16) — WP03's inlined
- * `generated/examples-default.json` expanded by WP01's `fromFixtureCase` — and the tokenizer client, which is the
- * precomputed-examples `ExamplesClient` (WP01's `MockTokenizerClient`) until WP07's Worker `TokenizerClient` replaces it.
- * The client's code is imported on its first use, after first paint (`deferred-client.ts`, 06 §3).
+ * `generated/examples-default.json` expanded by WP01's `fromFixtureCase` — and the tokenizer client.
+ *
+ * The client is WP07's Worker `TokenizerClient` (PA-8): `new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }))`
+ * over the Vite worker import of `@tsbs/worker/entry`, so typing tokenizes live with the real engines. `?mock=1` swaps in
+ * the precomputed-examples `ExamplesClient` (WP01's `MockTokenizerClient`) for deterministic results without a Worker
+ * (e2e specs that pin precomputed examples, offline debugging; docs/dev.md). Either way the client's code — and the
+ * Worker — is imported on its first use, after first paint (`deferred-client.ts`, 06 §3).
  */
 import type { TokenizationResult, TokenizerClientLike } from '@tsbs/core';
 import type { ExamplesWire } from '@tsbs/core/fixture/examples-wire';
@@ -19,8 +23,16 @@ export function defaultResult(seq = 0): TokenizationResult {
   return fromFixtureCase(examplesDefault as unknown as ExamplesWire, caseName, tokenizerEntry(tokenizer), { seq });
 }
 
-/** The client of the page: precomputed examples, fetched per tokenizer on first load (the code with the first call). */
-export function createClient(fetchImpl?: (url: string) => Promise<Response>): TokenizerClientLike {
+/** True when the page URL asks for the precomputed-examples client (`?mock=1`). */
+export function wantsMockClient(search: string = 'location' in globalThis ? globalThis.location.search : ''): boolean {
+  return new URLSearchParams(search).get('mock') === '1';
+}
+
+/**
+ * The precomputed-examples client: answers the example chips from the lazy `examples/<id>.<sha8>.json` files and rejects
+ * any other text with `NoPrecomputedResultError` (the code arrives with the first call).
+ */
+export function createExamplesClient(fetchImpl?: (url: string) => Promise<Response>): TokenizerClientLike {
   return new DeferredClient(async () => {
     const { ExamplesClient } = await import('./examples-client.ts');
     return new ExamplesClient({
@@ -30,6 +42,22 @@ export function createClient(fetchImpl?: (url: string) => Promise<Response>): To
       ...(fetchImpl === undefined ? {} : { fetch: fetchImpl }),
     });
   });
+}
+
+/** The Worker client (PA-8): the client module and the Worker's entry chunk arrive with the first call. */
+export function createWorkerClient(): TokenizerClientLike {
+  return new DeferredClient(async () => {
+    const [{ TokenizerClient, WORKER_NAME }, { default: TokWorker }] = await Promise.all([
+      import('@tsbs/worker/client'),
+      import('@tsbs/worker/entry?worker'),
+    ]);
+    return new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }));
+  });
+}
+
+/** The client of the page: the Worker, or the precomputed examples under `?mock=1`. */
+export function createClient(): TokenizerClientLike {
+  return wantsMockClient() ? createExamplesClient() : createWorkerClient();
 }
 
 export function createAppState(): AppState {

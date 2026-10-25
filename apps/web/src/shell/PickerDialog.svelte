@@ -136,7 +136,10 @@
 
   function sizeLabel(id: TokenizerId): string | null {
     if (downloaded.has(id)) return i18n.t('picker.downloaded');
-    const size = assets?.[id].bytesCompressed;
+    // The Worker reports only the ids its bundled manifest has (a partial vocabulary build lacks some), so read it as
+    // possibly absent although AssetSummary names all nine.
+    const summary: AssetSummary[TokenizerId] | undefined = assets?.[id];
+    const size = summary?.bytesCompressed;
     return size === undefined ? null : i18n.t('picker.wire', { size: formatSize(size, i18n.current) });
   }
 

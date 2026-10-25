@@ -238,6 +238,9 @@ importers:
       '@tsbs/ui-tokens':
         specifier: workspace:*
         version: link:../../packages/ui-tokens
+      '@tsbs/worker':
+        specifier: workspace:*
+        version: link:../../packages/worker
       svelte:
         specifier: 5.57.2
         version: 5.57.2(@typescript-eslint/types@8.72.0)

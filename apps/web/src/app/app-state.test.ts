@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { cachedTokenizers } from '../shell/cache-probe.ts';
 import { progressPercent } from '../shell/progress.ts';
 import { AppState, optionsFor } from './app-state.svelte.ts';
-import { createClient, defaultResult } from './bootstrap.ts';
+import { createExamplesClient, defaultResult } from './bootstrap.ts';
 import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
 import { isNoPrecomputedResult } from './no-precomputed.ts';
 import { EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
@@ -41,7 +41,7 @@ function fixtureCase(id: TokenizerId, name: string): { readonly ids: readonly nu
 
 describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () => {
   it('fetches the examples on first load with monotone progress and reports the resident tokenizer', async () => {
-    const client = createClient(fixtureFetch());
+    const client = createExamplesClient(fixtureFetch());
     const residents: Array<string | null> = [];
     client.onResident((id) => residents.push(id));
     const progress: Progress[] = [];
@@ -59,7 +59,7 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
   });
 
   it('answers every chip with its oracle result and rejects other text as not precomputed', async () => {
-    const client = createClient(fixtureFetch());
+    const client = createExamplesClient(fixtureFetch());
     await client.load('openai-cl100k_base');
     const tainan = await client.encode('台灣台南', DEFAULT_OPTIONS);
     expect([...tainan.tokens.id]).toEqual(fixtureCase('openai-cl100k_base', 'zh-tw-tainan').ids);
@@ -68,7 +68,7 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
   });
 
   it('lets a newer load supersede one that is still fetching (one resident)', async () => {
-    const client = createClient(fixtureFetch());
+    const client = createExamplesClient(fixtureFetch());
     const first = client.load('xai-grok2');
     const second = client.load('google-gemma4');
     await expect(first).rejects.toMatchObject({ name: 'cancelled' });
@@ -77,14 +77,14 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
   });
 
   it('reports a missing examples file as a fetch error and knows no wire sizes before the Worker client', async () => {
-    const client = createClient(fixtureFetch(['xai-grok1']));
+    const client = createExamplesClient(fixtureFetch(['xai-grok1']));
     await expect(client.load('xai-grok1')).rejects.toMatchObject({ code: 'fetch' });
     await expect(client.assets).rejects.toThrow(/WP07/);
   });
 });
 
 describe('AppState (05 §1.1)', () => {
-  const make = (): AppState => new AppState(createClient(fixtureFetch()), defaultResult());
+  const make = (): AppState => new AppState(createExamplesClient(fixtureFetch()), defaultResult());
 
   it('starts with the precomputed default example on o200k', () => {
     const app = make();

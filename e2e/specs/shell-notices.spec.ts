@@ -20,13 +20,13 @@ test('"Powered by xAI" is visible iff Grok-2 is selected', async ({ page }) => {
 
 test('the picker announces progress and the loaded tokenizer', async ({ page }) => {
   await openShell(page, 'en');
-  // Until the Worker client (WP07) the download is the tokenizer's precomputed examples file: hold it so the progress
+  // The download is the tokenizer's vocabulary (/tok/<id>/<sha12>.bin), fetched by the Worker: hold it so the progress
   // bar is observable instead of racing a local fetch.
   let release: () => void = () => undefined;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route('**/examples/openai-cl100k_base.*.json', async (route) => {
+  await page.route('**/tok/openai-cl100k_base/*.bin', async (route) => {
     await held;
     await route.continue();
   });
@@ -42,9 +42,10 @@ test('the picker announces progress and the loaded tokenizer', async ({ page }) 
   // 台灣台南 is an example chip: cl100k answers it with the oracle's 5 tokens, 2 of them partial (灣 = E7 81 + A3).
   await expect(page.getByTestId('counts')).toContainText('5 tokens');
   await expect(page.getByTestId('counts')).toContainText('2 partial-character tokens');
-  // Text outside the chips has no result before the engines exist: the counts wait instead of showing stale tokens.
+  // Text outside the chips is tokenized live by the engine: cl100k gives not / an / example (1962 459 3187).
   await page.locator('#text-input').fill('not an example');
-  await expect(page.getByTestId('counts')).toContainText('waiting for the tokenizer');
+  await expect(page.getByTestId('counts')).toContainText('3 tokens');
+  await expect(page.getByTestId('counts')).not.toContainText('waiting for the tokenizer');
 });
 
 test('the picker listbox works from the keyboard and returns focus on close', async ({ page }) => {

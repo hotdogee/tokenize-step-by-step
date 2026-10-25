@@ -14,7 +14,8 @@
       "!apps/web/dist/assets/boot-*.js",
       "!apps/web/dist/assets/entry-*.js",
       "!apps/web/dist/assets/bytelevel-*.js",
-      "!apps/web/dist/assets/spm-*.js"
+      "!apps/web/dist/assets/spm-*.js",
+      "!apps/web/dist/assets/engine-core-*.js"
     ],
     "limit": "80 KiB"
   },
@@ -29,13 +30,13 @@
     "limit": "12 KiB"
   },
   {
-    "name": "Engine chunk: bytelevel (incl. Unicode tables)",
-    "path": "apps/web/dist/assets/bytelevel-*.js",
+    "name": "Engine chunk: bytelevel (incl. Unicode tables) + engine-core (the core code both engines share, loaded with the first engine; apps/web/vite.config.ts)",
+    "path": ["apps/web/dist/assets/bytelevel-*.js", "apps/web/dist/assets/engine-core-*.js"],
     "limit": "16 KiB"
   },
   {
-    "name": "Engine chunk: spm",
-    "path": "apps/web/dist/assets/spm-*.js",
+    "name": "Engine chunk: spm + engine-core (the core code both engines share, loaded with the first engine)",
+    "path": ["apps/web/dist/assets/spm-*.js", "apps/web/dist/assets/engine-core-*.js"],
     "limit": "10 KiB"
   },
   {
