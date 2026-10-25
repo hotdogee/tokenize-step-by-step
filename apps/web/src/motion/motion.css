@@ -1,0 +1,113 @@
+/*
+ * Motion styles (05 §7, AD-15: an external stylesheet; all animation itself is WAAPI, motion/flip.ts).
+ *
+ * - The switch crossfades: one View Transition group for the board (`view-transition-name` is set through the CSSOM only
+ *   while a switch runs, view-transition.ts), 220 ms.
+ * - Reduced motion chosen in the app (`<html data-motion="reduced">`, motion-prefs.svelte.ts) behaves like the system
+ *   setting does in theme/base.css: no CSS transitions (the picker's loading bar gets `transition: none`), no smooth
+ *   scrolling.
+ * - The anchored inspector panel's entrance (translateY + opacity, `@starting-style` where available).
+ * - The part the current step formed (`data-just-merged`, motion/director.svelte.ts): a star drawn from an SVG mask (no
+ *   text glyph, AD-36; its text alternative is the cell's "merged at this step" description) and the outline the pulse
+ *   animates (opacity of the cell's `::before`; an outline, so forced-colours mode keeps it).
+ * - The byte-tier caret under a merge's junction (`data-merge-caret` on the byte cells where the right part started): an
+ *   upward triangle straddling the cell's left edge, drawn with `clip-path` (no glyph, AD-36).
+ * - Detached copies the choreography fades out (`.mo-ghost`: a leaving chunk row, a merged right part) take no pointer
+ *   events; the U+ labels wait hidden while a large morph scales their boxes (`data-mo-morph` on the grid).
+ */
+
+.mo-ghost {
+  pointer-events: none;
+}
+
+/* A large stop 2→3 morph does not counter-scale the U+ labels inside the scaled boxes: they wait hidden (choreography.ts). */
+.bd-grid[data-mo-morph] .bd-ulabel {
+  visibility: hidden;
+}
+
+.bd-cell-byte[data-merge-caret]::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: -5px;
+  z-index: 1;
+  width: 10px;
+  height: 7px;
+  background: var(--accent);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 220ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-motion='reduced'] [role='progressbar'] {
+  transition: none !important;
+}
+
+/* The anchored inspector panel (768–1023 px) slides in and fades when it appears; reduced motion: instant. */
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-motion='reduced']) [data-testid='inspector-host'][data-surface='anchored'] {
+    transition:
+      opacity var(--dur) ease-out,
+      transform var(--dur) var(--ease);
+  }
+
+  @starting-style {
+    html:not([data-motion='reduced']) [data-testid='inspector-host'][data-surface='anchored'] {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+}
+
+.bd-cell-token[data-just-merged]::before {
+  content: '';
+  position: absolute;
+  inset: 0 1px;
+  z-index: 1;
+  border-radius: var(--radius);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.bd-cell-token[data-just-merged][data-merge-outline]::before {
+  opacity: 1;
+}
+
+.bd-cell-token[data-just-merged] > .bd-vis::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M5 0l1.5 3.3 3.5.4-2.6 2.4.7 3.6L5 8l-3.1 1.7.7-3.6L0 3.7l3.5-.4z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+@media (forced-colors: active) {
+  .bd-cell-token[data-just-merged]::before {
+    outline-color: Highlight;
+  }
+
+  .bd-cell-token[data-just-merged] > .bd-vis::after,
+  .bd-cell-byte[data-merge-caret]::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}

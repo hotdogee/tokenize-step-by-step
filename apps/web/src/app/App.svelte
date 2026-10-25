@@ -21,7 +21,7 @@
   import PickerButton from '../shell/PickerButton.svelte';
   import type PickerDialogComponent from '../shell/PickerDialog.svelte';
   import { isEditableTarget, matchShortcut } from '../shell/shortcuts.ts';
-  import StagePlaceholder from '../shell/StagePlaceholder.svelte';
+  import PipelineRail from '../pipeline/PipelineRail.svelte';
   import TextInput from '../shell/TextInput.svelte';
   import type { AppState, Stage } from './app-state.svelte.ts';
   import { createAppState } from './bootstrap.ts';
@@ -159,7 +159,7 @@
     <OptionsRow />
     <CountsLine />
   </section>
-  <StagePlaceholder />
+  <PipelineRail />
   <Board />
 
   {#if PickerDialog !== null}

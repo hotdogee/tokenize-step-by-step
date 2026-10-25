@@ -125,6 +125,20 @@ export const en = {
   'a11y.stop': '{n} of 6: {name}',
   'status.stage': '{name}: {detail}',
 
+  // ---- Pipeline rail, scrubber and playback (WP09; 05 §2, §8) ----
+  'step.none': 'step 0 / {stepCount} · no merges yet',
+  'step.split': 'step {step} / {stepCount} · {left} split into bytes ({chars})',
+  'step.part': 'part of {glyph}',
+  'step.crosses': 'across {glyph}',
+  'step.counter': 'step {step} / {stepCount}',
+  'scrubber.label': 'Merge step',
+  'scrubber.playing': 'playing the merges',
+  'play.label': 'Play the merges',
+  'speed.label': 'Playback speed',
+  'motion.reduce': 'Reduce motion',
+  'status.replayWindow': 'replaying bytes {start}–{end}',
+  'merges.toggle': { one: 'Merge list: {n} step', other: 'Merge list: {n} steps' },
+
   // ---- Board (WP08; 05 §3–§4, §8) ----
   'board.label': 'Alignment board',
   'board.tier.char': 'Characters',

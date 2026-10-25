@@ -20,9 +20,9 @@
     "limit": "80 KiB"
   },
   {
-    "name": "i18n chunk (three catalogs, part of the main JS)",
+    "name": "i18n chunk (three catalogs, part of the main JS; PA-10)",
     "path": "apps/web/dist/assets/i18n-*.js",
-    "limit": "8 KiB"
+    "limit": "9 KiB"
   },
   {
     "name": "Worker core (loader + protocol + host)",
