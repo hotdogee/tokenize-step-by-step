@@ -198,6 +198,8 @@ export const zhTW = {
   'error.oom': '這台裝置的記憶體不足以載入 {name}，請改用 {fallback}',
   'error.quota': '無法使用離線快取，但分詞器仍可正常運作。',
   'error.internal': '發生錯誤：{message}',
+  'error.network': '無法下載 {name}，請檢查網路連線後重試',
+  'error.engine': '無法為這段文字分詞（{code}）。',
   'action.reload': '重新載入',
   'action.retry': '重試',
   'action.back': '返回',
@@ -272,4 +274,8 @@ export const zhTW = {
   'longInput.banner': '文字很長：按需分詞',
   'longInput.run': '立即分詞',
   'longInput.capped': '只分析前 {n} 個碼位',
+  'status.replayOff': '超過 {n} 個碼位時不記錄合併重播',
+  'link.copy': '複製連結',
+  'link.copied': '已複製連結',
+  'link.copiedWithoutText': '已複製連結，但不含文字（超過 {n} 個字元）',
 } as const satisfies Catalog;

@@ -10,6 +10,7 @@ import { gridClasses } from './plugins/grid-classes.ts'; // writes src/board/gri
 import { headersMiddleware } from './plugins/headers.ts'; // dev/preview only: replays public/_headers (dev omits the CSP, PA-2b)
 import { lazyChunks } from './plugins/lazy-chunks.ts'; // chunks / does not load at startup → assets/lazy-*.js (06 §3 Main JS)
 import { licences } from './plugins/licences.ts'; // manifest + docs/licenses → generated/licences.json; copies texts (WP03)
+import { registryTrim } from './plugins/registry-trim.ts'; // PA-7: registry fields no page renders stay out of the bundle
 import { vocabAssets } from './plugins/vocab-assets.ts'; // copies data/vocab/dist/tok → dist/tok (manifest emit: WP03)
 
 const page = (path: string): string => fileURLToPath(new URL(path, import.meta.url));
@@ -68,6 +69,7 @@ export default defineConfig({
     bootScript(),
     headersMiddleware(),
     lazyChunks(page('./index.html')),
+    registryTrim(),
   ],
   appType: 'mpa',
   build: {

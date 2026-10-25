@@ -5,9 +5,4 @@
  */
 import type { MessageKey } from './en.ts';
 
-export const RESERVED_KEYS: Readonly<Partial<Record<MessageKey, 'WP08' | 'WP09' | 'WP13'>>> = {
-  'counts.stale': 'WP13',
-  'longInput.banner': 'WP13',
-  'longInput.run': 'WP13',
-  'longInput.capped': 'WP13',
-};
+export const RESERVED_KEYS: Readonly<Partial<Record<MessageKey, 'WP08' | 'WP09' | 'WP13'>>> = {};

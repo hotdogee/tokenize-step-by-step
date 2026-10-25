@@ -202,6 +202,8 @@ export const ja = {
   'error.oom': 'このデバイスでは {name} を読み込むメモリが足りません。{fallback} をお試しください',
   'error.quota': 'オフラインキャッシュは使えませんが、トークナイザーは動作します。',
   'error.internal': '問題が発生しました：{message}',
+  'error.network': '{name} をダウンロードできませんでした。接続を確認して再試行してください',
+  'error.engine': 'このテキストはトークン化できませんでした（{code}）。',
   'action.reload': '再読み込み',
   'action.retry': '再試行',
   'action.back': '戻る',
@@ -276,4 +278,8 @@ export const ja = {
   'longInput.banner': '長いテキスト：必要なときにトークン化',
   'longInput.run': '今すぐトークン化',
   'longInput.capped': '最初の {n} コードポイントのみを解析します',
+  'status.replayOff': '{n} コードポイントを超えるとマージの再生は記録されません',
+  'link.copy': 'リンクをコピー',
+  'link.copied': 'リンクをコピーしました',
+  'link.copiedWithoutText': 'テキストなしでリンクをコピーしました（{n} 文字を超えています）',
 } as const satisfies Catalog;

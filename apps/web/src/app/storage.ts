@@ -12,6 +12,8 @@ export const STORAGE_KEYS = {
   singleKeyShortcuts: 'tsbs:singleKeyShortcuts',
   /** sessionStorage: the last `loaded` diagnostics, shown on About › Diagnostics (05 §14). */
   lastLoaded: 'tsbs:lastLoaded',
+  /** sessionStorage: the Worker's `ready.features`, shown on About › Diagnostics next to the main thread's own probe. */
+  workerFeatures: 'tsbs:workerFeatures',
 } as const;
 
 type Area = 'local' | 'session';

@@ -7,6 +7,9 @@
  * the precomputed-examples `ExamplesClient` (WP01's `MockTokenizerClient`) for deterministic results without a Worker
  * (e2e specs that pin precomputed examples, offline debugging; docs/dev.md). Either way the client's code — and the
  * Worker — is imported on its first use, after first paint (`deferred-client.ts`, 06 §3).
+ *
+ * While a tokenizer loads, the example chips answer from the precomputed examples (`precomputed.ts`: the inlined
+ * default, the lazy per-tokenizer files), and the page URL's state (`url-state.ts`) is read once, here.
  */
 import type { TokenizationResult, TokenizerClientLike } from '@tsbs/core';
 import type { ExamplesWire } from '@tsbs/core/fixture/examples-wire';
@@ -15,7 +18,9 @@ import examplesDefault from '../generated/examples-default.json';
 import { AppState } from './app-state.svelte.ts';
 import { DeferredClient } from './deferred-client.ts';
 import { probeFeatures } from './features.ts';
+import { PrecomputedExamples } from './precomputed.ts';
 import { EXAMPLES_INDEX, TOKENIZERS, tokenizerEntry } from './registry.ts';
+import { parseUrlState, type UrlState } from './url-state.ts';
 
 /** The precomputed default example (OD-1: 台灣台南 on o200k_base), as the first paint shows it. */
 export function defaultResult(seq = 0): TokenizationResult {
@@ -60,6 +65,15 @@ export function createClient(): TokenizerClientLike {
   return wantsMockClient() ? createExamplesClient() : createWorkerClient();
 }
 
+/** The page URL's state (read once at load), among the tokenizers the picker offers. */
+export function initialUrlState(search: string = 'location' in globalThis ? globalThis.location.search : ''): UrlState {
+  return parseUrlState(
+    search,
+    TOKENIZERS.filter((entry) => entry.withdrawn !== true).map((entry) => entry.id),
+  );
+}
+
 export function createAppState(): AppState {
-  return new AppState(createClient(), defaultResult());
+  const precomputed = new PrecomputedExamples(EXAMPLES_INDEX.files, [examplesDefault as unknown as ExamplesWire]);
+  return new AppState(createClient(), defaultResult(), precomputed, initialUrlState());
 }

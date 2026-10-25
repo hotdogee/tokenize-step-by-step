@@ -17,7 +17,11 @@
    * - the inspector host (side rail / anchored panel / bottom sheet by viewport width) and selection sync with the
    *   textarea (CSS Custom Highlight API where supported).
    *
-   * While no tokenizer result belongs to the text, stops 1–3 are live from `analyzeText` and the token tier waits.
+   * What it renders is AppState's `board` (WP13): the current result; the last one, kept until its successor arrives (a
+   * keystroke on a loaded tokenizer renders once — PA-11 —, a tokenizer switch keeps the last result — AD-19), with
+   * `data-pending` set; or, while no tokenizer is loaded for the text, an IME composition is open (muted) or a long
+   * input waits for its on-demand run, the text-only board: stops 1–3 live from `analyzeText`, the token tier waiting.
+   * Rows virtualize above 600 cells or 8 packed rows (PA-11, window.ts).
    */
   import { onMount, tick, untrack } from 'svelte';
   import type { TokenizationResult } from '@tsbs/core';
@@ -26,6 +30,7 @@
   import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
   import { hexByte } from '@tsbs/core/text/utf8';
   import { appState } from '../app/context.ts';
+  import { tokenizerEntry } from '../app/registry.ts';
   import { readStored, writeStored } from '../app/storage.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { formatPercent } from '../i18n/t.ts';
@@ -34,7 +39,7 @@
   import InspectorHost from '../inspector/InspectorHost.svelte';
   import type * as InspectorCatalogModule from '../inspector/i18n/catalogs.ts';
   import type { InspectorTranslate } from '../inspector/i18n/catalogs.ts';
-  import { copyValueOf, inspectorModel } from '../inspector/model.ts';
+  import type * as InspectorModelModule from '../inspector/model.ts';
   import { progressPercent } from '../shell/progress.ts';
   import { isComposing } from '../shell/shortcuts.ts';
   import { placePanel, type Extent } from './anchor.ts';
@@ -46,11 +51,10 @@
   import { navigate, navKeyOf, resolveAnchor as resolveAnchorIn } from './navigation.ts';
   import Row from './Row.svelte';
   import { byteRangeOfSelection, highlightSelection } from './selection.ts';
-  import { textOnlyResult } from './text-only.ts';
   import { BoardUnits, type Anchor, type CellRef, type Span } from './units.ts';
   import { viewOf } from './view-cache.ts';
   import { BoardViewport } from './viewport.svelte.ts';
-  import { mountedRows, spacers, visibleRows } from './window.ts';
+  import { mountedRows, OVERSCAN, shouldVirtualize, spacers, visibleRows } from './window.ts';
   import './grid-classes.css';
   import './board.css';
 
@@ -58,7 +62,10 @@
   const HOVER_MS = 120;
   /** localStorage: the keyboard hint under the board is shown until the board keys have been used (05 §8). */
   const HINT_KEY = 'tsbs:boardKeysUsed';
-  /** The first of these anywhere on the page loads the inspector catalog (PA-7: it is not part of the startup JS). */
+  /**
+   * The first of these anywhere on the page loads the inspector catalog and the inspector model (PA-7: neither is part of
+   * the startup JS; WP13 moved the model out of it too).
+   */
   const ENGAGE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'focusin'] as const;
 
   const app = appState();
@@ -79,10 +86,10 @@
   let viewHeight = $state(900);
 
   // ---- data ----
-  const pending = $derived(app.currentResult === null);
-  const result: TokenizationResult = $derived(
-    app.currentResult ?? textOnlyResult(app.text, app.tokenizer, app.entry.family),
-  );
+  const board = $derived(app.board);
+  /** No tokens to show (the text-only board). */
+  const pending = $derived(board.kind === 'text');
+  const result: TokenizationResult = $derived(board.result);
   const lang = $derived(resolveTextLang(app.textLang, app.text, i18n.current));
   const view = $derived(viewOf(result, lang));
   const stage = $derived(app.stage);
@@ -95,7 +102,7 @@
   const tiers = $derived(
     tiersFor({ stage, byteView: app.byteView, wide: viewport.wide, chunkTier: viewport.small, tokens: !pending }),
   );
-  const fusedDummy = $derived(fusesDummy(result, app.entry));
+  const fusedDummy = $derived(fusesDummy(result, tokenizerEntry(result.tokenizer)));
   const nfkc = $derived(nfkcSource(result));
   /** WP10's live token tier (extra-tier.svelte.ts): one more decorative track per row while it applies. */
   const extra = $derived(extraTierFor(extraTier.current, result, stage, pending));
@@ -145,19 +152,25 @@
    * its empty text and the keyboard hint's reserved lines stay blank.
    */
   let inspectorCatalog: typeof InspectorCatalogModule | null = $state.raw(null);
+  let inspectorMod: typeof InspectorModelModule | null = $state.raw(null);
   const ti: InspectorTranslate | null = $derived.by(() => {
     const catalog = inspectorCatalog;
     const locale = i18n.current;
     return catalog === null ? null : (key, params) => catalog.translateInspector(locale, key, params);
   });
-  const model = $derived(
-    inspected === null || ti === null
+  const model = $derived.by(() => {
+    const mod = inspectorMod;
+    return inspected === null || ti === null || mod === null
       ? null
-      : inspectorModel({ result, units, ref: inspected, t: i18n.t, ti, fusedDummy, lang, step }),
-  );
+      : mod.inspectorModel({ result, units, ref: inspected, t: i18n.t, ti, fusedDummy, lang, step });
+  });
 
   // ---- virtual window ----
-  const range = $derived(visibleRows(viewTop, viewHeight, rowPx, rows.length));
+  /** Grid cells of the whole board (every row mounted): the virtualization bound of PA-11. */
+  const cellCount = $derived(tiers.reduce((sum, tier) => sum + units.count(tier), 0));
+  const range = $derived(
+    visibleRows(viewTop, viewHeight, rowPx, rows.length, OVERSCAN, shouldVirtualize(cellCount, rows.length)),
+  );
   /** At stop 5: the packed row of the part the current step formed (−1: none), where the director marks and follows. */
   const mergedRow = $derived(
     stage === 5 && parts !== null && parts.justMerged >= 0
@@ -308,6 +321,16 @@
     writeStored(HINT_KEY, 'true');
   }
 
+  /** The inspector model module (lazy, PA-7), imported once. */
+  let inspectorImport: Promise<typeof InspectorModelModule> | null = null;
+  function loadInspector(): Promise<typeof InspectorModelModule> {
+    inspectorImport ??= import('../inspector/model.ts').then((mod) => {
+      inspectorMod = mod;
+      return mod;
+    });
+    return inspectorImport;
+  }
+
   // ---- keyboard (05 §8) ----
   function onKeydown(event: KeyboardEvent): void {
     if (isComposing(event)) return;
@@ -341,7 +364,7 @@
       void focusPanel();
     } else if (letter === 'c') {
       event.preventDefault();
-      void copyValue(copyValueOf(result, units, ref));
+      void loadInspector().then((mod) => copyValue(mod.copyValueOf(result, units, ref)));
     }
   }
 
@@ -470,8 +493,8 @@
     measure();
     const loadCatalog = (): void => {
       for (const type of ENGAGE_EVENTS) document.removeEventListener(type, loadCatalog, true);
-      void import('../inspector/i18n/catalogs.ts').then(
-        (catalog) => {
+      void Promise.all([import('../inspector/i18n/catalogs.ts'), loadInspector()]).then(
+        ([catalog]) => {
           inspectorCatalog = catalog;
         },
         () => {
@@ -621,7 +644,9 @@
         aria-colcount={K}
         data-testid="board-grid"
         data-stage={stage}
-        data-pending={pending ? '' : undefined}
+        data-pending={board.kind === 'final' ? undefined : ''}
+        data-composing={app.composing ? '' : undefined}
+        data-cells={cellCount}
         style:--k={K}
         bind:this={grid}
         onkeydown={onKeydown}
@@ -720,6 +745,11 @@
   /* The extra tier's track (board.css .bd-grid.extra --extra-h). */
   .main.extra .probe {
     height: calc(var(--row-h) + 32px);
+  }
+
+  /* An open IME composition: the text-only board is provisional, shown muted (05 §6). */
+  .bd-grid[data-composing] {
+    opacity: 0.6;
   }
 
   .pending,
