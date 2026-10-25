@@ -10,7 +10,9 @@
     "tsbs-vocab": "./src/cli.ts"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./dev": "./src/dev/index.ts",
+    "./vite-support": "./src/vite-support.ts"
   },
   "dependencies": {
     "@tsbs/conformance": "workspace:*",

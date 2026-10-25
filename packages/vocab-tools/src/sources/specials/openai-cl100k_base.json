@@ -1,0 +1,31 @@
+{
+  "tokenizer": "openai-cl100k_base",
+  "source": {
+    "url": "https://raw.githubusercontent.com/openai/tiktoken/4e71bbe0c078468e00fefbf94b39849389f346e5/tiktoken_ext/openai_public.py",
+    "revision": "4e71bbe0c078468e00fefbf94b39849389f346e5",
+    "tag": "tiktoken 0.14.0",
+    "symbol": "cl100k_base() special_tokens"
+  },
+  "specials": [
+    {
+      "id": 100257,
+      "text": "<|endoftext|>"
+    },
+    {
+      "id": 100258,
+      "text": "<|fim_prefix|>"
+    },
+    {
+      "id": 100259,
+      "text": "<|fim_middle|>"
+    },
+    {
+      "id": 100260,
+      "text": "<|fim_suffix|>"
+    },
+    {
+      "id": 100276,
+      "text": "<|endofprompt|>"
+    }
+  ]
+}
