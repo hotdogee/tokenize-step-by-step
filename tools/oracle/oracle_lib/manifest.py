@@ -11,7 +11,11 @@ ship intent, notes) and a list of files. Every file carries:
   facts, written only by ``fetch_vocab.py --update-manifest``;
 * ``volatile`` (optional) -- why a re-download can never reproduce the
   recorded hash (e.g. a per-request nonce in a web page); such a file is
-  restored from its committed ``docs/licenses`` snapshot instead.
+  restored from its committed ``docs/licenses`` snapshot instead;
+* ``snapshot`` (optional, default ``true``) -- ``false`` keeps a volatile
+  page out of ``docs/licenses`` (and out of the required files) while its
+  recorded ``sha256``/``bytes``/``retrievedOn`` stay as the retrieval record,
+  e.g. a raw HTML page whose extracted ``html-text`` file is the evidence.
 
 An asset's ``license`` may also carry ``notice`` (``{file, text}``): an
 attribution Notice file that the licence requires the distributor to write
@@ -61,6 +65,11 @@ def save(path: Path, manifest: dict[str, Any]) -> bool:
     """Validate and write a manifest canonically; return ``True`` if it changed."""
     validate(manifest)
     return jsonio.write(path, manifest)
+
+
+def is_snapshotted(entry: FileEntry) -> bool:
+    """True if ``entry`` is copied into ``docs/licenses`` (a snapshot role without ``snapshot: false``)."""
+    return entry["role"] in SNAPSHOT_ROLES and entry.get("snapshot", True)
 
 
 def file_by_name(asset: Asset, name: str) -> FileEntry:
@@ -174,4 +183,9 @@ def _file_problems(aid: str, entry: FileEntry, names: set[str]) -> list[str]:
             out.append(f"{where}: volatile must be a non-empty reason string")
         if entry.get("role") not in SNAPSHOT_ROLES:
             out.append(f"{where}: only snapshotted roles can be volatile")
+    if "snapshot" in entry:
+        if not isinstance(entry["snapshot"], bool):
+            out.append(f"{where}: snapshot must be a boolean")
+        elif not entry["snapshot"] and not entry.get("volatile"):
+            out.append(f"{where}: snapshot: false is only allowed on a volatile file (others re-download and verify)")
     return out

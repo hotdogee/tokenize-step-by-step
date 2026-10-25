@@ -89,14 +89,16 @@ works too.
 
 `fetch_vocab.py` writes every manifest file to
 `data/vocab/raw/<asset-id>/<name>` (gitignored). It copies each file with a
-licence-like role into `docs/licenses/<asset-id>/` (committed). Files that are
+licence-like role into `docs/licenses/<asset-id>/` (committed), unless the file
+is marked `snapshot: false` (see *Volatile files*). Files that are
 already present and valid are skipped. It exits with status 1 if any file
 fails verification, and prints a table with one row per file:
 
 | Status       | Meaning |
 |--------------|---------|
 | `cached`     | Already on disk, and its SHA-256 and size match the manifest. |
-| `restored`   | A `volatile` file, copied from its committed `docs/licenses` snapshot, which matches the manifest. |
+| `restored`   | A `volatile` file (or one extracted from an unsnapshotted page), copied from its committed `docs/licenses` snapshot, which matches the manifest. |
+| `unsnapshotted` | A `volatile` file marked `snapshot: false`. It is neither required on disk nor downloaded; its recorded hash is a retrieval record. |
 | `fetched`    | Downloaded, extracted or derived, and it matches the manifest. |
 | `accepted`   | No hash was recorded, so the observed hash was written (`--update-manifest` only). |
 | `updated`    | The hash differed and the new hash was accepted (`--update-manifest` only). |
@@ -125,6 +127,19 @@ files carry a `volatile` reason in the manifest. `fetch_vocab.py` restores them
 from the committed snapshot and downloads them only when no valid snapshot
 exists. To refresh one, delete both copies (`docs/licenses/...` and
 `data/vocab/raw/...`), run with `--update-manifest`, and review the diff.
+
+A volatile file can also be marked `snapshot: false`. It is then kept out of
+`docs/licenses/` and out of the required files, and `fetch_vocab.py` reports
+it as `unsnapshotted` without downloading it. Its recorded `sha256`, `bytes`,
+`retrievedOn` and `httpHeaders` stay in the manifest as the record of the
+retrieval. The raw Gemma Terms of Use HTML is such a file: the page carries
+third-party analytics ids and feature flags, so only the extracted
+`gemma-terms-of-use.txt` is committed as the evidence (planner amendment
+PA-4). A file extracted from an unsnapshotted page is restored from its own
+committed snapshot. If that snapshot is missing too, the page is downloaded
+fresh, the text is extracted again and checked against the text file's own
+SHA-256. To refresh the page record, set `snapshot` to `true`, then follow the
+refresh steps above.
 
 ## Updating upstream pins (human in the loop)
 
@@ -190,6 +205,8 @@ The top level has `schemaVersion` (1), `about`, and an ordered `assets` list
     fixed extension table instead.
   - `volatile` (optional): why a re-download cannot reproduce `sha256` (see
     *Volatile files*). Only snapshotted roles may be volatile.
+  - `snapshot` (optional, default `true`): `false` keeps a volatile file out
+    of `docs/licenses/` while its observed facts stay as a retrieval record.
   - `access`: present only when a download was refused (e.g. `gated (HTTP 401)`).
 
 | `source.type`    | Fields                          | Pinned `url`                                         | `revision` |

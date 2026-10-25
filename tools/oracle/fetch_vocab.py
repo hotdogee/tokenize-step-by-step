@@ -16,6 +16,11 @@ Verification rules:
 * A ``volatile`` file (a page whose bytes change on every request) is restored
   from its committed ``docs/licenses`` snapshot when that snapshot matches the
   manifest; it is downloaded only when no valid snapshot exists.
+* A volatile file marked ``snapshot: false`` is neither required on disk nor
+  downloaded (status ``unsnapshotted``); its recorded hash is a historical
+  retrieval record. A file derived from it (``html-text``) is restored from
+  its own committed snapshot, or re-derived from a fresh download of the page
+  and verified by its own SHA-256.
 * ``archive-member`` and ``html-text`` files are derived from another, already
   verified file of the same asset and checked like any download.
 
@@ -101,8 +106,14 @@ def obtain(asset: mf.Asset, entry: mf.FileEntry) -> Obtained:
         content_type = MEMBER_CONTENT_TYPES.get(suffix, "application/octet-stream")
         return Obtained(archives.read_member(archive_path, src["member"]), content_type)
     if src["type"] == "html-text":
-        page = _verified_sibling(asset, src["document"]).read_bytes().decode("utf-8")
-        text = htmltext.extract(page, src["classes"])
+        document = mf.file_by_name(asset, src["document"])
+        if document.get("snapshot", True):
+            page = _verified_sibling(asset, src["document"]).read_bytes()
+        else:
+            # An unsnapshotted volatile page never matches its recorded sha256, so it is fetched fresh;
+            # the extracted text is deterministic and is verified by its own sha256 in process_file.
+            page = netio.get(document["url"]).body
+        text = htmltext.extract(page.decode("utf-8"), src["classes"])
         return Obtained(text.encode("utf-8"), "text/plain; charset=utf-8")
     if not entry.get("url"):
         raise RuntimeError("file is not pinned; run pin_manifest.py first")
@@ -112,7 +123,7 @@ def obtain(asset: mf.Asset, entry: mf.FileEntry) -> Obtained:
 
 def snapshot_if_licence(asset: mf.Asset, entry: mf.FileEntry, data: bytes) -> None:
     """Copy verified licence-like files verbatim into ``docs/licenses``."""
-    if entry["role"] in mf.SNAPSHOT_ROLES:
+    if mf.is_snapshotted(entry):
         fsio.write_bytes_if_changed(paths.license_snapshot_path(asset["id"], entry["name"]), data)
 
 
@@ -120,8 +131,24 @@ def _matches(data: bytes, entry: mf.FileEntry) -> bool:
     return sha256_hex(data) == entry.get("sha256") and len(data) == entry.get("bytes")
 
 
+def _restorable(asset: mf.Asset, entry: mf.FileEntry) -> bool:
+    """True if ``entry`` may be restored from its committed snapshot instead of being downloaded.
+
+    That holds for a volatile file and for a file derived (``html-text``) from an
+    unsnapshotted volatile page, which could otherwise only be re-derived online.
+    """
+    if not mf.is_snapshotted(entry):
+        return False
+    if entry.get("volatile"):
+        return True
+    src = entry["source"]
+    return src["type"] == "html-text" and not mf.file_by_name(asset, src["document"]).get("snapshot", True)
+
+
 def process_file(asset: mf.Asset, entry: mf.FileEntry, update: bool, today: str) -> str:
     """Fetch/verify one file and return its status word (mutates ``entry`` on update)."""
+    if not entry.get("snapshot", True):
+        return "unsnapshotted"
     dest = paths.raw_path(asset["id"], entry["name"])
     recorded = entry.get("sha256")
     if recorded and dest.exists():
@@ -129,7 +156,7 @@ def process_file(asset: mf.Asset, entry: mf.FileEntry, update: bool, today: str)
         if _matches(on_disk, entry):
             snapshot_if_licence(asset, entry, on_disk)
             return "cached"
-    if recorded and entry.get("volatile"):
+    if recorded and _restorable(asset, entry):
         snapshot = paths.license_snapshot_path(asset["id"], entry["name"])
         if snapshot.exists() and _matches(snapshot.read_bytes(), entry):
             fsio.write_bytes_if_changed(dest, snapshot.read_bytes())

@@ -42,9 +42,14 @@ def _snapshot_links(asset: mf.Asset) -> list[str]:
     """Markdown links to every committed file under ``docs/licenses/<asset-id>/``."""
     links = []
     for entry in asset["files"]:
-        if entry["role"] in mf.SNAPSHOT_ROLES:
+        if mf.is_snapshotted(entry):
             rel = f"{asset['id']}/{entry['name']}"
             links.append(f"[{entry['name']}]({rel}) ({entry['role']})")
+        elif entry["role"] in mf.SNAPSHOT_ROLES:
+            links.append(
+                f"{entry['name']} ({entry['role']}; not snapshotted, sha256 {entry['sha256'][:12]}… of"
+                f" {entry['retrievedOn']} recorded in the manifest)"
+            )
     notice = asset["license"].get("notice")
     if notice:
         links.append(f"[{notice['file']}]({asset['id']}/{notice['file']}) (notice, rendered from the manifest)")
