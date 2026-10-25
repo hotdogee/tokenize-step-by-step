@@ -110,6 +110,16 @@ describe('runFixture negative cases', () => {
     expect(report.failures[0]).toMatchObject({ field: 'encode', message: 'Error: boom' });
   });
 
+  it('checks the addBos variant where the tokenizer declares a BOS id', () => {
+    const inner = fixtureTokenizer('meta-llama3');
+    const dropped = corrupt(inner, (r, text, options) => (options.addBos === true ? inner.encode(text) : r));
+    const fields = runFixture(loadFixture('meta-llama3'), dropped, { cases: ['zh-tw-tainan', 'empty'] }).failures.map(
+      (f) => `${f.variant}:${f.field}`,
+    );
+    expect(fields).toContain('bos:ids');
+    expect(fields).toContain('bos:bos');
+  });
+
   it('checks splitChars from the fixture tokens (Grok-1 zh-tw-tainan = 1)', () => {
     const bad = corrupt(fixtureTokenizer('xai-grok1'), (r) => ({ ...r, stats: { ...r.stats, splitChars: 2 } }));
     const fields = runFixture(loadFixture('xai-grok1'), bad, { cases: ['zh-tw-tainan'] }).failures.map((f) => f.field);

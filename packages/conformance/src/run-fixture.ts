@@ -13,10 +13,13 @@
  * - the 03 §B.3 invariants, and `encode()` ≡ `encodeIncremental()` (timings excluded);
  * - `specialTokens: 'match'` ids equal `idsWithSpecials`, or `ids` where the fixture omits it. Since the oracle lane emits the
  *   emulated `idsWithSpecials` for the user-defined-atomic SentencePiece fixtures (gemma2, grok1) wherever a CONTROL/UNK
- *   string makes them differ (03 §B.5), this one rule covers both specials-mode oracles and the emulation.
+ *   string makes them differ (03 §B.5), this one rule covers both specials-mode oracles and the emulation;
+ * - `addBos: true` (tokenizers with a BOS id, 03 §B.5 `policy.addBos === false` row): `[bosId, ...ids]`, the BOS a
+ *   zero-width `ZeroWidth | Special` token of kind Bos at `[0, 0)`, every other token's span unchanged.
  */
 import {
   checkInvariants,
+  TokenFlag,
   TokenKind,
   type EncodeOptions,
   type Fixture,
@@ -32,7 +35,7 @@ import { compareMergeSteps } from './position-steps.ts';
 
 export interface ConformanceFailure {
   readonly case: string;
-  readonly variant: 'default' | 'match' | 'nfkc';
+  readonly variant: 'default' | 'match' | 'nfkc' | 'bos';
   readonly field: string;
   readonly message: string;
 }
@@ -275,6 +278,41 @@ function checkMatch(tokenizer: Tokenizer, c: AnyCase, out: Collector): void {
   out.assertions++;
 }
 
+function checkBos(tokenizer: Tokenizer, c: AnyCase, bosId: number, out: Collector): void {
+  const fail = (field: string, message: string) => (): ConformanceFailure => ({
+    case: c.name,
+    variant: 'bos',
+    field,
+    message,
+  });
+  let r: TokenizationResult;
+  try {
+    r = tokenizer.encode(c.text, { addBos: true });
+  } catch (error) {
+    out.check(false, fail('encode', error instanceof Error ? `${error.name}: ${error.message}` : String(error)));
+    return;
+  }
+  const ids = Array.from(r.tokens.id);
+  const expected = [bosId, ...c.ids];
+  out.check(
+    ids.length === expected.length && ids.every((id, i) => id === expected[i]),
+    fail('ids', `got [${ids.join(', ')}], expected [${expected.join(', ')}]`),
+  );
+  out.check(
+    r.tokens.byteStart[0] === 0 &&
+      r.tokens.byteStart[1] === 0 &&
+      r.tokens.flags[0] === (TokenFlag.ZeroWidth | TokenFlag.Special) &&
+      r.tokens.kind[0] === TokenKind.Bos,
+    fail('bos', 'BOS must be a zero-width ZeroWidth|Special Bos token at [0, 0)'),
+  );
+  const spansKept = c.tokens.every(
+    (t, i) => r.tokens.byteStart[i + 1] === t.start && r.tokens.byteStart[i + 2] === t.end,
+  );
+  out.check(spansKept, fail('tokens.span', 'token spans changed under addBos'));
+  for (const v of checkInvariants(r)) out.check(false, fail('invariants', v));
+  out.assertions++;
+}
+
 /** Runs every assertion of 04 §7 for `fixture` against `tokenizer`. */
 export function runFixture(fixture: Fixture, tokenizer: Tokenizer, options: RunFixtureOptions = {}): ConformanceReport {
   const out = new Collector(options.maxFailures ?? 200);
@@ -286,6 +324,8 @@ export function runFixture(fixture: Fixture, tokenizer: Tokenizer, options: RunF
     if (out.full) break;
     checkCase(fixture, tokenizer, c, 'default', c.text, out, settings);
     if (tokenizer.info.supports.specialsToggle) checkMatch(tokenizer, c, out);
+    const bosId = tokenizer.info.bosId;
+    if (tokenizer.info.supports.bos && bosId !== null) checkBos(tokenizer, c, bosId, out);
     encoded++;
   }
   if (fixture.family === 'tiktoken-bpe' && fixture.normalizedNFKC && tokenizer.info.supports.nfkc) {
