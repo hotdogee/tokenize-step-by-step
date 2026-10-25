@@ -68,6 +68,16 @@ a {
   box-shadow: var(--focus);
 }
 
+/*
+ * WebKit drops box-shadow on natively themed selects, checkboxes and radios (computed `box-shadow: none` while they match
+ * :focus-visible), so they get the same 2 px accent ring 2 px out as an outline, which WebKit paints on themed controls
+ * (WCAG 2.4.7 on Safari / iOS). Elsewhere it overlaps the box-shadow ring exactly.
+ */
+:where(select, input[type='checkbox'], input[type='radio']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Sentence-length copy wraps in CJK at 360 px (05 §10). */
 .prose {
   line-break: strict;
