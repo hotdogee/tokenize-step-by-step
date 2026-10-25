@@ -293,7 +293,7 @@ Suites:
 - **Research anchors**: the §5.3 table duplicated as literal unit tests so a regression is readable in isolation (e.g. o200k 台灣台南 → `[3735, 133072, 3735, 14609]`; Grok-2 token 4242 case and its `zh-tw-tainan` first step `[0, 1128]` (stepResultId 1128 = PCES index 1000 + idOffset 128); Claude 20094; cl100k 灣 split at step 7 of 7 → 66285).
 - **Property** (fast-check; 1,000 runs per PR, 20,000 nightly): random Unicode strings weighted to CJK/emoji/whitespace/controls/unpaired surrogates → B.3 invariants for every tokenizer; agenda ≡ quadratic reference; varint/TSBV1 round trips; alignment on random piece sequences; `packRows` properties; both spm fallback orders agree.
 - **Browser parity** (every PR, Playwright): `compilePattern` chunk test on fixture texts in chromium/firefox/webkit; `DecompressionStream` + `readTsbv1` of the o200k `.bin` in webkit.
-- **Fuzz vs npm oracles** (`pnpm test:fuzz`, Node only, nightly 10,000 strings/tokenizer, 2,000 with a fixed seed on engine-path changes; failures saved to `fixtures/candidates/*.json` for the oracle lane):
+- **Fuzz vs oracles** (`pnpm test:fuzz`, nightly 10,000 strings/tokenizer, 2,000 with a fixed seed on engine-path changes; failures saved to `fixtures/candidates/*.json` for the oracle lane). **PA-9 (00 §E):** the primary oracle is the Python lane (`tools/oracle/fuzz_oracle.py`, ids + byte spans); of the table below only the pure-JS second opinions `gpt-tokenizer` and `@huggingface/tokenizers` are used, and `tiktoken` WASM / `@sctg/sentencepiece-js` are not:
 
 | Our tokenizer | Oracle(s) | Notes |
 |---|---|---|
