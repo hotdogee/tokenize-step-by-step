@@ -29,7 +29,7 @@
     "contrast:check": "pnpm --filter @tsbs/ui-tokens check",
     "test": "pnpm generate && vitest run && pnpm test:browser",
     "test:browser": "vitest run --config apps/web/vitest.browser.config.ts",
-    "test:fuzz": "node scripts/pending.ts test:fuzz WP12",
+    "test:fuzz": "node packages/core/test/fuzz/cli.ts",
     "e2e": "pnpm --filter @tsbs/e2e e2e",
     "e2e:shell": "pnpm e2e shell",
     "e2e:headers": "pnpm --filter @tsbs/e2e e2e:headers",

@@ -12,6 +12,8 @@
     "./format/__tests__/*": null
   },
   "devDependencies": {
-    "fast-check": "4.10.2"
+    "@huggingface/tokenizers": "0.2.0",
+    "fast-check": "4.10.2",
+    "gpt-tokenizer": "4.1.0"
   }
 }
