@@ -5,6 +5,7 @@
  * headers through `fetch`, the key forgotten on "Forget key", on collapse and on `pagehide`, never in web storage).
  */
 import '../theme/base.css';
+import axe from 'axe-core';
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { page } from 'vitest/browser';
@@ -17,6 +18,14 @@ import { alignLiveTokens, type LiveToken } from './live-tier.ts';
 import LiveTierRow from './LiveTierRow.svelte';
 
 const GROK2 = { id: 'xai-grok2', family: 'bytelevel-bpe' } as const;
+const WCAG: axe.RunOptions = {
+  runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
+};
+
+async function axeViolations(target: HTMLElement): Promise<string[]> {
+  const results = await axe.run(target, WCAG);
+  return results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
+}
 const TEXT = '台灣台南';
 const encoder = new TextEncoder();
 
@@ -73,6 +82,7 @@ describe('live token tier on the board (extra-tier hook)', () => {
     // One extra 32 px track per packed row; the ARIA grid is unchanged (the layer is decorative).
     expect(grid.querySelector<HTMLElement>('.bd-row')?.offsetHeight).toBe(rowHeight + 32);
     expect(grid.getAttribute('aria-rowcount')).toBe(rowCount);
+    expect(await axeViolations(board.target)).toEqual([]);
 
     // Each cut sits on the left edge of its byte's column: boundary 5 = the column of byte 5 in the byte tier.
     const cut = grid.querySelector<HTMLElement>('[data-boundary="5"]')?.getBoundingClientRect();
@@ -156,6 +166,12 @@ describe('drawer key lifecycle', () => {
     expect(input?.type).toBe('password');
     expect(input?.getAttribute('autocomplete')).toBe('off');
     expect(target.querySelector('form')).toBeNull();
+    expect(await axeViolations(target)).toEqual([]);
+    // With an answer on screen (token list, comparison sentence) the drawer stays axe clean.
+    showAnswer(cutAt([3, 6]));
+    await frames(2);
+    expect(target.querySelector('[data-testid="live-token-list"]')).not.toBeNull();
+    expect(await axeViolations(target)).toEqual([]);
     destroy();
   });
 
