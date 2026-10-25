@@ -51,3 +51,4 @@ shell when `data/vocab/dist` is absent) and `src/generated/engine-config.json` (
   unload) and the Worker heap check of 06 §3 (`test/heap.test.ts`: 500 keystrokes into a 10k-CJK paragraph grow
   `heapUsed + external` by < 10 MB, o200k and Gemma 4). Timing runs are serial (one file at a time): a parallel run
   shares the CPU and has pushed a ceiling over. `pnpm test:perf` runs every `TSBS_PERF` test of core and worker that way.
+  Under `TSBS_PERF=1` without `--expose-gc` the heap check fails instead of skipping.

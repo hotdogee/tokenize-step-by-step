@@ -6,7 +6,8 @@
  * and one after the 500th result (the chunk cache is ≤ 2 MiB and a CJK paragraph is one chunk that is never cached).
  * Opt-in and serial, with forced GC:
  *   TSBS_PERF=1 NODE_OPTIONS=--expose-gc pnpm test:perf
- * Skips without `data/vocab/dist` (`pnpm vocab:build`) or without the generated engine config (`pnpm generate`).
+ * Skips without `data/vocab/dist` (`pnpm vocab:build`) or without the generated engine config (`pnpm generate`). With
+ * TSBS_PERF=1 but no `gc` (no `--expose-gc`) it fails rather than skip, so a green opt-in run always includes it.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -25,10 +26,8 @@ const DIST = join(REPO, 'data', 'vocab', 'dist');
 const MANIFEST = join(DIST, 'vocab-manifest.generated.json');
 const ENGINE_CONFIG = join(REPO, 'packages', 'worker', 'src', 'generated', 'engine-config.json');
 const gc = (globalThis as { gc?: () => void }).gc;
-const PERF = process.env['TSBS_PERF'] === '1' && gc !== undefined;
+const PERF = process.env['TSBS_PERF'] === '1';
 const READY = existsSync(MANIFEST) && existsSync(ENGINE_CONFIG);
-if (process.env['TSBS_PERF'] === '1' && gc === undefined)
-  console.warn('[worker heap] skipped: needs NODE_OPTIONS=--expose-gc');
 
 /** 06 §3: 500 keystrokes into a 10k-CJK paragraph grow the Worker's memory by less than this. */
 const GROWTH_LIMIT = 10 * 2 ** 20;
@@ -60,7 +59,10 @@ async function settledMemory(): Promise<number> {
 }
 
 describe.skipIf(!READY || !PERF)('Worker heap while typing (TSBS_PERF=1, 06 §3)', () => {
-  it.each<TokenizerId>(['openai-o200k_base', 'google-gemma4'])(
+  it.runIf(gc === undefined)('has forced GC (TSBS_PERF=1)', () => {
+    expect.fail('the Worker heap check needs forced GC: run it with NODE_OPTIONS=--expose-gc');
+  });
+  it.runIf(gc !== undefined).each<TokenizerId>(['openai-o200k_base', 'google-gemma4'])(
     '%s: 500 keystrokes into a 10k-CJK paragraph grow the memory by < 10 MB (TSBS_PERF=1)',
     async (id) => {
       const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as VocabManifest;
