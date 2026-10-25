@@ -288,6 +288,12 @@ test('scrub trace: `.` through the merge steps at stop 5', async ({ page, browse
   await page.locator('#text-input').blur();
   await page.keyboard.press('5');
   await expect(page.locator('[data-testid="board-grid"]')).toHaveAttribute('data-stage', '5');
+  // From stop 6, `5` lands on the last merge (WP09: stop 6 ≡ stop 5 at step = stepCount), where `.` would leave for
+  // stop 6; the walk starts at step 0 instead (Home on the scrubber; `.` keeps working with the scrubber focused).
+  const scrubber = page.getByTestId('scrubber');
+  await scrubber.focus();
+  await page.keyboard.press('Home');
+  await expect(scrubber).toHaveValue('0');
   const before = await probeOf(page);
   const { tasks } = await traced(browser, page, async () => {
     for (let i = 0; i < 40; i++) {
