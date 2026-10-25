@@ -22,9 +22,14 @@ once, and the checklist signed off before the first production deploy and re-run
      `pnpm --filter @tsbs/e2e exec playwright install chromium firefox webkit`), or one CI job with
      `E2E_FULL_MATRIX=1 E2E_ENGINE=webkit pnpm e2e --shard=1/3`.
    - **Wall-time target ≤ 15 min** (06 §4): `check` ∥ `vocab` (≈ 1–4 min with warm caches) → `build` ∥ `unit` (≈ 2–3 min)
-     → the nine e2e shards and `e2e-headers` in parallel (≈ 4–6 min each: install from cache, CJK fonts, ≈ 20–60 tests at
-     the runner's two Playwright workers). If a shard grows past ≈ 8 min, add shards in the `e2e` matrix
-     (`shard: [1, 2, 3, 4]` and `--shard=${{ matrix.shard }}/4`) rather than more workers per runner.
+     → the nine e2e shards and `e2e-headers` in parallel. A shard runs (`playwright test --list --shard=<n>/3`) ≈ 123
+     tests on chromium (six projects), 24–25 on firefox and 47 on webkit (two projects). Their summed test time, measured
+     on a Windows workstation with 8 workers, is 431 s for chromium, 160 s for firefox and 600 s for webkit: per shard at
+     the runner's two Playwright workers ≈ 1.2, 0.5 and 1.7 min of tests plus the setup (browser from cache, CJK fonts,
+     `vite preview`). WebKit, not chromium, is the long pole, and the firefox shards are mostly setup. The Linux wall
+     time is not measured yet; record it here from the first full CI run. If a shard grows past ≈ 8 min, raise that
+     matrix's shard count (`shard: [1, 2, 3, 4]`, `/4` in the job name and `--shard=${{ matrix.shard }}/4`) rather than
+     add workers per runner; the shard checks are not required by name (item 7), so branch protection stays as it is.
 2. **Merge to `main` → `ci`** runs again on the merge commit.
 3. **`deploy`** (`.github/workflows/deploy.yml`) is triggered only by that `ci` run completing successfully on `main`. It
    downloads the `dist` artifact that run tested (no rebuild), runs `wrangler deploy`, then `pnpm deploy:smoke` against
@@ -72,10 +77,12 @@ Do this once, before the first deploy.
    pnpm build   # strict conformance (the default); ends with wrangler deploy --dry-run
    ```
 
-7. **Branch protection on `main`**: require the status checks `check`, `vocab`, `unit`, `build`, the nine
-   `e2e (chromium 1/3)` … `e2e (webkit 3/3)` checks (`e2e (<engine> <shard>/3)` for chromium, firefox and webkit, shards
-   1–3; the single `e2e (chromium)` check of waves 1–2 no longer exists), `e2e-headers` and `lighthouse` (a skipped job
-   counts as passing, so `lighthouse` does not block before the secrets exist). The `production` environment is created
+7. **Branch protection on `main`**: require the status checks `check`, `vocab`, `unit`, `build`, `e2e`, `e2e-headers`
+   and `lighthouse` (06 §4; a skipped job counts as passing, so `lighthouse` does not block before the secrets exist).
+   `e2e` is the gate job over the matrix: it fails unless every `e2e (<engine> <shard>/3)` job succeeded (it runs even
+   when they are skipped, so a failed `build` fails it too). Do not require the shard checks themselves, so changing the
+   shard count never leaves a required check that no longer reports; remove the `e2e (chromium)` check of waves 1–2 if
+   it is still listed. The `production` environment is created
    by the first deploy; adding required reviewers to it pauses every deploy until approved.
 
 ## Visual baselines
@@ -83,9 +90,10 @@ Do this once, before the first deploy.
 The `visual` project (`e2e/visual/board.visual.ts`, 06 §1) compares 4 fixtures (台灣台南 on o200k, cl100k and Grok-1;
 𰻝 on Gemma 4) × 2 themes × 3 viewports (360, 768, 1440) with `toHaveScreenshot` at `maxDiffPixelRatio` 0.002. The
 baselines are Linux renders (chromium + `fonts-noto-cjk` on `ubuntu-24.04`), stored as
-`e2e/visual/__screenshots__/<fixture>-<theme>-<width>-linux.png`; off Linux, or while a baseline is absent, each test
-skips with a notice (and the `e2e (chromium 1/3)` job prints a "Visual baselines absent" notice). They cannot be
-produced on Windows or macOS — fonts and anti-aliasing differ. To create or refresh them:
+`e2e/visual/__screenshots__/<fixture>-<theme>-<width>-linux.png`. Off Linux, or while no baseline is committed at all,
+each test skips with a notice (and the `e2e (chromium 1/3)` job prints a "Visual baselines absent" notice); once any
+baseline exists, a missing one fails its test. They cannot be produced on Windows or macOS — fonts and anti-aliasing
+differ. To create or refresh them:
 
 1. Actions → **ci** → _Run workflow_ on the branch whose UI the baselines should show (after the last UI change of a
    wave). Tick **open_pr** to have the run push `visual-baselines/<sha>` and open a PR (needs _Settings → Actions →
