@@ -522,7 +522,8 @@
     };
   });
 
-  // The sheet's height feeds scroll-padding-block-end so the focused row is never under it (WCAG 2.4.11).
+  // The sheet's height (plus an 8 px gap in the CSS below) feeds scroll-padding-block-end so the focused row is never
+  // under it (WCAG 2.4.11).
   $effect(() => {
     const height = viewport.surface === 'sheet' ? (sheetExpanded ? '40vh' : '56px') : null;
     if (height === null) document.documentElement.style.removeProperty('--sheet-height');
@@ -719,8 +720,10 @@
     }
   }
 
+  /* The sheet height plus a gap, so a focused cell scrolled "nearest" never sits flush against the sheet: flush, its
+     focus ring is cut off, and a sub-pixel layout difference (fonts, scrollbars) already counts as overlap. */
   :global(html) {
-    scroll-padding-block-end: var(--sheet-height);
+    scroll-padding-block-end: calc(var(--sheet-height, 0px) + 8px);
   }
 
   :global(body) {

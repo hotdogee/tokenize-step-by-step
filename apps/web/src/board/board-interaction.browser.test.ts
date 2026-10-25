@@ -254,7 +254,8 @@ describe('inspector region (05 §5, AD-34)', () => {
     expect(handle?.getAttribute('aria-expanded')).toBe('false');
     expect(handle?.getAttribute('aria-controls')).toBe('inspector-panel');
     expect(document.documentElement.style.getPropertyValue('--sheet-height')).toBe('56px');
-    expect(getComputedStyle(document.documentElement).scrollPaddingBottom).toBe('56px');
+    // The sheet height plus the 8 px gap that keeps a focused cell's ring clear of the sheet.
+    expect(getComputedStyle(document.documentElement).scrollPaddingBottom).toBe('64px');
     expect(host?.getBoundingClientRect().height).toBe(56);
     handle?.click();
     await frames(2);
