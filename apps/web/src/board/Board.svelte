@@ -33,6 +33,7 @@
   import { copyValueOf, inspectorModel } from '../inspector/model.ts';
   import { progressPercent } from '../shell/progress.ts';
   import { isComposing } from '../shell/shortcuts.ts';
+  import { placePanel, type Extent } from './anchor.ts';
   import type { InteractionState } from './cell-state.ts';
   import { nfkcSource, type BoardContext } from './cells.ts';
   import { appTier, columnsFor, GUTTER, tiersFor, tokenMode, type BoardTier } from './geometry.ts';
@@ -432,17 +433,23 @@
     }
     const element = cellElement(inspected);
     if (element === null) return;
-    // Beside the active cell without covering its packed row (the vertical slice the panel explains): below the row,
-    // flipped above it only when it fits there and not below.
+    // Beside the active cell without covering its packed row (the vertical slice the panel explains) nor, while a pinned
+    // or hovered cell is inspected, the row holding keyboard focus (WCAG 2.4.11: stay pinned and keep arrowing).
+    const rows = [rowExtent(element)];
+    const focused = gridFocused && focusRef !== null && !sameRef(focusRef, inspected) ? cellElement(focusRef) : null;
+    if (focused !== null) rows.push(rowExtent(focused));
     const cell = element.getBoundingClientRect();
-    const row = (element.closest('.bd-row') ?? element).getBoundingClientRect();
     const box = layout.getBoundingClientRect();
     const width = Math.min(320, box.width);
-    const panelHeight = host?.offsetHeight ?? 0;
-    const above = row.bottom + 4 + panelHeight > window.innerHeight && row.top - panelHeight - 4 >= 0;
-    const top = above ? row.top - box.top - panelHeight - 4 : row.bottom - box.top + 4;
+    const top = placePanel(rows, host?.offsetHeight ?? 0, window.innerHeight) - box.top;
     const left = Math.min(Math.max(0, cell.left - box.left), Math.max(0, box.width - width));
     anchor = { top: Math.round(top), left: Math.round(left) };
+  }
+
+  /** Viewport extent of the packed row holding `element`. */
+  function rowExtent(element: HTMLElement): Extent {
+    const { top, bottom } = (element.closest('.bd-row') ?? element).getBoundingClientRect();
+    return { top, bottom };
   }
 
   onMount(() => {
@@ -555,9 +562,9 @@
     });
   });
 
-  // Anchored panel placement follows the inspected cell.
+  // Anchored panel placement follows the inspected cell and keyboard focus (a focus move while pinned re-places it).
   $effect(() => {
-    track(inspected, viewport.surface, K);
+    track(inspected, focusRef, gridFocused, viewport.surface, K);
     void tick().then(updateAnchor);
   });
 
