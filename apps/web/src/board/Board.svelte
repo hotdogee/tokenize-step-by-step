@@ -647,6 +647,7 @@
         data-pending={board.kind === 'final' ? undefined : ''}
         data-composing={app.composing ? '' : undefined}
         data-cells={cellCount}
+        data-window={board.window === null ? undefined : `${String(board.window.start)}-${String(board.window.end)}`}
         style:--k={K}
         bind:this={grid}
         onkeydown={onKeydown}

@@ -30,6 +30,7 @@
   import type PickerDialogComponent from '../shell/PickerDialog.svelte';
   import { isEditableTarget, matchShortcut } from '../shell/shortcuts.ts';
   import PipelineRail from '../pipeline/PipelineRail.svelte';
+  import { setViewResolvers } from '../board/view-cache.ts';
   import TextInput from '../shell/TextInput.svelte';
   import type { AppState } from './app-state.svelte.ts';
   import { createAppState } from './bootstrap.ts';
@@ -174,9 +175,11 @@
   onMount(() => {
     i18n.setPage('main');
     app.setResultTransition((update) => crossfade(document.getElementById('board'), update, motionPrefs.reduced));
+    setViewResolvers(app.viewResolvers);
     void app.start();
     return () => {
       app.setResultTransition(null);
+      setViewResolvers(null);
       clearTimeout(urlTimer);
     };
   });

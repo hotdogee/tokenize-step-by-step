@@ -24,6 +24,34 @@ export async function cachedVocabUrls(): Promise<string[] | null> {
   }
 }
 
+/** One cached response: its URL and its body size in bytes (`Content-Length`, else the body read once). */
+export interface CachedEntry {
+  readonly url: string;
+  readonly bytes: number | null;
+}
+
+/** Every response cached by the loader with its size (About › Diagnostics), or null without the Cache API. */
+export async function cachedVocabEntries(): Promise<CachedEntry[] | null> {
+  if (typeof caches === 'undefined') return null;
+  try {
+    const entries: CachedEntry[] = [];
+    for (const name of await caches.keys()) {
+      if (!name.startsWith(VOCAB_CACHE_PREFIX)) continue;
+      const cache = await caches.open(name);
+      for (const request of await cache.keys()) {
+        const response = await cache.match(request);
+        const length = Number(response?.headers.get('Content-Length') ?? Number.NaN);
+        const bytes =
+          Number.isFinite(length) && length > 0 ? length : response === undefined ? null : (await response.blob()).size;
+        entries.push({ url: request.url, bytes });
+      }
+    }
+    return entries;
+  } catch {
+    return null;
+  }
+}
+
 /** The tokenizers with a cached `/tok/<id>/….bin`. */
 export function cachedTokenizers(urls: readonly string[], ids: readonly TokenizerId[]): Set<TokenizerId> {
   const out = new Set<TokenizerId>();

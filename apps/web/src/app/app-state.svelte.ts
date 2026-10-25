@@ -66,6 +66,8 @@ import { DEFAULT_TOKENIZER, EXAMPLES, tokenizerEntry } from './registry.ts';
 import { readStored, STORAGE_KEYS, writeStored } from './storage.ts';
 import { textStats } from './text-stats.ts';
 import type { UrlState } from './url-state.ts';
+import { VocabLookup } from './vocab-lookup.ts';
+import type { ViewResolverSource } from '../board/view-cache.ts';
 import type * as WindowSliceModule from './window-slice.ts';
 import type { ByteWindow } from './window-slice.ts';
 
@@ -190,6 +192,13 @@ export class AppState {
   /** An on-demand run is in flight (the banner's button shows "tokenizing"). */
   running = $state(false);
 
+  /** The views' vocabulary resolvers over the Worker's `lookup` (registered with the view cache by App.svelte). */
+  readonly lookup: VocabLookup;
+  /** Bumps when lookup answers arrive (views built after it carry them). */
+  lookupVersion = $state(0);
+  /** What App.svelte registers with the view cache (`setViewResolvers`). */
+  readonly viewResolvers: ViewResolverSource;
+
   /** What the board renders (see `BoardState`). */
   readonly board: BoardState = $derived.by(() => this.#boardState());
 
@@ -205,6 +214,8 @@ export class AppState {
   /** An on-demand run asked for before the tokenizer was loaded. */
   #pendingRun = false;
   #started = false;
+  /** The result of the last on-demand run (the counts line's source in on-demand tiers, AD-27). */
+  #onDemand: TokenizationResult | null = $state.raw(null);
   /** Code points of `text` (kept with it; `setText` updates both). */
   #codePoints = countCodePoints(DEFAULT_EXAMPLE);
   /** The window slicer (`window-slice.ts`), imported when a text first reaches an on-demand tier (not startup code). */
@@ -221,6 +232,17 @@ export class AppState {
   ) {
     this.#client = client;
     this.#precomputed = source;
+    this.lookup = new VocabLookup(client, () => {
+      this.lookupVersion++;
+    });
+    const lookupVersion = (): number => this.lookupVersion;
+    const lookup = this.lookup;
+    this.viewResolvers = {
+      get version() {
+        return lookupVersion();
+      },
+      resolversFor: (result) => lookup.resolversFor(result),
+    };
     this.#applyUrl(url);
     this.options = optionsFor(tokenizerEntry(this.tokenizer));
     // The inlined default example only answers the default text on the default tokenizer.
@@ -347,7 +369,10 @@ export class AppState {
   get countsResult(): TokenizationResult | null {
     const result = this.result;
     if (isOnDemand(this.longInput))
-      return result !== null && result.tokenizer === this.tokenizer && sameTokenOptions(result, this.options)
+      return result !== null &&
+        result === this.#onDemand &&
+        result.tokenizer === this.tokenizer &&
+        sameTokenOptions(result, this.options)
         ? result
         : null;
     return this.#isCurrent(result) ? result : null;
@@ -507,7 +532,10 @@ export class AppState {
     if (estimatedResultBytes(utf8ByteLength(text), trace) > RELEASE_ABOVE_BYTES) this.result = null;
     try {
       const result = await this.#client.encode(text, { ...this.options, trace });
-      if (seq === this.#seq) this.#accept(result, 'live', seq);
+      if (seq === this.#seq) {
+        this.#onDemand = result;
+        this.#accept(result, 'live', seq);
+      }
     } catch (error) {
       this.#encodeFailed(error, seq);
     } finally {

@@ -102,10 +102,18 @@ export const aboutEn = {
   'about.diagnostics.safari': 'Safari removes this cache after 7 days without a visit.',
   'about.diagnostics.lastLoad': 'Last tokenizer load in this tab',
   'about.diagnostics.lastLoadNone': 'No tokenizer has been loaded in this tab yet.',
-  'about.diagnostics.lastLoadValue': '{name}: {ms}, {source}, layer {layer}, content encoding {encoding}',
+  'about.diagnostics.lastLoadValue':
+    '{name}: {ms}, {source}, {bytes} transferred, layer {layer}, content encoding {encoding}',
   'about.diagnostics.fromCache': 'from the cache',
   'about.diagnostics.fromNetwork': 'from the network',
   'about.diagnostics.none': 'none',
+  'about.diagnostics.workerFeatures': 'In the tokenizer worker',
+  'about.diagnostics.workerNone': 'The tokenizer worker has not started in this tab yet.',
+  'about.diagnostics.cacheEntry': '{path} ({size})',
+  'about.diagnostics.unicode': 'Pre-tokenizer Unicode {pinned}; your browser reports ≈ Unicode {version}.',
+  'about.diagnostics.unicodeUnknown':
+    'Pre-tokenizer Unicode {pinned}; your browser’s Unicode version could not be detected.',
+  'about.diagnostics.build': 'Build {sha}, {date}.',
 } as const satisfies Readonly<Record<string, Message>>;
 
 /** Every About-page message key. */
