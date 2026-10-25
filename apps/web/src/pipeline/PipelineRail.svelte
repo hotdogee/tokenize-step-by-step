@@ -23,7 +23,7 @@
    *   end" (05 §2; Play does not).
    * - The merge list sits in the rail under the scrubber (on narrow viewports it is the collapsible section 05 §1 asks
    *   for) with a single tab stop (roving tabindex), so it adds one Tab stop between Play and the board where 05 §8 has
-   *   it after the inspector; WP13 owns the final region order.
+   *   it after the inspector; WP13 kept it here at every width (docs/dev.md, "How the page is wired").
    * - The motion director (motion/director.svelte.ts) animates every commit; the switch crossfades wrap the byte-view,
    *   tokenizer and locale switches (motion/view-transition.ts). Both load nothing before the first interaction.
    */

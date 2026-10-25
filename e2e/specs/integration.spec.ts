@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
 import { mockProvider, openDrawer, XAI_URL } from './byok-helpers.ts';
 import { focusBoard, grid } from './board-helpers.ts';
-import { checkedStop, domParts, fixtureReplay, rail, scrubber } from './pipeline-helpers.ts';
+import { checkedStop, domParts, fixtureReplay, maskUnnamed, rail, scrubber } from './pipeline-helpers.ts';
 import { openShell, pickTokenizer } from './shell-helpers.ts';
 
 const TEXT = '台灣台南';
@@ -52,13 +52,13 @@ test('shell, board, rail, inspector and drawer work together on the live Worker'
   await scrubber(page).focus();
   await page.keyboard.press('Home');
   await expect(scrubber(page)).toHaveAttribute('aria-valuetext', new RegExp(`^step 0 / ${String(last)} · `));
-  await expect.poll(() => domParts(page)).toEqual(replay[0]);
+  await expect.poll(async () => maskUnnamed(await domParts(page), replay[0])).toEqual(replay[0]);
   await page.keyboard.press('End');
   await expect(scrubber(page)).toHaveAttribute(
     'aria-valuetext',
     new RegExp(`^step ${String(last)} / ${String(last)} · `),
   );
-  await expect.poll(() => domParts(page)).toEqual(replay[last]);
+  await expect.poll(async () => maskUnnamed(await domParts(page), replay[last])).toEqual(replay[last]);
 
   // Inspector: follows board focus.
   await focusBoard(page);

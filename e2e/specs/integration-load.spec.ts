@@ -6,12 +6,14 @@
  *   every tokenizer; once the engine answers, the same chips' live results have identical token cells (ids, kinds,
  *   partial flags, variants) — gemma4's whitespace pieces stay Normal (AD-31);
  * - a second visit with `/tok/*` blocked at the network layer loads o200k from the Cache API (chromium), and About ›
- *   Diagnostics shows the cached file with its size, the last load and the Worker's features — without a Worker.
+ *   Diagnostics shows the cached file with its size, the last load and the Worker's features — without a Worker;
+ * - the views name intermediate parts through the Worker's vocabulary lookup (TokenizationView `idOf`).
  */
 import { expect, test, type Page, type Route } from '@playwright/test';
 import type { TokenizerId } from '@tsbs/core';
 import { watchPage } from '../support/page-guards.ts';
 import { grid } from './board-helpers.ts';
+import { domParts } from './pipeline-helpers.ts';
 import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
 
 /** Picker names (part of each tokenizer's display name) in the brief's lab order. */
@@ -214,4 +216,13 @@ test('a second visit with /tok/* blocked loads o200k from the Cache API; About �
   );
   await expect(diagnostics.getByTestId('diagnostics-build')).toContainText(/^Build \w+/);
   expect(workers).toEqual([]);
+});
+
+test('stop 4 names every part through the Worker vocabulary lookup (TokenizationView idOf)', async ({ page }) => {
+  await openShell(page, 'en');
+  await page.locator('body').press('Digit4');
+  await expect(grid(page)).toHaveAttribute('data-stage', '4');
+  // 台灣台南 on o200k before any merge: twelve single bytes, each a vocabulary entry no fixture replay can name.
+  await expect.poll(async () => (await domParts(page)).length).toBe(12);
+  await expect.poll(async () => (await domParts(page)).filter((part) => part.endsWith('|-'))).toEqual([]);
 });

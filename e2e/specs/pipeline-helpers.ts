@@ -52,6 +52,19 @@ export async function domParts(page: Page): Promise<Part[]> {
   });
 }
 
+/**
+ * `dom` with the id of every part that `expected` leaves unnamed (`-`) masked: since WP13 the board names such parts
+ * through the Worker's vocabulary lookup (single bytes before their first merge), which a fixture replay cannot do.
+ * Every id the replay does name must still match, and so must every part's bytes.
+ */
+export function maskUnnamed(dom: readonly Part[], expected: readonly Part[] | undefined): Part[] {
+  return dom.map((part, i) => {
+    const want = expected?.[i];
+    if (want === undefined || !want.endsWith('|-')) return part;
+    return `${part.split('|')[0] ?? ''}|-`;
+  });
+}
+
 const FIXTURES = new URL('../../fixtures/', import.meta.url);
 const fixtures = new Map<TokenizerId, Fixture>();
 
