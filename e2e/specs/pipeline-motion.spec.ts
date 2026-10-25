@@ -1,29 +1,18 @@
 /**
- * Motion on the real page (05 §7; 06 §3 "Stop 2→3 morph: no frame > 32 ms at ≤ 600 cells"), chromium:
+ * Motion on the real page (05 §7), chromium (the stop 2→3 morph's frame budget is pipeline-trace.spec.ts):
  *
- * - the stop 2→3 morph of 150 ideographs (150 char boxes + 450 byte cells = 600 cells, all on screen) FLIPs the boxes
- *   and unfolds the bytes, and a chromium trace shows no main-thread task over 32 ms while it plays. Like the unit perf
- *   ceilings, the 32 ms bound holds on a quiet machine: it is enforced with `TSBS_PERF=1` (run serially:
- *   `TSBS_PERF=1 pnpm e2e pipeline-motion --workers=1`); the default parallel run, where workers compete for the CPU,
- *   checks twice that (still catching a pathological regression). The commit itself — the keydown task that re-renders
- *   the board and the first frame that paints the new byte tier — is the board's render cost; it is measured and
- *   attached to the report (`commit-frame` annotation), not asserted;
  * - fast scrubbing cancels the running FLIP and only crossfades, so `document.getAnimations()` drains;
  * - with `prefers-reduced-motion: reduce` no animation touches `transform`, opacity swaps stay ≤ 150 ms, every
  *   programmatic scroll uses `behavior: 'auto'` and the picker's loading bar has no transition;
  * - a byte-view switch is a View Transition where the engine has `document.startViewTransition`, and an opacity fade of
  *   the board under a Firefox 143 user agent without it (Firefox < 144 has no View Transitions).
  */
-import process from 'node:process';
 import { expect, test, type Page } from '@playwright/test';
 import { chooseExample, grid } from './board-helpers.ts';
 import { motionReady, scrubber } from './pipeline-helpers.ts';
 import { openShell, pickTokenizer } from './shell-helpers.ts';
 
 test.skip(({ browserName }) => browserName !== 'chromium', 'chromium: tracing, CDP and the View Transition stand-in');
-
-/** 06 §3: no frame over 32 ms — enforced in a serial perf run (`TSBS_PERF=1`), doubled under parallel workers. */
-const FRAME_CEILING_MS = process.env['TSBS_PERF'] === '1' ? 32 : 64;
 
 interface LoggedAnimation {
   readonly target: string;
@@ -64,77 +53,21 @@ async function instrument(page: Page): Promise<void> {
 const logged = (page: Page): Promise<LoggedAnimation[]> =>
   page.evaluate(() => (window as unknown as Record<string, LoggedAnimation[]>)['__tsbsAnimations'] ?? []);
 
+/** Waits until a stage change's animations (they start a few frames after the commit) have started and finished. */
 async function drained(page: Page): Promise<void> {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        let n = 0;
+        const tick = (): void => {
+          if (++n >= 4) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }),
+  );
   await expect.poll(() => page.evaluate(() => document.getAnimations().length), { timeout: 5000 }).toBe(0);
 }
-
-interface TraceEvent {
-  readonly name: string;
-  readonly ph: string;
-  readonly ts: number;
-  readonly dur?: number;
-  readonly pid: number;
-  readonly tid: number;
-  readonly args?: { readonly name?: string; readonly data?: { readonly type?: string } };
-}
-
-test('the stop 2→3 morph at 600 cells has no main-thread task over 32 ms while it plays (chromium trace)', async ({
-  page,
-  browser,
-}) => {
-  await page.setViewportSize({ width: 1440, height: 3200 });
-  await openShell(page, 'en');
-  const text = '台灣台南日本語東京都渋谷区'.repeat(12).slice(0, 150);
-  await page.locator('#text-input').fill(text);
-  await expect(page.getByTestId('counts')).toContainText('450 bytes');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
-  await motionReady(page);
-  for (const key of ['Digit2', 'Digit3', 'Digit2']) {
-    // One morph and back first, so the measured one runs warm (JIT, layers, fonts).
-    await page.keyboard.press(key);
-    await expect(grid(page)).toHaveAttribute('data-stage', key.slice(-1));
-    await drained(page);
-  }
-  expect(await page.locator('.bd-cell-char').count()).toBe(150);
-
-  await browser.startTracing(page, {
-    categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'toplevel'],
-  });
-  await page.keyboard.press('Digit3');
-  await expect(grid(page)).toHaveAttribute('data-stage', '3');
-  const animated = await page.evaluate(() => document.getAnimations().length);
-  await drained(page);
-  await page.waitForTimeout(100);
-  const trace = JSON.parse((await browser.stopTracing()).toString('utf8')) as { traceEvents: TraceEvent[] };
-
-  expect(animated).toBeGreaterThan(150); // the boxes, their glyphs and the byte tier rows
-  const events = trace.traceEvents;
-  const keydown = events.findLast((e) => e.name === 'EventDispatch' && e.args?.data?.type === 'keydown');
-  expect(keydown).toBeDefined();
-  if (keydown === undefined) return;
-  const tasks = events
-    .filter(
-      (e) =>
-        e.name === 'ThreadControllerImpl::RunTask' && e.ph === 'X' && e.pid === keydown.pid && e.tid === keydown.tid,
-    )
-    .sort((a, b) => a.ts - b.ts);
-  const end = (e: TraceEvent): number => e.ts + (e.dur ?? 0);
-  const commit = tasks.find((task) => task.ts <= keydown.ts && end(task) >= end(keydown));
-  expect(commit).toBeDefined();
-  if (commit === undefined) return;
-  const paints = events.filter((e) => e.name === 'Paint' && e.pid === keydown.pid && e.tid === keydown.tid);
-  const firstFrame = tasks.find(
-    (task) => task.ts >= end(commit) && paints.some((p) => p.ts >= task.ts && end(p) <= end(task)),
-  );
-  const after = tasks.filter((task) => task.ts > end(firstFrame ?? commit));
-  const ms = (e: TraceEvent | undefined): number => Math.round((e?.dur ?? 0) / 100) / 10;
-  test.info().annotations.push({
-    type: 'commit-frame',
-    description: `keydown task ${String(ms(commit))} ms, first frame ${String(ms(firstFrame))} ms; ${String(after.length)} tasks after, longest ${String(Math.max(0, ...after.map(ms)))} ms (ceiling ${String(FRAME_CEILING_MS)} ms)`,
-  });
-  expect(after.length).toBeGreaterThan(0);
-  expect(Math.max(...after.map(ms))).toBeLessThanOrEqual(FRAME_CEILING_MS);
-});
 
 test('fast scrubbing cancels the running FLIP and only crossfades; the animations drain', async ({ page }) => {
   await openShell(page, 'en');

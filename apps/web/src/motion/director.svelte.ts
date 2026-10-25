@@ -8,8 +8,9 @@
  *
  * At stop 5 it also marks the part the current step formed: `data-just-merged` (the star, motion.css), the hidden
  * "merged at this step" description added to the cell's `aria-describedby` (restored before the next commit, so the
- * board's own attributes are never left changed), the pulse after a forward step and, in follow mode, a
- * `scrollIntoView({ block: 'nearest' })` with the reduced-motion behaviour.
+ * board's own attributes are never left changed), the byte-tier caret under a merge's junction (`data-merge-caret`), the
+ * pulse after a forward step and, in follow mode, a `scrollIntoView({ block: 'nearest' })` with the reduced-motion
+ * behaviour.
  *
  * The choreography (choreography.ts + flip.ts) is a lazy chunk loaded on the first interaction with the page; until it
  * arrives changes are discrete.
@@ -61,6 +62,8 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
   let last: Position | null = null;
   let prepared: Choreography.Prepared | null = null;
   let marks: Mark[] = [];
+  /** Byte cells showing the merge caret (`data-merge-caret`). */
+  let carets: HTMLElement[] = [];
   let outlineTimer: ReturnType<typeof setTimeout> | undefined;
 
   function clearMarks(): void {
@@ -72,6 +75,8 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
       else el.setAttribute('aria-describedby', describedBy);
     }
     marks = [];
+    for (const el of carets) delete el.dataset['mergeCaret'];
+    carets = [];
   }
 
   /** The cells (all fragments) of the parts step `k` formed: the merged part, or every byte of a split. */
@@ -87,6 +92,27 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
       i++;
     } while ((parts.partStart[i] ?? end) < end);
     return cells;
+  }
+
+  /** Merge step `k`: the right part's index before it (the left part's index + 1), or null for a split / no timeline. */
+  function rightPartOf(view: TokenizationView | null, k: number): number | null {
+    const timeline = view?.result.timeline ?? null;
+    if (view === null || timeline === null || k < 1 || k > view.stepCount) return null;
+    if (timeline.stepKind[k - 1] !== StepKind.Merge) return null;
+    const left = view.partsAt(k).justMerged;
+    return left < 0 ? null : left + 1;
+  }
+
+  /** The byte cells (hex and dec rows) at the junction of merge step `k` (its right part's first byte). */
+  function junctionCells(grid: HTMLElement, view: TokenizationView, k: number): HTMLElement[] {
+    const timeline = view.result.timeline;
+    if (timeline?.stepKind[k - 1] !== StepKind.Merge) return [];
+    const mid = String(timeline.stepMid[k - 1] ?? 0);
+    return [
+      ...grid.querySelectorAll<HTMLElement>(
+        `[data-tier="hex"][data-index="${mid}"], [data-tier="dec"][data-index="${mid}"]`,
+      ),
+    ];
   }
 
   function mark(cells: readonly HTMLElement[]): void {
@@ -117,7 +143,9 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
         prepared = choreography.prepare(grid, { kind: 'stage', from: last.stage, to: stage }, reduced);
       } else if (stage === 5 && step !== last.step) {
         const fast = Math.abs(step - last.step) > 1 || performance.now() - last.at < FAST_SCRUB_MS;
-        prepared = choreography.prepare(grid, { kind: 'step', fast, forward: step > last.step }, reduced);
+        const forward = step > last.step;
+        const mergeRight = !fast && forward ? rightPartOf(options.view(), step) : null;
+        prepared = choreography.prepare(grid, { kind: 'step', fast, forward, mergeRight }, reduced);
       }
     });
   });
@@ -136,11 +164,15 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
       if (stage !== 5 || step < 1 || grid === null || view === null || step > view.stepCount) return;
       const cells = formedCells(grid, view, step);
       mark(cells);
+      carets = junctionCells(grid, view, step);
+      for (const el of carets) el.dataset['mergeCaret'] = '';
       const stepped = previous !== null && previous.result === result && previous.stage === 5 && previous.step !== step;
       if (!stepped) return;
       if (step === previous.step + 1 && last.at - previous.at >= FAST_SCRUB_MS) {
-        if (!motionPrefs.reduced) choreography?.pulse(cells);
-        else {
+        if (!motionPrefs.reduced) {
+          choreography?.pulse(cells);
+          choreography?.revealCaret(carets);
+        } else {
           // Reduced motion: a discrete swap and a 600 ms static outline — an attribute, not an animation.
           for (const el of cells) el.dataset['mergeOutline'] = '';
           outlineTimer = setTimeout(() => {

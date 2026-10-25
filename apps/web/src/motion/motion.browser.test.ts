@@ -1,6 +1,9 @@
 /**
- * Motion in chromium (05 §7): the stop 2→3 morph FLIPs the char boxes (glyphs counter-scaled) and unfolds the byte cells;
- * a merge step FLIPs the changed chips and marks the merged part (star, pulse, "merged at this step"); rapid scrubbing
+ * Motion in chromium (05 §7): the stop 2→3 morph keeps its First state through the frame that paints the commit (no
+ * animation, the boxes' stop-2 geometry) and then FLIPs the char boxes (glyphs counter-scaled) and unfolds the byte
+ * cells, and a change before the start restores the board's own geometry; leaving stop 5 fades a copy of the chunk
+ * brackets out; a merge step FLIPs the changed chips, slides a copy of the right part into the left one, draws the
+ * byte-tier caret and marks the merged part (star, pulse, "merged at this step"); rapid scrubbing
  * cancels the running FLIP (`Animation.cancel()`) and only crossfades, so `document.getAnimations()` drains; the in-app
  * reduced-motion switch leaves zero transform animations, opacity swaps ≤ 150 ms, `scrollIntoView` with
  * `behavior: 'auto'` and the loading bar without a transition; the switch crossfade uses a View Transition when
@@ -11,7 +14,7 @@ import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { appWith, fixtureResult, frames } from '../board/board.test-helper.ts';
 import { animatesTransform, durations, mountRail, type MountedRail } from '../pipeline/pipeline.test-helper.ts';
-import { cancelAll, runningCount } from './flip.ts';
+import { cancelAll, heldCount, runningCount } from './flip.ts';
 import { motionPrefs } from './motion-prefs.svelte.ts';
 import { crossfade, startViewTransitionOf, wrapSwitches } from './view-transition.ts';
 
@@ -35,12 +38,22 @@ const sleep = (ms: number): Promise<void> =>
     setTimeout(resolve, ms);
   });
 
-/** Moves the timeline position and lets Svelte commit it (the director animates around the commit). */
+/**
+ * Moves the timeline position and lets Svelte commit it (the director animates around the commit): a step animates at
+ * once, a stage change three frames later (flip.ts `Plan.startAfterPaint`), so stage changes wait four frames.
+ */
 async function go(board: MountedRail, change: { stage?: 1 | 2 | 3 | 4 | 5 | 6; step?: number }): Promise<void> {
   if (change.stage !== undefined) board.app.setStage(change.stage);
   if (change.step !== undefined) board.app.step = change.step;
   flushSync();
-  await frames(1);
+  await frames(change.stage === undefined ? 1 : 4);
+}
+
+/** Each char box's `--dx` / `--w` as the board wrote them. */
+function boxVars(grid: HTMLElement): string[] {
+  return [...grid.querySelectorAll<HTMLElement>('.bd-box')].map(
+    (box) => `${box.style.getPropertyValue('--dx')}/${box.style.getPropertyValue('--w')}`,
+  );
 }
 
 /** Waits until every animation on the page has finished. */
@@ -55,6 +68,40 @@ async function showDefault(stage: 1 | 2 | 3 | 4 | 5 | 6, step?: number): Promise
 }
 
 describe('stop 2 → 3 (the "aha" morph, AD-17)', () => {
+  it('keeps the First state through the commit frame, then starts the animations', async () => {
+    const board = await showDefault(2);
+    const first = boxVars(board.grid);
+    expect(first).toEqual(['0/1', '-2/1', '-4/1', '-6/1']); // uniform cells left-packed over 3-byte columns
+    board.app.setStage(3);
+    flushSync(); // the board committed stop 3 ...
+    expect(board.grid.querySelectorAll('.bd-cell-byte')).toHaveLength(12);
+    expect(boxVars(board.grid)).toEqual(first); // ... but the boxes keep their stop-2 geometry for the commit frame
+    expect(document.getAnimations()).toEqual([]);
+    expect(heldCount()).toBe(1);
+    await frames(2); // the frame after: the boxes at their byte spans under the inverted transform, still no animation
+    expect(boxVars(board.grid)).toEqual(['0/3', '0/3', '0/3', '0/3']);
+    expect(document.getAnimations()).toEqual([]);
+    const box = board.grid.querySelector<HTMLElement>('.bd-box');
+    expect(box?.style.getPropertyValue('transform')).toMatch(/translateX\(.+px\) scaleX\(0\.3/);
+    await frames(1);
+    expect(heldCount()).toBe(0);
+    expect(document.getAnimations().length).toBeGreaterThan(0);
+    expect(box?.style.getPropertyValue('transform')).toBe(''); // the animation took over from the held keyframe
+  });
+
+  it("restores the board's own geometry when the position changes before the morph starts", async () => {
+    const board = await showDefault(2);
+    board.app.setStage(3);
+    flushSync();
+    board.app.setStage(4);
+    flushSync(); // cancelled while held: the board's stop-3 values come back before it commits stop 4
+    await frames(4);
+    expect(boxVars(board.grid)).toEqual(['0/3', '0/3', '0/3', '0/3']);
+    await drained();
+    expect(heldCount()).toBe(0);
+    for (const box of board.grid.querySelectorAll<HTMLElement>('.bd-box')) expect(box.style.transform).toBe('');
+  });
+
   it('FLIPs the char boxes with translate + scaleX, counter-scales the glyphs and unfolds the byte cells', async () => {
     const board = await showDefault(2);
     await go(board, { stage: 3 });
@@ -81,8 +128,31 @@ describe('stop 2 → 3 (the "aha" morph, AD-17)', () => {
   });
 });
 
+describe('stop 5 → 6', () => {
+  it('fades a detached copy of the leaving chunk brackets out, invisible to the board and assistive technology', async () => {
+    const board = await showDefault(5, 8);
+    expect(board.grid.querySelectorAll('[data-tier="chunk"]').length).toBeGreaterThan(0);
+    await go(board, { stage: 6 });
+    expect(board.grid.querySelectorAll('[data-tier="chunk"]')).toHaveLength(0);
+    const ghosts = [...board.grid.querySelectorAll<HTMLElement>('.mo-ghost')];
+    expect(ghosts.length).toBeGreaterThan(0);
+    for (const ghost of ghosts) {
+      expect(ghost.classList.contains('bd-tier-chunk')).toBe(true);
+      expect(ghost.getAttribute('aria-hidden')).toBe('true');
+      expect(ghost.inert).toBe(true);
+      expect(ghost.querySelectorAll('[role], [tabindex], [id], [data-tier]')).toHaveLength(0);
+      const fades = ghost
+        .getAnimations()
+        .map((a) => (a.effect as KeyframeEffect).getKeyframes().map((f) => f['opacity']));
+      expect(fades).toEqual([['1', '0']]);
+    }
+    await drained();
+    expect(board.grid.querySelectorAll('.mo-ghost')).toHaveLength(0);
+  });
+});
+
 describe('merge steps (05 §7)', () => {
-  it('FLIPs the changed chips, pulses and marks the merged part', async () => {
+  it('FLIPs the changed chips, slides the right part into the left one, draws the caret, pulses and marks the merged part', async () => {
     const board = await showDefault(5, 3);
     await sleep(150); // not a fast scrub
     await go(board, { step: 4 });
@@ -93,6 +163,22 @@ describe('merge steps (05 §7)', () => {
     const animations = document.getAnimations();
     expect(animations.some(animatesTransform)).toBe(true);
     expect(animations.some((a) => (a.effect as KeyframeEffect).pseudoElement === '::before')).toBe(true); // the pulse
+    const right = [...board.grid.querySelectorAll<HTMLElement>('.bd-tier-token > .mo-ghost')];
+    expect(right).toHaveLength(1); // a copy of the right part, sliding the 2 px gap and fading into the merged chip
+    expect(right[0]?.getAttribute('aria-hidden')).toBe('true');
+    expect(right[0]?.hasAttribute('data-tier')).toBe(false);
+    const slide = right[0]?.getAnimations()[0]?.effect as KeyframeEffect | undefined;
+    expect(slide?.getKeyframes().map((f) => [f['opacity'], f['transform']])).toEqual([
+      ['1', 'none'],
+      ['0', 'translateX(-2px)'],
+    ]);
+    const carets = [...board.grid.querySelectorAll<HTMLElement>('[data-merge-caret]')];
+    expect(carets.length).toBeGreaterThan(0); // under the junction, in each byte row
+    for (const caret of carets) expect(caret.closest('.bd-cell-byte')).toBe(caret);
+    await drained();
+    expect(board.grid.querySelectorAll('.mo-ghost')).toHaveLength(0);
+    await go(board, { step: 5 });
+    for (const caret of carets) expect(caret.hasAttribute('data-merge-caret')).toBe(false); // the next step's own
   });
 
   it('cancels the running FLIP on a rapid scrub and only crossfades, so the animations drain', async () => {
