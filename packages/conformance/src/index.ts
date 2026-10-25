@@ -1,11 +1,21 @@
 /**
  * @tsbs/conformance — golden-fixture conformance shared by the engine tests and `tsbs-vocab build` (AD-13).
  *
- * `runFixture(fixture, tokenizer)` arrives with WP01 (04 §7). WP00 provides the conformance modes and the engine probe
- * that implements the interim gate (AD-32): under `skip-missing-engine`, conformance is skipped only for a family whose
- * engine factory `@tsbs/core` does not export yet.
+ * `runFixture(fixture, tokenizer)` (04 §7, WP01) checks a tokenizer against a golden fixture; WP00 provides the conformance
+ * modes and the engine probe that implements the interim gate (AD-32): under `skip-missing-engine`, conformance is
+ * skipped only for a family whose engine factory `@tsbs/core` does not export yet.
  */
 import type { Family } from '@tsbs/core';
+
+export { compareMergeSteps } from './position-steps.ts';
+export {
+  firstDifference,
+  formatReport,
+  runFixture,
+  type ConformanceFailure,
+  type ConformanceReport,
+  type RunFixtureOptions,
+} from './run-fixture.ts';
 
 /** Modes of `tsbs-vocab build --conformance` (03 §C.5). `off` is for local development only and never used in CI. */
 export const CONFORMANCE_MODES = ['strict', 'skip-missing-engine', 'off'] as const;
