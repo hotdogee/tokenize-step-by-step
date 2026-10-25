@@ -107,4 +107,21 @@ describe('MockTokenizerClient', () => {
     expect(entries[2]).toEqual({ id: 5, bytes: null, piece: null });
     expect(entries[3]?.id).toBe(130876);
   });
+
+  it('adds or replaces a source after construction (lazily fetched examples)', async () => {
+    const c = client('reject');
+    await expect(c.load('google-gemma4')).rejects.toMatchObject({ code: 'fetch' });
+    const gemma4 = loadFixture('google-gemma4');
+    c.addSource({ ref: REFS['google-gemma4'], data: toExamplesWire(gemma4, 'google-gemma4', ['zh-tw-tainan']) });
+    await c.load('google-gemma4');
+    const tainan = await c.encode('台灣台南', DEFAULT_OPTIONS);
+    expect([...tainan.tokens.id]).toEqual(gemma4.cases.find((k) => k.name === 'zh-tw-tainan')?.ids);
+    await expect(c.encode('Hello', DEFAULT_OPTIONS)).rejects.toBeInstanceOf(MockClientError);
+    // Replacing the source drops the cached case names and lookup index of that tokenizer.
+    c.addSource({ ref: REFS['google-gemma4'], data: gemma4 });
+    expect(c.resident).toBe('google-gemma4');
+    const hello = gemma4.cases.find((k) => k.name === 'en-hello-world');
+    if (hello === undefined) throw new Error('en-hello-world');
+    expect([...(await c.encode(hello.text, DEFAULT_OPTIONS)).tokens.id]).toEqual(hello.ids);
+  });
 });

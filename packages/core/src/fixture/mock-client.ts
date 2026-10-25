@@ -147,7 +147,7 @@ function later<T>(work: () => T): Promise<T> {
 export class MockTokenizerClient implements TokenizerClientLike {
   readonly features: Promise<Features>;
   readonly assets: Promise<AssetSummary>;
-  private readonly sources: ReadonlyMap<TokenizerId, MockTokenizerSource>;
+  private readonly sources: Map<TokenizerId, MockTokenizerSource>;
   private readonly options: MockTokenizerClientOptions;
   private readonly listeners = new Set<(id: TokenizerId | null) => void>();
   private readonly indexes = new Map<TokenizerId, LookupIndex>();
@@ -172,6 +172,16 @@ export class MockTokenizerClient implements TokenizerClientLike {
       TOKENIZER_IDS.map((id) => [id, { path: `/tok/${id}/mock.bin`, bytesCompressed: 0, bytesRaw: 0 }]),
     ) as Record<TokenizerId, { path: string; bytesCompressed: number; bytesRaw: number }>;
     this.assets = Promise.resolve(options.assets ?? assets);
+  }
+
+  /**
+   * Adds or replaces the data of one tokenizer (e.g. a precomputed-examples file fetched when it is first loaded). It
+   * takes effect from the next `load`/`encode`/`lookup`; a resident tokenizer stays resident.
+   */
+  addSource(source: MockTokenizerSource): void {
+    this.sources.set(source.ref.id, source);
+    this.indexes.delete(source.ref.id);
+    this.names.delete(source.ref.id);
   }
 
   /** The resident tokenizer (plain getter). */
