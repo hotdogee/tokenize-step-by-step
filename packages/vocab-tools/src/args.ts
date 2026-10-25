@@ -22,10 +22,9 @@ export interface BuildOptions {
   /** Where `conformance` came from, for the log line. */
   readonly conformanceSource: 'flag' | 'env' | 'default';
   /**
-   * Default `fail`, as 03 §C.5 requires ("any failure aborts the whole build"). Recorded deviation: under
-   * `skip-missing-engine` only, the default is `skip` (a warning per asset plus a summary), because WP00's CI build job
-   * has no `data/vocab/raw` and AD-32 rejects a red build job for wave 1. AD-32 does not cover this; remove it when
-   * WP11 restores `data/vocab/raw` in CI (or at the `strict` flip, whichever comes first).
+   * `fail` unless `--missing-raw skip` is given, in every conformance mode, as 03 §C.5 requires ("any failure aborts
+   * the whole build"): CI fetches `data/vocab/raw`, so an absent file (e.g. a gated download that `fetch_vocab.py`
+   * skipped) must fail the build instead of deploying a site without that vocabulary. `skip` is for local runs only.
    */
   readonly missingRaw: MissingRawPolicy;
   readonly fixtures: string;
@@ -96,8 +95,8 @@ Commands (docs/design/03-data-model-and-assets.md §C.5):
   examples  [--fixtures <dir>] [--chips <examples.json>] [--out <dir>]
 
 --conformance defaults to $CONFORMANCE_MODE, then to "${DEFAULT_CONFORMANCE}".
---missing-raw defaults to "fail", except "skip" under skip-missing-engine (interim CI deviation from 03 §C.5 until CI
-fetches data/vocab/raw; see the package README); a raw SHA-256 mismatch always fails.`;
+--missing-raw defaults to "fail" in every mode (03 §C.5); "skip" leaves out assets whose raw files are absent (local runs
+only); a raw SHA-256 mismatch always fails.`;
 
 const str = (fallback: string) => ({ type: 'string', default: fallback }) as const;
 
@@ -156,7 +155,7 @@ function parseBuild(
       only: typeof only === 'string' ? only : null,
       conformance: rawMode,
       conformanceSource,
-      missingRaw: missing ?? (rawMode === 'skip-missing-engine' ? 'skip' : 'fail'),
+      missingRaw: missing ?? 'fail',
       fixtures: String(values['fixtures']),
       licenses: String(values['licenses']),
       registry: String(values['registry']),

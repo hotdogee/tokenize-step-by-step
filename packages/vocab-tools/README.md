@@ -17,8 +17,9 @@ Node-only vocabulary converter (`tsbs-vocab`, docs/design/03-data-model-and-asse
 - `tsbs-vocab examples --out <dir>` — `ExamplesWire` files per tokenizer, `examples-default.json` and
   `examples-index.json` (03 §C.7).
 
-`--conformance` defaults to `$CONFORMANCE_MODE`, then `strict`. `--missing-raw` defaults to `fail` (a SHA-256 mismatch
-always fails). `SOURCE_DATE_EPOCH` overrides every date written.
+`--conformance` defaults to `$CONFORMANCE_MODE`, then `strict`. `--missing-raw` defaults to `fail` in every mode, as 03 §C.5
+requires; `--missing-raw skip` leaves out assets whose raw files are absent and is for local runs only (a SHA-256
+mismatch always fails). `SOURCE_DATE_EPOCH` overrides every date written.
 
 The conformance gate reads each container back through WP02's `readTsbv1`, imported from the design's subpath
 `@tsbs/core/format/tsbv1` (a root re-export is accepted too; `src/core-reader.ts`). WP02 merged in wave 1, so the
@@ -27,11 +28,6 @@ every `.bin` in `data/vocab/dist` back through it.
 
 ## Recorded deviations
 
-- **`--missing-raw skip` is the default under `skip-missing-engine`.** 03 §C.5 says any failure aborts the build. WP00's
-  CI build job has no `data/vocab/raw`, and AD-32 rejects a red build job in wave 1. So in that mode only, an asset whose
-  raw files are absent is skipped. The build prints a warning per asset and a summary warning, and the site deploys
-  without those vocabularies. AD-32 does not cover this. Remove it when WP11 restores `data/vocab/raw` in CI, or at the
-  `strict` flip if that comes first.
 - **No `vocab:build` cache** keyed on the manifest and tools hash (02 §6). A full build takes about 5 s, so it always
   rebuilds. Its outputs are deterministic either way.
 

@@ -301,7 +301,7 @@ export async function runBuild(
   }
   if (missingRaw > 0)
     warnings.push(
-      `${String(missingRaw)} of ${String(sources.length)} assets skipped for absent raw files, so a site built from this manifest ships without those vocabularies (interim deviation from 03 §C.5 under --missing-raw skip; see packages/vocab-tools/README.md).`,
+      `${String(missingRaw)} of ${String(sources.length)} assets skipped for absent raw files, so a site built from this manifest ships without those vocabularies (--missing-raw skip: local runs only, never in CI).`,
     );
 
   // Everything converted: write the outputs.

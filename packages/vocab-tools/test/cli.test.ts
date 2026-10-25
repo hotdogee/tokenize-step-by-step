@@ -37,13 +37,13 @@ describe('parseCommand: build', () => {
     expect(buildOptions(['build'], { CONFORMANCE_MODE: '' }).conformanceSource).toBe('default');
   });
 
-  it('defaults --missing-raw to fail, except skip under skip-missing-engine (interim CI deviation)', () => {
+  it('defaults --missing-raw to fail in every conformance mode (03 §C.5)', () => {
     expect(buildOptions(['build', '--conformance', 'strict']).missingRaw).toBe('fail');
     expect(buildOptions(['build', '--conformance', 'off']).missingRaw).toBe('fail');
-    expect(buildOptions(['build', '--conformance', 'skip-missing-engine']).missingRaw).toBe('skip');
-    expect(buildOptions(['build'], { CONFORMANCE_MODE: 'skip-missing-engine' }).missingRaw).toBe('skip');
-    expect(buildOptions(['build', '--conformance', 'skip-missing-engine', '--missing-raw', 'fail']).missingRaw).toBe(
-      'fail',
+    expect(buildOptions(['build', '--conformance', 'skip-missing-engine']).missingRaw).toBe('fail');
+    expect(buildOptions(['build'], { CONFORMANCE_MODE: 'skip-missing-engine' }).missingRaw).toBe('fail');
+    expect(buildOptions(['build', '--conformance', 'skip-missing-engine', '--missing-raw', 'skip']).missingRaw).toBe(
+      'skip',
     );
     expect(buildOptions(['build', '--conformance', 'off', '--missing-raw', 'skip']).missingRaw).toBe('skip');
     expect(parseCommand(['build', '--missing-raw', 'maybe'], {}).kind).toBe('usage-error');

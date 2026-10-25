@@ -87,10 +87,14 @@ async function sandbox(root: string): Promise<Sandbox> {
     root,
     writeManifest,
     manifest: async () => JSON.parse(await readFile(manifestPath, 'utf8')) as Record<string, unknown>,
+    // The sandbox holds the raw files of two assets only, so its builds skip the other seven (`--missing-raw skip`;
+    // a test passes `--missing-raw fail` to override it — the last occurrence wins).
     options: (argv = [], env = { CONFORMANCE_MODE: 'skip-missing-engine' }) => {
       const parsed = parseCommand(
         [
           'build',
+          '--missing-raw',
+          'skip',
           '--manifest',
           manifestPath,
           '--raw',
@@ -180,8 +184,10 @@ describe('runBuild (synthetic repository)', () => {
     await expect(readdir(join(dir, 'out'))).rejects.toThrow();
   });
 
-  it('fails on missing raw files unless --missing-raw skip (the default only under skip-missing-engine)', async () => {
-    await expect(runBuild(box.options(['--conformance', 'off']), {}, NO_MODULES)).rejects.toThrow(/missing raw file/);
+  it('fails on missing raw files under --missing-raw fail in every mode (the default, cli.test.ts)', async () => {
+    await expect(
+      runBuild(box.options(['--conformance', 'off', '--missing-raw', 'fail']), {}, NO_MODULES),
+    ).rejects.toThrow(/missing raw file/);
     await expect(
       runBuild(box.options(['--missing-raw', 'fail'], { CONFORMANCE_MODE: 'skip-missing-engine' }), {}, NO_MODULES),
     ).rejects.toThrow(/missing raw file/);
@@ -189,7 +195,7 @@ describe('runBuild (synthetic repository)', () => {
     const result = await runBuild(box.options(['--conformance', 'off', '--missing-raw', 'skip']), {}, NO_MODULES);
     expect(result.assets).toHaveLength(2);
     expect(result.warnings).toContain(
-      '7 of 9 assets skipped for absent raw files, so a site built from this manifest ships without those vocabularies (interim deviation from 03 §C.5 under --missing-raw skip; see packages/vocab-tools/README.md).',
+      '7 of 9 assets skipped for absent raw files, so a site built from this manifest ships without those vocabularies (--missing-raw skip: local runs only, never in CI).',
     );
   });
 
