@@ -68,11 +68,11 @@ tokenize-step-by-step/
 │  │  └─ src/
 │  │     ├─ model/               # result.ts (FROZEN), view-types.ts (FROZEN), flags.ts, view.ts, invariants.ts
 │  │     ├─ text/                # utf8.ts, analyze.ts (code points, UTF-16 map, graphemes), stand-ins.ts
-│  │     ├─ unicode/             # tables.generated.ts (committed), classes.ts
+│  │     ├─ unicode/             # tables.generated.ts (committed), classes.ts, patterns.ts (templates), expand.ts (pattern expander) — WP02 (§8)
 │  │     ├─ format/              # tsbv1.ts (reader), varint.ts, byte-vocab.ts (ByteVocab), types.ts (FROZEN)
 │  │     ├─ agenda/              # merge-loop.ts (PairPriority, MergeState, mergeStep, mergeAll), part-list.ts, heap.ts — owned by WP01 (AD-33)
 │  │     ├─ engines/
-│  │     │  ├─ bytelevel/        # patterns.ts (templates), expand.ts, pretokenize.ts, specials.ts, engine.ts, chunk-cache.ts
+│  │     │  ├─ bytelevel/        # pretokenize.ts, specials.ts, engine.ts, chunk-cache.ts (patterns come from ../../unicode/expand.ts)
 │  │     │  └─ spm/              # normalize.ts, symbolize.ts, priority.ts (Score/MergeRank), fallback.ts, align.ts, engine.ts
 │  │     ├─ timeline/            # timeline.ts (born/died, NEVER/ALIVE), trace-recorder.ts, replay.ts, fixture-steps.ts (Fenwick, tests only) — WP01
 │  │     ├─ layout/              # pack-rows.ts (pure; used by web)
@@ -203,7 +203,7 @@ Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esb
 | `pnpm vocab:fetch` | `uv run --project tools/oracle tools/oracle/fetch_vocab.py` |
 | `pnpm vocab:build [--only <id>] [--conformance strict\|skip-missing-engine\|off]` | `tsbs-vocab build` → `data/vocab/dist/tok/**`, `vocab-manifest.generated.json`, `licences.generated.json`, MODIFIED notices; conformance inside (AD-13; `skip-missing-engine` is the CI mode until both engines have merged, AD-32) |
 | `pnpm vocab:verify` | re-decode every `.bin`, check sha256, round-trip against raw |
-| `pnpm unicode:export` / `pnpm unicode:check` | Python export of the Unicode 16.0 tables → `tools/oracle/unicode_tables.json` (WP02 converts it to TS) / diff gate |
+| `pnpm unicode:export` / `pnpm unicode:check` | Python export of the Unicode 16.0 tables → `tools/oracle/unicode_tables.json`, then `scripts/unicode-tables.ts` converts it to TS / Node-only diff gate: `tables.generated.ts` vs the committed JSON (the fresh-export diff is `oracle:check`'s `export_unicode_tables.py --check`) |
 | `pnpm registry:check` | zod validation + cross-refs + negative tests |
 | `pnpm test` | `vitest run` across the workspace (core, conformance, worker, registry, web units/components) |
 | `pnpm test:fuzz` | Node fuzz vs npm oracles (nightly; seed printed) |
