@@ -5,13 +5,14 @@
  *    `loaded.ms` (the Worker's download + verify + gunzip + build, read from About's `tsbs:lastLoaded`) ≤ 2.5 s;
  * 2. keystroke → board update at 1k and 10k characters (p95 ≤ 50 / ≤ 120 ms), with a Chromium trace of the 10k typing
  *    (no main-thread task > 50 ms);
- * 3. render a board of ≈ 2,000 cells: script from the Worker's `result` to the updated DOM ≤ 50 ms;
+ * 3. render a board of ≈ 2,000 cells (the text is sized from a calibration render): the wall time from the Worker's
+ *    `result` to the updated DOM, held to the 06 §3 "≤ 50 ms script" budget (wall time bounds the script time from above);
  * 4. scrub: `.` through the merge steps at stop 5 with a trace (recorded).
  *
  * Budget misses are soft (warnings + `test-results/perf/perf-results.json`, the trend artifact) unless `PERF_STRICT=1`.
- * The keystroke latency is reported twice: from the keystroke (it includes the deliberate 40 ms encode debounce of
- * 05 §6, `ENCODE_DEBOUNCE_MS`) and from the `encode` request the debounce releases; the 06 §3 budget is held to the
- * second, the work the page and the Worker do per keystroke (docs/perf-log.md).
+ * The keystroke budget is held to the interval 06 §3 defines, keystroke → frame, which includes the deliberate 40 ms
+ * encode debounce of 05 §6 (`ENCODE_DEBOUNCE_MS`); the latency from the `encode` request the debounce releases is
+ * recorded beside it as a diagnostic (docs/perf-log.md, finding 2).
  */
 import { join } from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
@@ -26,14 +27,16 @@ const BUDGET = {
   longTaskMs: 50,
   render2000CellsMs: 50,
 } as const;
+/** The board size of the render budget ("Render 2,000 cells ≤ 50 ms script"). */
+const RENDER_CELLS = 2000;
 /** 05 §6 / apps/web/src/app/app-state.svelte.ts `ENCODE_DEBOUNCE_MS`. */
 const ENCODE_DEBOUNCE_MS = 40;
 /** DevTools "Fast 4G" as 06 §3 defines it. */
 const FAST_4G = {
   offline: false,
   latency: 170,
-  downloadThroughput: (9 * 1024 * 1024) / 8,
-  uploadThroughput: (1.5 * 1024 * 1024) / 8,
+  downloadThroughput: 9_000_000 / 8,
+  uploadThroughput: 1_500_000 / 8,
   connectionType: 'cellular4g',
 } as const;
 const KEYSTROKES = 30;
@@ -166,13 +169,13 @@ test('keystroke → board update at 1k characters (p95 ≤ 50 ms)', async ({ pag
     frames,
   );
   expect(total).toHaveLength(KEYSTROKES);
-  record('keystroke → board update, 1k chars, p95 incl. 40 ms debounce', percentile(total, 95), 'ms', null);
-  record('keystroke → board update, 1k chars, p50 incl. debounce', percentile(total, 50), 'ms', null);
   budget(
-    'keystroke → board update, 1k chars, p95 (encode request → frame)',
-    percentile(work, 95),
+    'keystroke → board update, 1k chars, p95 (keystroke → frame, incl. 40 ms debounce)',
+    percentile(total, 95),
     BUDGET.keystroke1kP95Ms,
   );
+  record('keystroke → board update, 1k chars, p50 (keystroke → frame)', percentile(total, 50), 'ms', null);
+  record('encode request → board update, 1k chars, p95 (diagnostic)', percentile(work, 95), 'ms', null);
   record(
     'keystroke → encode request (the debounce), median',
     percentile(latencies(keys, encodes), 50),
@@ -200,12 +203,12 @@ test('keystroke → board update at 10k characters (p95 ≤ 120 ms), no main-thr
     frames,
   );
   expect(total).toHaveLength(KEYSTROKES);
-  record('keystroke → board update, 10k CJK, p95 incl. 40 ms debounce', percentile(total, 95), 'ms', null);
   budget(
-    'keystroke → board update, 10k CJK, p95 (encode request → frame)',
-    percentile(work, 95),
+    'keystroke → board update, 10k CJK, p95 (keystroke → frame, incl. 40 ms debounce)',
+    percentile(total, 95),
     BUDGET.keystroke10kP95Ms,
   );
+  record('encode request → board update, 10k CJK, p95 (diagnostic)', percentile(work, 95), 'ms', null);
   budget('longest main-thread task while typing into 10k CJK (trace)', Math.max(0, ...tasks), BUDGET.longTaskMs);
   const longTasks = (await probeOf(page)).longTasks.slice(longTasksBefore);
   record('long tasks (> 50 ms) while typing into 10k CJK (PerformanceObserver)', longTasks.length, 'count', null);
@@ -215,49 +218,66 @@ test.describe('render', () => {
   // Wide enough that K reaches the 1600 px board cap, so ≈ 2,000 cells fit in ≤ 24 rows: the full, unvirtualized board.
   test.use({ viewport: { width: 2560, height: 1440 } });
 
-  test('render ≈ 2,000 board cells: script ≤ 50 ms from the Worker result to the updated DOM', async ({
+  /** `rows` rows of K one-byte characters (short words, so the token tier has chips); `variant` changes the words. */
+  const rowsText = (k: number, rows: number, variant: number): string =>
+    Array.from({ length: rows * k }, (_, w) => `w${String((w * 7 + variant) % 97)}x`)
+      .join(' ')
+      .slice(0, rows * k);
+  const cellCount = (page: Page): Promise<number> =>
+    page.locator('[data-testid="board-grid"] [role="gridcell"]').count();
+
+  test('render ≈ 2,000 board cells: wall time from the Worker result to the updated DOM ≤ 50 ms (06 §3 script budget)', async ({
     page,
     browser,
   }) => {
     await openLive(page);
     const k = Number(await page.locator('[data-k]').first().getAttribute('data-k'));
     expect(k).toBeGreaterThanOrEqual(8);
-    const length = 20 * k; // 20 rows of K one-byte characters: K char cells + K byte cells per row, plus token chips
-    const scripts: number[] = [];
+    // Calibration: the cells one row of this text mounts (K char cells, K byte cells and the token chips), so the
+    // measured text is sized to about RENDER_CELLS cells.
+    const calibrationRows = 10;
+    await setText(page, rowsText(k, calibrationRows, 0));
+    const rows = Math.max(1, Math.round(RENDER_CELLS / ((await cellCount(page)) / calibrationRows)));
+    const walls: number[] = [];
     const frames: number[] = [];
     let cells = 0;
     // One warm-up, five measured renders, then one more under a trace (tracing slows the page, so its numbers are
     // reported separately).
     for (let i = 0; i < 7; i++) {
-      const words = Array.from({ length }, (_, w) => `w${String((w * 7 + i) % 97)}x`)
-        .join(' ')
-        .slice(0, length);
+      const text = rowsText(k, rows, i + 1);
       const before = await probeOf(page);
       if (i === 6) {
-        const { tasks } = await traced(browser, page, () => setText(page, words));
+        const { tasks } = await traced(browser, page, () => setText(page, text));
         record(`render, longest main-thread task under a trace`, Math.max(0, ...tasks), 'ms', null);
         break;
       }
-      await setText(page, words);
+      await setText(page, text);
       const after = await probeOf(page);
       const result = after.results.slice(before.results.length).at(-1);
       const update = after.updates.slice(before.updates.length).at(-1);
       const frame = after.frames.slice(before.frames.length).at(-1);
       if (result === undefined || update === undefined || frame === undefined) throw new Error('no board update');
       if (i > 0) {
-        scripts.push(update - result);
+        walls.push(update - result);
         frames.push(frame - result);
       }
-      cells = await page.locator('[data-testid="board-grid"] [role="gridcell"]').count();
+      cells = await cellCount(page);
     }
-    record(`board cells mounted (K ${String(k)}, ${String(length)} characters)`, cells, 'count', null);
-    expect(cells).toBeGreaterThan(1500);
-    budget(
-      `render ${String(cells)} cells, script (result → DOM), median of 5`,
-      percentile(scripts, 50),
-      BUDGET.render2000CellsMs,
+    record(
+      `board cells mounted (K ${String(k)}, ${String(rows)} rows, ${String(rows * k)} characters)`,
+      cells,
+      'count',
+      null,
     );
-    record(`render ${String(cells)} cells, script, max of 5`, Math.max(...scripts), 'ms', null);
+    expect(cells).toBeGreaterThan(RENDER_CELLS * 0.85);
+    expect(cells).toBeLessThan(RENDER_CELLS * 1.15);
+    budget(
+      `render ${String(cells)} cells, wall time result → DOM, median of 5`,
+      percentile(walls, 50),
+      BUDGET.render2000CellsMs,
+      'wall time, an upper bound of the script time the budget names',
+    );
+    record(`render ${String(cells)} cells, wall time result → DOM, max of 5`, Math.max(...walls), 'ms', null);
     record(`render ${String(cells)} cells, result → next frame, median`, percentile(frames, 50), 'ms', null);
   });
 });

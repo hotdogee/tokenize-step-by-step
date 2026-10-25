@@ -7,8 +7,7 @@
   "type": "module",
   "scripts": {
     "e2e": "playwright test",
-    "e2e:headers": "playwright test --config playwright.headers.config.ts",
-    "e2e:perf": "playwright test --config perf/playwright.config.ts"
+    "e2e:headers": "playwright test --config playwright.headers.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
