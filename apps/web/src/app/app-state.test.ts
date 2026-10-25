@@ -198,9 +198,27 @@ describe('AppState (05 §1.1)', () => {
     app.setStage(2);
     app.announceStage();
     expect(app.status).toBe('Code points: 4 code points');
+    // Stops 4–6 count their own unit too: chunks, merge steps, tokens (PA-13).
     app.setStage(4);
     app.announceStage();
-    expect(app.status).toBe('Chunks: 4 tokens');
+    expect(app.status).toBe('Chunks: 1 chunk');
+    app.setStage(5);
+    app.announceStage();
+    expect(app.status).toBe('Merges: 8 steps');
+    app.setStage(6);
+    app.announceStage();
+    expect(app.status).toBe('Tokens: 4 tokens');
+  });
+
+  it('announces SentencePiece stop 4 as symbols, counting the parts the board shows before any merge', async () => {
+    const app = make();
+    await app.selectTokenizer('google-gemma4');
+    await flush();
+    expect(app.currentResult?.tokenizer).toBe('google-gemma4');
+    expect(app.currentResult?.timeline).toBeNull(); // precomputed spm: stop 4 shows the final pieces as the parts
+    app.setStage(4);
+    app.announceStage();
+    expect(app.status).toBe('Symbols: 3 symbols');
   });
 
   it('cycles the byte view hex → dec (→ both only when wide)', () => {

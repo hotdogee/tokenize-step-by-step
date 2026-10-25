@@ -1,6 +1,7 @@
 /**
  * Pipeline keyboard (05 §8, AD-22) on the real Worker: `[` `]` move between stops and `1`–`6` jump, each stop announced
- * as "3 of 6: UTF-8 bytes" (the radio's name) with the status region's "UTF-8 bytes: 12 bytes"; `,` `.` step one merge
+ * as "3 of 6: UTF-8 bytes" (the radio's name) with the status region's "UTF-8 bytes: 12 bytes" (stops 4–6 count chunks
+ * or symbols, merge steps and tokens, in all three UI languages); `,` `.` step one merge
  * and `Shift` steps ten (matched by `event.code`), past the end to stop 6 and before the start to stop 4, saying the merge
  * sentence; Space plays and pauses on the scrubber only; Home/End go to the first/last step; arrows move the rail's
  * radios (a radio change is announced like the keys); and with "Single-key shortcuts: off" every global key is inert while the rail's own keys keep working.
@@ -8,7 +9,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { chooseExample, grid } from './board-helpers.ts';
 import { checkedStop, rail, scrubber } from './pipeline-helpers.ts';
-import { openShell } from './shell-helpers.ts';
+import { openShell, pickTokenizer } from './shell-helpers.ts';
 
 const status = (page: Page) => page.getByTestId('status');
 
@@ -17,7 +18,7 @@ test('[ and ] move between stops; 1–6 jump; each stop is announced', async ({ 
   expect(await checkedStop(page)).toBe(6);
   await page.keyboard.press('BracketLeft');
   await expect(page.getByRole('radio', { name: '5 of 6: Merges' })).toBeChecked();
-  await expect(status(page)).toHaveText('Merges: 4 tokens');
+  await expect(status(page)).toHaveText('Merges: 8 steps');
   await page.keyboard.press('BracketLeft');
   await page.keyboard.press('BracketLeft');
   await expect(page.getByRole('radio', { name: '3 of 6: UTF-8 bytes' })).toBeChecked();
@@ -48,8 +49,35 @@ test('[ and ] move between stops; 1–6 jump; each stop is announced', async ({ 
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('radio', { name: '4 of 6: Chunks' })).toBeChecked();
-  await expect(status(page)).toHaveText('Chunks: 4 tokens');
+  await expect(status(page)).toHaveText('Chunks: 1 chunk');
   await expect(rail(page).getByRole('radiogroup', { name: 'pipeline stage' })).toBeVisible();
+});
+
+test('stops 4–6 announce their own count in each UI language: chunks or symbols, merge steps, tokens', async ({
+  page,
+}) => {
+  for (const [locale, chunks, steps, tokens] of [
+    ['zh-TW', '切塊：1 個切塊', '合併：8 步', '詞元：4 詞元'],
+    ['ja', 'チャンク：1 チャンク', 'マージ：8 ステップ', 'トークン：4 トークン'],
+    ['en', 'Chunks: 1 chunk', 'Merges: 8 steps', 'Tokens: 4 tokens'],
+  ] as const) {
+    await openShell(page, locale);
+    for (const [key, text] of [
+      ['Digit4', chunks],
+      ['Digit5', steps],
+      ['Digit6', tokens],
+    ] as const) {
+      await page.keyboard.press(key);
+      await expect(status(page)).toHaveText(text);
+    }
+  }
+  // SentencePiece's stop 4 counts the symbols before any merge (Gemma 4: one per code point of 台灣台南).
+  await pickTokenizer(page, 'Gemma 4');
+  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(scrubber(page)).toBeEnabled();
+  await page.keyboard.press('Digit4');
+  await expect(status(page)).toHaveText('Symbols: 4 symbols');
+  await expect(grid(page).locator('[data-tier="token"][data-first]')).toHaveCount(4); // what the board shows
 });
 
 test(', and . step one merge, Shift steps ten, and the merge sentence is announced', async ({ page }) => {

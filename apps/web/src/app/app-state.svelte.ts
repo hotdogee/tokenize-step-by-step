@@ -23,7 +23,9 @@ import type {
 import type { ExampleChip, TokenizerEntry } from '@tsbs/registry';
 import type { CellSize } from '@tsbs/ui-tokens';
 import { DEFAULT_OPTIONS } from '@tsbs/core/model/result';
+import { viewOf } from '../board/view-cache.ts';
 import { i18n } from '../i18n/locale.svelte.ts';
+import { resolveTextLang } from '../i18n/text-lang.ts';
 import type { Locale } from '../i18n/types.ts';
 import { preferences } from '../shell/preferences.svelte.ts';
 import { theme, type ThemeChoice } from '../theme/theme.svelte.ts';
@@ -367,14 +369,24 @@ export class AppState {
   /** Says the stop and its count in the status region, "UTF-8 bytes: 12 bytes" (05 §8): for the keys and rail radios. */
   announceStage(): void {
     const stage = this.stage;
-    const name = stage === 4 && this.entry.family === 'spm-bpe' ? i18n.t('stage.4.symbols') : i18n.t(STAGE_NAME[stage]);
+    const spm = this.entry.family === 'spm-bpe';
+    const name = stage === 4 && spm ? i18n.t('stage.4.symbols') : i18n.t(STAGE_NAME[stage]);
     const result = this.currentResult;
     let detail: string;
     if (stage <= 2) detail = i18n.t('counts.codePoints', { n: textStats(this.text, 0).codePoints });
     else if (stage === 3) detail = i18n.t('counts.bytes', { n: textStats(this.text, 0).bytes });
-    else if (result !== null) detail = i18n.t('counts.tokens', { n: result.stats.tokens });
-    else detail = i18n.t('counts.tokensPending');
+    else if (result === null) detail = i18n.t('counts.tokensPending');
+    else if (stage === 4 && spm) detail = i18n.t('counts.symbols', { n: this.#symbolCount(result) });
+    else if (stage === 4) detail = i18n.t('counts.chunks', { n: result.stats.chunks });
+    else if (stage === 5) detail = i18n.t('counts.steps', { n: result.timeline?.stepCount ?? result.stats.mergeSteps });
+    else detail = i18n.t('counts.tokens', { n: result.stats.tokens });
     this.announce(i18n.t('status.stage', { name, detail }));
+  }
+
+  /** SentencePiece's stop 4: the symbols the board shows before any merge (the parts at step 0 of the shared view). */
+  #symbolCount(result: TokenizationResult): number {
+    const view = viewOf(result, resolveTextLang(this.textLang, this.text, i18n.current));
+    return view.partsAt(0).partStart.length - 1;
   }
 
   /** Puts `message` in the polite status region (re-announces identical text). */
