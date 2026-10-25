@@ -7,8 +7,10 @@
 #               runners are slower than the quiet machine the 06 §3 Node ceilings assume); the Playwright perf spec on
 #               vite preview (budget misses are warnings, the results JSON is the trend artifact)
 #
-# On failure: an issue with the seed, and the fixtures/candidates artifact (engine mismatches and oracle divergences in
-# the fixture case shape, each with its classification).
+# The property, heap and perf duties run even when an earlier one failed (`!cancelled()`), so one fuzz finding does not
+# cost the night its other signals or its trend point. On failure: an issue with the seed, and the fixtures/candidates
+# artifact (one file per tokenizer with an engine mismatch, an oracle error or an unclassified divergence, holding every
+# case of that run in the fixture case shape with its classification).
 name: nightly-fuzz
 
 on:
@@ -75,11 +77,13 @@ jobs:
       # 20,000 fast-check runs per property (1,000 per PR): every property suite lives in the core project and reads
       # FAST_CHECK_NUM_RUNS (packages/core/test/helpers/runs.ts); 20× the runs needs a longer per-test timeout.
       - name: Property tests (20,000 runs)
+        if: ${{ !cancelled() }}
         run: pnpm generate && pnpm exec vitest run --project core --test-timeout 600000
         env:
           FAST_CHECK_NUM_RUNS: '20000'
       # 06 §3: 500 keystrokes into a 10k-CJK paragraph grow the Worker's memory by < 10 MB (Node harness, forced GC).
       - name: Worker heap check
+        if: ${{ !cancelled() }}
         run: pnpm generate && pnpm exec vitest run --project worker --no-file-parallelism -t "Worker heap"
         env:
           TSBS_PERF: '1'
@@ -87,28 +91,33 @@ jobs:
       # Serial timing runs (one file at a time): the TSBS_PERF=1 ceilings, then vitest bench + check-bench.ts. Soft:
       # the medians are in the log and the bench JSON artifact; the assertion that counts runs on a quiet machine.
       - name: Node ceilings and vitest bench (TSBS_PERF=1, serial; soft)
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: pnpm test:perf && pnpm bench
         env:
           TSBS_PERF: '1'
           NODE_OPTIONS: --expose-gc
       - id: playwright
+        if: ${{ !cancelled() }}
         run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
       - id: browsers
+        if: ${{ !cancelled() }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - if: steps.browsers.outputs.cache-hit != 'true'
+      - if: ${{ !cancelled() && steps.browsers.outputs.cache-hit != 'true' }}
         run: pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium
-      - if: steps.browsers.outputs.cache-hit == 'true'
+      - if: ${{ !cancelled() && steps.browsers.outputs.cache-hit == 'true' }}
         run: pnpm --filter @tsbs/e2e exec playwright install-deps chromium
       - name: Build the site for the perf spec
+        if: ${{ !cancelled() }}
         run: pnpm --filter @tsbs/web build
       # Fast 4G load, keystroke latency at 1k/10k, 2,000-cell render, scrub traces. Budget misses are warnings.
       - name: Perf spec (vite preview, chromium)
+        if: ${{ !cancelled() }}
         run: pnpm e2e:perf
-      - if: always()
+      - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: perf-trend-${{ steps.plan.outputs.seed }}
