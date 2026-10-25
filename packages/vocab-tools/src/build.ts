@@ -4,7 +4,8 @@
  * `.bin` + manifest entry (`sha256` and `sha256Raw`); then `licences.generated.json` and `MODIFIED-<assetId>.txt`.
  * Every asset is converted in memory first; any failure aborts the whole build before anything is written.
  * Deterministic: no timestamps beyond `retrievedOn` (or `SOURCE_DATE_EPOCH`), fixed section order and gzip parameters,
- * so two builds are byte-identical and unchanged vocabularies keep their hashed file names.
+ * so two builds are byte-identical and unchanged vocabularies keep their hashed file names. There is no build cache
+ * keyed on the manifest and tools hash (02 §6): a full build of the nine assets takes about 5 s, so it always rebuilds.
  */
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -265,6 +266,7 @@ export async function runBuild(
     warnings.push('--conformance off: conformance disabled — local development only, never in CI (AD-13).');
 
   const converted: ConvertedAsset[] = [];
+  let missingRaw = 0;
   for (const source of sources) {
     const asset = oracle.assets.find((a) => a.id === source.assetId);
     if (asset === undefined) throw new Error(`oracle manifest has no asset ${source.assetId}`);
@@ -284,6 +286,7 @@ export async function runBuild(
         options.missingRaw === 'skip'
       ) {
         warnings.push(`ASSET SKIPPED for ${source.tokenizerId}: ${error.message} (--missing-raw skip).`);
+        missingRaw++;
         continue;
       }
       throw error;
@@ -296,6 +299,10 @@ export async function runBuild(
     info.push(`${source.tokenizerId}: ${result.notes.join('; ')}`);
     converted.push(result);
   }
+  if (missingRaw > 0)
+    warnings.push(
+      `${String(missingRaw)} of ${String(sources.length)} assets skipped for absent raw files, so a site built from this manifest ships without those vocabularies (interim deviation from 03 §C.5 under --missing-raw skip; see packages/vocab-tools/README.md).`,
+    );
 
   // Everything converted: write the outputs.
   const manifestPath = join(options.out, MANIFEST_FILE);

@@ -180,12 +180,17 @@ describe('runBuild (synthetic repository)', () => {
     await expect(readdir(join(dir, 'out'))).rejects.toThrow();
   });
 
-  it('fails on missing raw files unless --missing-raw skip', async () => {
+  it('fails on missing raw files unless --missing-raw skip (the default only under skip-missing-engine)', async () => {
+    await expect(runBuild(box.options(['--conformance', 'off']), {}, NO_MODULES)).rejects.toThrow(/missing raw file/);
     await expect(
-      runBuild(box.options(['--conformance', 'off', '--missing-raw', 'fail']), {}, NO_MODULES),
+      runBuild(box.options(['--missing-raw', 'fail'], { CONFORMANCE_MODE: 'skip-missing-engine' }), {}, NO_MODULES),
     ).rejects.toThrow(/missing raw file/);
-    const result = await runBuild(box.options(['--conformance', 'off']), {}, NO_MODULES);
+    await expect(readdir(join(dir, 'out'))).rejects.toThrow();
+    const result = await runBuild(box.options(['--conformance', 'off', '--missing-raw', 'skip']), {}, NO_MODULES);
     expect(result.assets).toHaveLength(2);
+    expect(result.warnings).toContain(
+      '7 of 9 assets skipped for absent raw files, so a site built from this manifest ships without those vocabularies (interim deviation from 03 §C.5 under --missing-raw skip; see packages/vocab-tools/README.md).',
+    );
   });
 
   it('refuses a raw SHA-256 mismatch in every mode', async () => {
