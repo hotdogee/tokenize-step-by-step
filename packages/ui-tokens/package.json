@@ -2,7 +2,7 @@
   "name": "@tsbs/ui-tokens",
   "version": "0.0.0",
   "private": true,
-  "description": "Design tokens (CSS custom properties) for light and dark themes (docs/design/05-ui-ux.md §11).",
+  "description": "Design tokens (CSS custom properties) for light and dark themes, the stand-in subset font and the contrast check (docs/design/05-ui-ux.md §10, §11).",
   "license": "MIT",
   "type": "module",
   "sideEffects": [
@@ -10,6 +10,11 @@
   ],
   "exports": {
     ".": "./src/index.ts",
-    "./tokens.css": "./src/tokens.css"
+    "./tokens.css": "./src/tokens.css",
+    "./fonts.css": "./src/fonts.css"
+  },
+  "scripts": {
+    "check": "node scripts/check-contrast.mjs",
+    "font:build": "uv run --no-project --with fonttools==4.60.1 --with brotli==1.1.0 python fonts/build_standins.py"
   }
 }
