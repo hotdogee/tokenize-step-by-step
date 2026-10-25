@@ -225,9 +225,9 @@ Findings 1 (render) and 2 (keystroke budget vs debounce) of the baseline are clo
 
 **Startup bundle (`pnpm build`, size-limit, brotli, kB = 1000 B):** Main JS 81.10 kB on main at `2f826d6` → ≈ 74.9 kB
 after the PA-7 trim alone (registry fields no page renders, the non-default chips' "why" sentences and the inspector
-model moved out of the initial chunks) → **79.21 kB** of 81.92 with all of WP13a (main 41.81 + Header 19.40 + registry
+model moved out of the initial chunks) → **79.38 kB** of 81.92 with all of WP13a (main 41.97 + Header 19.40 + registry
 9.37 + i18n 8.63; i18n 8.63 of 9.22). Worker entry + entry-core 11.40 of 12.29, bytelevel + engine-core 15.20 of 16.38,
-spm + engine-core 8.75 of 10.24, CSS 11.82 of 20.48. New lazy chunks: window-slice 1.87, LongInputBanner 0.59, inspector
+spm + engine-core 8.75 of 10.24, CSS 11.82 of 20.48. New lazy chunks: window-slice 1.87, LongInputBanner 0.61, inspector
 model 3.37, examples (the "why" sentences) 4.96 kB.
 
 **lhci-local** (`pnpm lhci-local --runs 3`; loopback `wrangler dev`, gzip rather than brotli, not budget-authoritative;

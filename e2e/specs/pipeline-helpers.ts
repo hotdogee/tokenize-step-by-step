@@ -60,7 +60,7 @@ export async function domParts(page: Page): Promise<Part[]> {
 export function maskUnnamed(dom: readonly Part[], expected: readonly Part[] | undefined): Part[] {
   return dom.map((part, i) => {
     const want = expected?.[i];
-    if (want === undefined || !want.endsWith('|-')) return part;
+    if (want?.endsWith('|-') !== true) return part;
     return `${part.split('|')[0] ?? ''}|-`;
   });
 }
