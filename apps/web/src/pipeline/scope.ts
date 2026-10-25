@@ -7,6 +7,7 @@
  *   order, 03 §B.2), position p ↦ step first − 1 + p; SentencePiece replays the steps inside a 2,000-byte window around the
  *   focused byte (one global sequence, so the scoped steps are a sorted list): position 0 ↦ the step before the first one,
  *   position i ↦ the i-th listed step. The rail states the scope in its `role="status"` line.
+ * - A step outside the scope (moved there by the keyboard or the inspector) moves the scope to it (`scopeAround`).
  * - Step duration = clamp(60 ms, 12 s / steps, 450 ms) at ×1, divided by the speed (×0.5 / ×1 / ×2).
  */
 import type { TokenizationResult } from '@tsbs/core';
@@ -107,6 +108,29 @@ export function replayScope(result: TokenizationResult, focus: number, limit: nu
     start,
     end,
   };
+}
+
+/** Whether timeline step `k` is one of `scope`'s positions (position 0, the step before its first, included). */
+export function inScope(scope: ReplayScope, k: number): boolean {
+  if (scope.steps === null) return k >= scope.first - 1 && k <= scope.first - 1 + scope.count;
+  return k === stepAt(scope, 0) || scope.steps.includes(k);
+}
+
+/**
+ * The replay scope around byte `focus` (`replayScope`), moved to the step on the board when that step lies outside it:
+ * a `,` / `.` step past the scope's end, or the inspector's "show this step" for another chunk, moves the scope with the
+ * board instead of leaving the scrubber pinned at one end of a scope the board has left. `step` is null off stop 5.
+ */
+export function scopeAround(
+  result: TokenizationResult,
+  focus: number,
+  step: number | null,
+  limit: number = SCOPE_LIMIT,
+): ReplayScope {
+  const scope = replayScope(result, focus, limit);
+  const timeline = result.timeline;
+  if (scope.kind === 'all' || step === null || timeline === null || step < 1 || inScope(scope, step)) return scope;
+  return replayScope(result, timeline.stepLeft[step - 1] ?? focus, limit);
 }
 
 /** The timeline step shown at scrubber position `p` (0 ≤ p ≤ count). */

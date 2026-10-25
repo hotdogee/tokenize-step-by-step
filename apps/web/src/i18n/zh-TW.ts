@@ -128,6 +128,7 @@ export const zhTW = {
   'step.crosses': '跨越 {glyph}',
   'step.counter': '第 {step} / {stepCount} 步',
   'scrubber.label': '合併步驟',
+  'scrubber.playing': '正在播放合併過程',
   'play.label': '播放合併過程',
   'speed.label': '播放速度',
   'motion.reduce': '減少動態效果',

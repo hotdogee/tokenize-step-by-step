@@ -90,7 +90,8 @@ test('fast scrubbing cancels the running FLIP and only crossfades; the animation
         .filter((a) => (a.effect as KeyframeEffect).getKeyframes().some((frame) => 'transform' in frame)).length,
   );
   expect(flipping).toBeGreaterThan(0);
-  for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
+  // One jump of 17 steps: a fast scrub by its size alone (> 1 step), however slowly the runner delivers the key.
+  await page.keyboard.press('End');
   const state = await page.evaluate(() => {
     const all = document.getAnimations();
     return {
@@ -101,7 +102,7 @@ test('fast scrubbing cancels the running FLIP and only crossfades; the animation
   });
   expect(state.transforms).toBe(0);
   expect(state.longest).toBeLessThanOrEqual(80);
-  await expect(scrubber(page)).toHaveValue('9');
+  await expect(scrubber(page)).toHaveValue('18');
   await page.waitForTimeout(150);
   expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
 });

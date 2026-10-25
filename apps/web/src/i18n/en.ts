@@ -132,6 +132,7 @@ export const en = {
   'step.crosses': 'across {glyph}',
   'step.counter': 'step {step} / {stepCount}',
   'scrubber.label': 'Merge step',
+  'scrubber.playing': 'playing the merges',
   'play.label': 'Play the merges',
   'speed.label': 'Playback speed',
   'motion.reduce': 'Reduce motion',

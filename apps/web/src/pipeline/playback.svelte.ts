@@ -3,7 +3,8 @@
  * clamp(60 ms, 12 s / steps, 450 ms) ÷ speed per step — from the scope's start when the position is at its end or off
  * stop 5 — and stops at the scope's end; a step taken by hand while playing continues from there. It drives the timeline
  * position through AppState (`stage`, `step`, `playing`, `speed`). Follow mode (the merged part scrolled into view, motion
- * director) turns off when the user scrolls by hand and back on with "jump to end" (the scrubber's end) or Play.
+ * director) turns off when the user scrolls by hand and back on only with "jump to end" (the scrubber's end), as 05 §2
+ * says: Play does not turn it back on, so a reader who scrolled away keeps their place.
  */
 import type { AppState } from '../app/app-state.svelte.ts';
 import { positionOf, stepAt, stepDuration, type ReplayScope } from './scope.ts';
@@ -57,7 +58,6 @@ export class Playback {
     const p = this.position(scope);
     if (this.#app.stage !== 5 || p >= scope.count || stepAt(scope, p) !== this.#app.step) this.seek(scope, 0);
     this.#app.playing = true;
-    this.follow = true;
     this.#schedule(scope);
   }
 

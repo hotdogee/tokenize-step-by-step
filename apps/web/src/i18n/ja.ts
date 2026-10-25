@@ -132,6 +132,7 @@ export const ja = {
   'step.crosses': '{glyph} にまたがる',
   'step.counter': 'ステップ {step} / {stepCount}',
   'scrubber.label': 'マージのステップ',
+  'scrubber.playing': 'マージを再生中',
   'play.label': 'マージを再生',
   'speed.label': '再生速度',
   'motion.reduce': '動きを減らす',

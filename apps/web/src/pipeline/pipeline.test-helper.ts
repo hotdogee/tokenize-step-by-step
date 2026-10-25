@@ -17,12 +17,16 @@ import RailHarness from './RailHarness.test-helper.svelte';
 
 /**
  * `words` × "abcd", each word merged in three steps (ab, cd, abcd → id 102): byte-level with one regex chunk per word
- * (steps grouped by chunk), or spm with one SpmText chunk (one global sequence). 3 × `words` steps.
+ * (steps grouped by chunk), or spm with one SpmText chunk (one global sequence). 3 × `words` steps, or the first
+ * `maxSteps` of them (a truncated timeline, `trace.maxSteps`).
  */
-export function longResult(words: number, family: Family = 'bytelevel-bpe'): TokenizationResult {
+export function longResult(words: number, family: Family = 'bytelevel-bpe', maxSteps?: number): TokenizationResult {
   const text = 'abcd'.repeat(words);
   const analysis = analyzeText(text);
-  const recorder = new TimelineRecorder(analysis.utf8.length, { rank: 'resultId' });
+  const recorder = new TimelineRecorder(analysis.utf8.length, {
+    rank: 'resultId',
+    ...(maxSteps === undefined ? {} : { maxSteps }),
+  });
   const ids: number[] = [];
   const starts: number[] = [0];
   const bytelevel = family === 'bytelevel-bpe';

@@ -9,9 +9,21 @@
    * Decisions recorded here (WP09):
    * - Stop 6 ≡ stop 5 at `step = stepCount` (05 §2), so while the stage is 6 the step follows the result's step count:
    *   `[` from stop 6 shows the last merge at stop 5, and the inspector's "formed at step k" sees every step. A step past
-   *   a new result's end is clamped.
+   *   a new result's end is clamped — once that result is there: while no result matches the text (typing, a tokenizer
+   *   switch, a lazy example) the step is kept, so a deep link's `s=5.7` (WP13) survives until its result arrives.
    * - The global keys (`[` `]` `,` `.` `1`–`6`, App.svelte) move the position; after a keyboard merge step the status
-   *   region says the merge sentence (05 §8: merge steps are announced on manual stepping, never during playback).
+   *   region says the merge sentence (05 §8: merge steps are announced on manual stepping, never during playback). While
+   *   playing, the scrubber's `aria-valuetext` stays "playing the merges" (a focused slider's value changes are spoken).
+   * - Above 2,000 steps the replay scope follows the board: a step outside it (`,` `.`, the inspector's "show this
+   *   step") moves the scope there (scope.ts `scopeAround`) rather than leaving the scrubber at one end.
+   * - The scrubber is shown at every stop (disabled without a timeline; position 0 before stop 5, the end at stop 6),
+   *   not only at stop 5 (05 §1): the rail keeps one height across stops, so changing stops shifts nothing (CLS, 06 §3).
+   * - Follow mode turns off on a manual scroll of the page — wheel or touch outside the rail, the page's scrolling keys
+   *   outside the board, the rail and editable fields, or a drag of the page's scrollbar — and back on only with "jump to
+   *   end" (05 §2; Play does not).
+   * - The merge list sits in the rail under the scrubber (on narrow viewports it is the collapsible section 05 §1 asks
+   *   for) with a single tab stop (roving tabindex), so it adds one Tab stop between Play and the board where 05 §8 has
+   *   it after the inspector; WP13 owns the final region order.
    * - The motion director (motion/director.svelte.ts) animates every commit; the switch crossfades wrap the byte-view,
    *   tokenizer and locale switches (motion/view-transition.ts). Both load nothing before the first interaction.
    */
@@ -29,7 +41,7 @@
   import type MergeListComponent from './MergeList.svelte';
   import { Playback } from './playback.svelte.ts';
   import PlayButton from './PlayButton.svelte';
-  import { replayScope, scopeTicks, stepAt, type Speed } from './scope.ts';
+  import { scopeAround, scopeTicks, stepAt, type Speed } from './scope.ts';
   import Scrubber from './Scrubber.svelte';
   import { stepText } from './sentence.ts';
   import '../motion/motion.css';
@@ -47,19 +59,29 @@
   const SPEEDS: readonly Speed[] = [0.5, 1, 2];
   /** The hidden "merged at this step" description the director adds to the merged part's cells. */
   const JUST_MERGED_ID = 'tsbs-just-merged';
+  /** Keys that scroll the page when nothing else takes them (follow mode turns off, 05 §2). */
+  const SCROLL_KEYS = new Set(['PageUp', 'PageDown', 'Home', 'End', 'ArrowUp', 'ArrowDown', ' ']);
   /** The first of these anywhere on the page loads the choreography chunk (it is not part of the startup JS). */
   const ENGAGE_EVENTS = ['pointerdown', 'keydown', 'focusin'] as const;
 
   const result = $derived(app.currentResult);
   const view = $derived(result === null ? null : viewOf(result, resolveTextLang(app.textLang, app.text, i18n.current)));
-  const scope = $derived(result === null ? null : replayScope(result, app.pinned?.byte ?? app.focus?.byte ?? 0));
+  const scope = $derived(
+    result === null
+      ? null
+      : scopeAround(result, app.pinned?.byte ?? app.focus?.byte ?? 0, app.stage === 5 ? app.step : null),
+  );
   const playback = new Playback(app, () => scope);
   const position = $derived(scope === null ? 0 : playback.position(scope));
   const shown = $derived(scope === null ? 0 : stepAt(scope, position));
   const ticks = $derived(result === null || scope === null ? [] : scopeTicks(result, scope));
   const canReplay = $derived(view !== null && result?.timeline !== null && (scope?.count ?? 0) > 0);
   const valueText = $derived(
-    view === null || result?.timeline === null ? i18n.t('stage.5.pending') : stepText(view, shown, i18n.t),
+    view === null || result?.timeline === null
+      ? i18n.t('stage.5.pending')
+      : app.playing
+        ? i18n.t('scrubber.playing')
+        : stepText(view, shown, i18n.t),
   );
   const scopeText = $derived.by(() => {
     if (result === null || scope === null) return '';
@@ -107,6 +129,7 @@
 
   // Stop 6 ≡ stop 5 at the last step; a step past the result's end is clamped (see the decisions above).
   $effect(() => {
+    if (app.currentResult === null) return;
     const count = app.stepCount;
     if (app.stage === 6 ? app.step !== count : app.step > count) app.step = count;
   });
@@ -155,9 +178,29 @@
       if (event.target instanceof Element && event.target.closest('[data-testid="pipeline"]') !== null) return;
       playback.follow = false;
     };
+    const scrollKey = (event: KeyboardEvent): void => {
+      // The page's own scrolling keys; the board, the rail (radios, scrubber, merge list), fields and dialogs use them.
+      if (!SCROLL_KEYS.has(event.key) || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey)
+        return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest('[role="grid"], [data-testid="pipeline"], dialog, select, input, textarea') != null) return;
+      if (isEditableTarget(event.target)) return;
+      // Space scrolls only when nothing focusable has focus (on a button it presses the button).
+      if (event.key === ' ' && target !== null && target !== document.body && target !== document.documentElement)
+        return;
+      playback.follow = false;
+    };
+    const scrollbarDrag = (event: PointerEvent): void => {
+      // A press on the page's scrollbar lands on the root element, beyond its client box.
+      const root = document.documentElement;
+      if (event.target === root && (event.clientX >= root.clientWidth || event.clientY >= root.clientHeight))
+        playback.follow = false;
+    };
     window.addEventListener('keydown', onKeyCapture, true);
     window.addEventListener('wheel', manualScroll, { passive: true });
     window.addEventListener('touchmove', manualScroll, { passive: true });
+    window.addEventListener('keydown', scrollKey);
+    window.addEventListener('pointerdown', scrollbarDrag, true);
     const unwrap = wrapSwitches(
       { app, locale: i18n },
       () => document.getElementById('board'),
@@ -168,6 +211,8 @@
       window.removeEventListener('keydown', onKeyCapture, true);
       window.removeEventListener('wheel', manualScroll);
       window.removeEventListener('touchmove', manualScroll);
+      window.removeEventListener('keydown', scrollKey);
+      window.removeEventListener('pointerdown', scrollbarDrag, true);
       unwrap();
       playback.pause();
     };
