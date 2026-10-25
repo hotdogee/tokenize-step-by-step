@@ -21,8 +21,9 @@ Node-only vocabulary converter (`tsbs-vocab`, docs/design/03-data-model-and-asse
 always fails). `SOURCE_DATE_EPOCH` overrides every date written.
 
 The conformance gate reads each container back through WP02's `readTsbv1`, imported from the design's subpath
-`@tsbs/core/format/tsbv1` (a root re-export is accepted too; `src/core-reader.ts`). Until WP02 merges the reader is
-absent: an asset whose engine factory exists then fails the gate, and the joint WP02/WP03 test is a todo.
+`@tsbs/core/format/tsbv1` (a root re-export is accepted too; `src/core-reader.ts`). WP02 merged in wave 1, so the
+reader is always present: the joint WP02/WP03 test (`test/real-assets.test.ts`) reads every in-memory container and
+every `.bin` in `data/vocab/dist` back through it.
 
 ## Recorded deviations
 
