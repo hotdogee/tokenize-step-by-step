@@ -42,6 +42,7 @@
     "build:site": "pnpm --filter @tsbs/web build && pnpm check:dist && pnpm exec wrangler deploy --dry-run",
     "check:dist": "node scripts/check-dist.ts && tsbs-vocab guard --dist apps/web/dist && size-limit --config size-limit.json --ignore-missing",
     "lhci": "pnpm dlx @lhci/cli@0.15.1 autorun --config=lighthouserc.json",
+    "lhci-local": "node scripts/lhci-local.ts",
     "deploy": "wrangler deploy",
     "deploy:smoke": "node scripts/deploy-smoke.ts",
     "preview:pr": "node scripts/preview-pr.ts",
@@ -68,6 +69,7 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.72.0",
     "vitest": "4.1.12",
-    "wrangler": "4.152.0"
+    "wrangler": "4.152.0",
+    "yaml": "2.9.1"
   }
 }

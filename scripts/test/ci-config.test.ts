@@ -1,10 +1,11 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 import { ISSUE_TITLE } from '../lib/reverify.ts';
 
-// Consistency of the delivery configuration (WP11): workflows ↔ root scripts ↔ pins, and the budgets of 06 §3 in
-// size-limit.json, lighthouserc.json and budgets.json. A failure here means a config drifted from the design or a
-// workflow calls something that does not exist.
+// Consistency of the delivery configuration (WP11): workflows and composite actions parse and are well-formed,
+// workflows ↔ root scripts ↔ pins, and the budgets of 06 §3 in size-limit.json, lighthouserc.json and budgets.json. A
+// failure here means a config drifted from the design or a workflow calls something that does not exist.
 const root = new URL('../../', import.meta.url);
 const read = (path: string): string => readFileSync(new URL(path, root), 'utf8');
 const json = (path: string): unknown => JSON.parse(read(path));
@@ -15,6 +16,30 @@ const workflows = readdirSync(new URL('.github/workflows/', root)).map((name) =>
   name,
   text: read(`.github/workflows/${name}`),
 }));
+/** Composite actions under .github/actions/<name>/action.yml. */
+const actions = readdirSync(new URL('.github/actions/', root)).map((name) => ({
+  name: `actions/${name}`,
+  text: read(`.github/actions/${name}/action.yml`),
+}));
+
+/** The parts of a workflow file the structural checks read. */
+interface Workflow {
+  name?: string;
+  on?: Record<string, unknown>;
+  jobs?: Record<
+    string,
+    {
+      'runs-on'?: string;
+      'timeout-minutes'?: number;
+      needs?: string | string[];
+      if?: string;
+      env?: Record<string, string>;
+      strategy?: { matrix?: Record<string, unknown> };
+      steps?: Array<{ uses?: string; run?: string; with?: Record<string, unknown>; if?: string }>;
+    }
+  >;
+}
+const parsed = (name: string): Workflow => parse(read(`.github/workflows/${name}`)) as Workflow;
 /** pnpm's own commands (everything else after `pnpm ` is a root script). */
 const PNPM_BUILTINS = new Set(['install', 'audit', 'exec', 'dlx', 'run', 'add']);
 
@@ -40,8 +65,31 @@ describe('workflows', () => {
     ]);
   });
 
+  it('parse as YAML: every job has runs-on, a timeout and steps, and needs only jobs that exist', () => {
+    for (const { name } of workflows) {
+      const workflow = parsed(name);
+      expect(workflow.name, name).toBe(name.replace(/\.yml$/, ''));
+      expect(Object.keys(workflow.on ?? {}).length, `${name}: on`).toBeGreaterThan(0);
+      const jobs = Object.entries(workflow.jobs ?? {});
+      expect(jobs.length, `${name}: jobs`).toBeGreaterThan(0);
+      for (const [id, job] of jobs) {
+        expect(job['runs-on'], `${name} ${id}: runs-on`).toBe('ubuntu-24.04');
+        expect(job['timeout-minutes'], `${name} ${id}: timeout-minutes`).toBeGreaterThan(0);
+        expect(job.steps?.length, `${name} ${id}: steps`).toBeGreaterThan(0);
+        for (const need of [job.needs ?? []].flat())
+          expect(workflow.jobs, `${name} ${id} needs ${need}`).toHaveProperty([need]);
+      }
+    }
+    for (const { name, text } of actions) {
+      const action = parse(text) as { name?: string; runs?: { using?: string; steps?: unknown[] } };
+      expect(action.name, name).toBeTruthy();
+      expect(action.runs?.using, name).toBe('composite');
+      expect(action.runs?.steps?.length, name).toBeGreaterThan(0);
+    }
+  });
+
   it('call only root scripts that exist (and root scripts call only existing scripts)', () => {
-    for (const { name, text } of workflows)
+    for (const { name, text } of [...workflows, ...actions])
       for (const script of pnpmScripts(text)) expect(pkg.scripts, `${name}: pnpm ${script}`).toHaveProperty([script]);
     for (const [name, body] of Object.entries(pkg.scripts))
       for (const script of pnpmScripts(body))
@@ -50,10 +98,52 @@ describe('workflows', () => {
     expect(e2ePkg.scripts).toHaveProperty(['e2e:headers']);
   });
 
-  it('pin every action to a full commit SHA', () => {
-    for (const { name, text } of workflows)
-      for (const match of text.matchAll(/uses:\s*(\S+)/g))
-        expect(match[1], name).toMatch(/^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/);
+  it('pin every action to a full commit SHA (local composite actions by path)', () => {
+    for (const { name, text } of [...workflows, ...actions])
+      for (const match of text.matchAll(/uses:\s*(\S+)/g)) {
+        const ref = match[1] ?? '';
+        if (ref.startsWith('./'))
+          expect(existsSync(new URL(`${ref.slice(2)}/action.yml`, root)), `${name}: ${ref}`).toBe(true);
+        else expect(ref, name).toMatch(/^[\w.-]+\/[\w./-]+@[0-9a-f]{40}$/);
+      }
+  });
+
+  it('install browsers only through the shared Playwright action (cache keyed on the Playwright version)', () => {
+    for (const { name, text } of workflows) expect(text, name).not.toMatch(/playwright install/);
+    const action = actions.find((entry) => entry.name === 'actions/playwright')?.text ?? '';
+    expect(action).toContain(`jq -r '.devDependencies["@playwright/test"]' e2e/package.json`);
+    expect(action).toMatch(/key: playwright-\$\{\{ runner\.os \}\}-\$\{\{ steps\.key\.outputs\.version \}\}-/);
+    expect(action).toContain('playwright install --with-deps $BROWSERS');
+    expect(action).toContain('fonts-noto-cjk');
+  });
+
+  it('run the full e2e matrix as engine × 3 shards with the CJK fonts (06 §4)', () => {
+    const e2e = parsed('ci.yml').jobs?.['e2e'];
+    expect(e2e?.strategy?.matrix).toMatchObject({ engine: ['chromium', 'firefox', 'webkit'], shard: [1, 2, 3] });
+    expect(e2e?.env).toEqual({ E2E_FULL_MATRIX: '1', E2E_ENGINE: '${{ matrix.engine }}' });
+    const steps = e2e?.steps ?? [];
+    expect(steps.find((step) => step.uses === './.github/actions/playwright')?.with).toEqual({
+      browsers: '${{ matrix.engine }}',
+      'cjk-fonts': 'true',
+    });
+    expect(steps.some((step) => step.run === 'pnpm e2e --shard=${{ matrix.shard }}/3')).toBe(true);
+    expect(steps.some((step) => step.if === 'failure()' && step.with?.['path'] !== undefined)).toBe(true);
+  });
+
+  it('render the visual baselines only on workflow_dispatch, never on push or pull_request', () => {
+    const ci = parsed('ci.yml');
+    expect(ci.on).toHaveProperty(['workflow_dispatch']);
+    const job = ci.jobs?.['visual-baselines'];
+    expect(job?.if).toBe("github.event_name == 'workflow_dispatch'");
+    expect(job?.steps?.some((step) => step.run === 'pnpm e2e --project=visual --update-snapshots=all')).toBe(true);
+    // A dispatched ci run on main must never deploy (deploy.yml requires a push run).
+    expect(read('.github/workflows/deploy.yml')).toContain("github.event.workflow_run.event == 'push'");
+  });
+
+  it('lhci-local reuses the exact @lhci/cli pin of the lhci script', () => {
+    expect(pkg.scripts['lhci']).toMatch(/@lhci\/cli@\d+\.\d+\.\d+ /);
+    expect(pkg.scripts['lhci-local']).toBe('node scripts/lhci-local.ts');
+    expect(read('scripts/lhci-local.ts')).toContain("pkg.scripts['lhci']");
   });
 
   it('use the repository wrangler and Playwright pins', () => {

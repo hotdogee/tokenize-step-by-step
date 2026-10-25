@@ -48,6 +48,12 @@ jobs:
       - run: pnpm vocab:fetch
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      # As in ci's `unit` job: the built assets for the .bin conformance and worker-browser suites, and chromium for the
+      # Vitest browser-mode projects of `pnpm test` (web-browser fails under CI without it) and the WP12 perf spec.
+      - run: pnpm vocab:build --conformance strict
+      - uses: ./.github/actions/playwright
+        with:
+          browsers: chromium
       - id: plan
         env:
           SEED_INPUT: ${{ inputs.seed }}

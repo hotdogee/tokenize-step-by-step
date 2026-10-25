@@ -226,6 +226,9 @@ importers:
       wrangler:
         specifier: 4.152.0
         version: 4.152.0(@types/node@26.6.5)
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   apps/web:
     dependencies:
