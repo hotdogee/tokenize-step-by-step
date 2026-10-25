@@ -5,7 +5,7 @@
  * map (03 §B.4). Classes come from the tiktoken class probe, cross-checked against HF tokenizers and the regex module;
  * the normalization tables from Python unicodedata united with the regex module (tools/oracle/README.md § "Unicode tables").
  *
- * Oracle versions: python 3.13.9, regex 2026.9.29, tiktoken 0.14.0, tokenizers 0.23.3, unicodedata 15.1.0.
+ * Oracle versions: python 3.13, regex 2026.9.29, tiktoken 0.14.0, tokenizers 0.23.3, unicodedata 15.1.0.
  *
  * Encoding: each table is a flat list of (gap, span) pairs over sorted inclusive code-point ranges; with next = 0, a pair
  * decodes to first = next + gap, last = first + span, then next = last + 1 (`decodeRanges` in ./ranges.ts).
@@ -16,7 +16,7 @@ export const UNICODE_VERSION = '16.0.0';
 
 /** Library versions of the export that produced these tables. */
 export const TABLE_VERSIONS = {
-  python: '3.13.9',
+  python: '3.13',
   regex: '2026.9.29',
   tiktoken: '0.14.0',
   tokenizers: '0.23.3',
