@@ -52,6 +52,8 @@
   const HOVER_MS = 120;
   /** localStorage: the keyboard hint under the board is shown until the board keys have been used (05 §8). */
   const HINT_KEY = 'tsbs:boardKeysUsed';
+  /** The first of these anywhere on the page loads the inspector catalog (PA-7: it is not part of the startup JS). */
+  const ENGAGE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'focusin'] as const;
 
   const app = appState();
   const viewport = new BoardViewport();
@@ -129,7 +131,11 @@
     slice: sliceRef === null ? null : units.span(sliceRef.tier, sliceRef.index),
     selected,
   });
-  /** The inspector catalog loads after first paint (a lazy chunk, PA-7); until then the panel shows its hint. */
+  /**
+   * The inspector catalog (a lazy chunk, PA-7) loads on the first interaction with the page — a pointer, a key or a focus
+   * anywhere, so board engagement (focus, hover, tap) always includes it — never at startup; until then the panel shows
+   * its empty text and the keyboard hint's reserved lines stay blank.
+   */
   let inspectorCatalog: typeof InspectorCatalogModule | null = $state.raw(null);
   const ti: InspectorTranslate | null = $derived.by(() => {
     const catalog = inspectorCatalog;
@@ -441,14 +447,18 @@
 
   onMount(() => {
     measure();
-    void import('../inspector/i18n/catalogs.ts').then(
-      (catalog) => {
-        inspectorCatalog = catalog;
-      },
-      () => {
-        // A stale deploy (chunk gone): the panel keeps its hint; the shell's reload alert covers the rest.
-      },
-    );
+    const loadCatalog = (): void => {
+      for (const type of ENGAGE_EVENTS) document.removeEventListener(type, loadCatalog, true);
+      void import('../inspector/i18n/catalogs.ts').then(
+        (catalog) => {
+          inspectorCatalog = catalog;
+        },
+        () => {
+          // A stale deploy (chunk gone): the panel keeps its empty text; the shell's reload alert covers the rest.
+        },
+      );
+    };
+    for (const type of ENGAGE_EVENTS) document.addEventListener(type, loadCatalog, { capture: true, passive: true });
     let frame = 0;
     const schedule = (): void => {
       cancelAnimationFrame(frame);
@@ -489,6 +499,7 @@
     document.addEventListener('pointerdown', onDocumentPointerDown, true);
     document.addEventListener('focusin', onDocumentFocusIn);
     return () => {
+      for (const type of ENGAGE_EVENTS) document.removeEventListener(type, loadCatalog, true);
       observer.disconnect();
       cancelAnimationFrame(frame);
       cancelAnimationFrame(scrollFrame);
@@ -673,7 +684,7 @@
     color: var(--fg-muted);
   }
 
-  /* The hint's text arrives with the inspector catalog (lazy): its lines are reserved so nothing shifts (CLS). */
+  /* The hint's text arrives with the inspector catalog (lazy, first interaction): its lines are reserved (no CLS). */
   .hint {
     min-height: 2.6em;
   }

@@ -1,6 +1,6 @@
 /**
- * The inspector's catalogs and translator (lazy: the Board imports this module after first paint, so the inspector's
- * strings never weigh on the initial `i18n` chunk, 06 §3 / PA-7). Same template rules as the shell (`fill`/`templateOf`
+ * The inspector's catalogs and translator (lazy: the Board imports this module on the first interaction with the page,
+ * never at startup, so the inspector's strings weigh on neither the initial `i18n` chunk nor the Main JS, 06 §3 / PA-7). Same template rules as the shell (`fill`/`templateOf`
  * of ../../i18n/t.ts: named placeholders, plural forms on `n`, raw digits for ids/hex/steps).
  */
 import { fill, templateOf } from '../../i18n/t.ts';

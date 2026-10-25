@@ -81,7 +81,9 @@ export async function mountBoard(app: AppState, width?: number): Promise<Mounted
   const component = mount(BoardHarness, { target, props: { app, width } });
   flushSync();
   await frames(3);
-  // The inspector's catalog is a lazy chunk: wait for it so tests see the panel's content.
+  // The inspector's catalog is a lazy chunk loaded on the first interaction with the page: interact once (a pointer
+  // move), then wait for it so tests see the panel's content.
+  document.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'mouse' }));
   for (let i = 0; i < 200 && target.querySelector('[data-inspector="ready"]') === null; i++) await frames(1);
   const grid = target.querySelector<HTMLElement>('[role="grid"]');
   if (grid === null) throw new Error('board grid not rendered');
