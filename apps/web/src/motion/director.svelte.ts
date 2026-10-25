@@ -13,7 +13,7 @@
  * behaviour.
  *
  * The choreography (choreography.ts + flip.ts) is a lazy chunk loaded on the first interaction with the page; until it
- * arrives changes are discrete.
+ * arrives changes are discrete. Once loaded it also slides the bottom sheet in when it expands (`watchSheet`).
  */
 import { untrack } from 'svelte';
 import type { TokenizationResult, TokenizationView } from '@tsbs/core';
@@ -65,6 +65,13 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
   /** Byte cells showing the merge caret (`data-merge-caret`). */
   let carets: HTMLElement[] = [];
   let outlineTimer: ReturnType<typeof setTimeout> | undefined;
+  let stopSheet: (() => void) | null = null;
+  let destroyed = false;
+
+  $effect(() => () => {
+    destroyed = true;
+    stopSheet?.();
+  });
 
   function clearMarks(): void {
     clearTimeout(outlineTimer);
@@ -191,6 +198,7 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
       loading ??= import('./choreography.ts').then(
         (module) => {
           choreography = module;
+          if (!destroyed) stopSheet = module.watchSheet(document.body, () => motionPrefs.reduced);
         },
         () => {
           loading = null; // a stale deploy: stay discrete; the next interaction retries

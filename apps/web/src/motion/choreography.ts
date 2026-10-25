@@ -20,6 +20,7 @@
  * | merge step | chips FLIP keyed by byte span (the merged chip grows out of its left part) while a copy of the right part slides the 2 px gap to abut it and fades into the merged chip, 280 ms; pulse on the merged part (600 ms) | discrete swap, 600 ms static outline |
  * | split step (spm byte fallback) | the byte chips FLIP out of the parent's span, 280 ms | discrete swap |
  * | fast scrub (> 1 step / 100 ms) | changed chips crossfade, 80 ms opacity | same |
+ * | bottom sheet expands / collapses | slides up from its collapsed height + fades in, 200 ms / fades, 200 ms | 120 ms opacity |
  *
  * Above `MAX_FLIP_CELLS` changed cells the visible rows crossfade instead of a per-cell FLIP. Above `DETAIL_CELLS` the
  * morph keeps one compositor layer per box and glyph and no more (measured: every animated element costs ≈ 0.07 ms in
@@ -455,4 +456,36 @@ function pseudo(cells: Iterable<HTMLElement>, keyframes: Keyframe[], duration: n
   } catch {
     // No pseudo-element animations (old engines): the static mark alone shows it.
   }
+}
+
+/**
+ * The bottom sheet (< 768 px, 05 §5) slides up and fades in when it expands — translateY from its collapsed height +
+ * opacity, 200 ms (reduced motion: 120 ms opacity) — and fades when it collapses (its height drops at once, so there is
+ * nothing to slide). Watches `data-expanded` on the inspector host; returns the function that stops watching.
+ */
+export function watchSheet(root: Node, reduced: () => boolean): () => void {
+  if (typeof MutationObserver === 'undefined') return () => undefined;
+  const observer = new MutationObserver((records) => {
+    for (const { target } of records) {
+      if (!(target instanceof HTMLElement) || target.dataset['surface'] !== 'sheet') continue;
+      const expanded = target.dataset['expanded'] === 'true';
+      const plan = new Plan();
+      if (reduced()) plan.add(target, [{ opacity: 0.6 }, { opacity: 1 }], { duration: REDUCED_MS, easing: 'ease-out' });
+      else if (expanded)
+        plan.add(
+          target,
+          [
+            { transform: 'translateY(calc(40vh - 56px))', opacity: 0.6 },
+            { transform: 'none', opacity: 1 },
+          ],
+          { duration: 200, easing: EASE },
+        );
+      else plan.add(target, [{ opacity: 0.6 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
+      plan.start();
+    }
+  });
+  observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['data-expanded'] });
+  return () => {
+    observer.disconnect();
+  };
 }

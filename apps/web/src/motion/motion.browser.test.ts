@@ -3,7 +3,8 @@
  * animation, the boxes' stop-2 geometry) and then FLIPs the char boxes (glyphs counter-scaled) and unfolds the byte
  * cells, and a change before the start restores the board's own geometry; leaving stop 5 fades a copy of the chunk
  * brackets out; a merge step FLIPs the changed chips, slides a copy of the right part into the left one, draws the
- * byte-tier caret and marks the merged part (star, pulse, "merged at this step"); rapid scrubbing
+ * byte-tier caret and marks the merged part (star, pulse, "merged at this step"); the bottom sheet slides in when it
+ * expands; rapid scrubbing
  * cancels the running FLIP (`Animation.cancel()`) and only crossfades, so `document.getAnimations()` drains; the in-app
  * reduced-motion switch leaves zero transform animations, opacity swaps ≤ 150 ms, `scrollIntoView` with
  * `behavior: 'auto'` and the loading bar without a transition; the switch crossfade uses a View Transition when
@@ -15,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { appWith, fixtureResult, frames } from '../board/board.test-helper.ts';
 import { animatesTransform, durations, mountRail, type MountedRail } from '../pipeline/pipeline.test-helper.ts';
 import { cancelAll, heldCount, runningCount } from './flip.ts';
-import { motionPrefs } from './motion-prefs.svelte.ts';
+import { MotionPrefs, motionPrefs } from './motion-prefs.svelte.ts';
 import { crossfade, startViewTransitionOf, wrapSwitches } from './view-transition.ts';
 
 let mounted: MountedRail | null = null;
@@ -196,6 +197,70 @@ describe('merge steps (05 §7)', () => {
     await sleep(150);
     expect(document.getAnimations()).toEqual([]);
     expect(runningCount()).toBe(0);
+  });
+});
+
+describe('bottom sheet (< 768 px)', () => {
+  it('slides up and fades in when it expands and fades when it collapses; reduced motion: opacity only', async () => {
+    const { watchSheet } = await import('./choreography.ts');
+    const host = document.createElement('div');
+    host.dataset['surface'] = 'sheet';
+    host.dataset['expanded'] = 'false';
+    document.body.append(host);
+    let reduced = false;
+    const stop = watchSheet(document.body, () => reduced);
+    try {
+      host.dataset['expanded'] = 'true';
+      await frames(1);
+      const slide = host.getAnimations();
+      expect(slide.some(animatesTransform)).toBe(true);
+      expect(durations(slide)).toEqual([200]);
+      cancelAll();
+      host.dataset['expanded'] = 'false';
+      await frames(1);
+      expect(host.getAnimations().filter(animatesTransform)).toEqual([]);
+      expect(host.getAnimations()).toHaveLength(1);
+      cancelAll();
+      reduced = true;
+      host.dataset['expanded'] = 'true';
+      await frames(1);
+      expect(host.getAnimations().filter(animatesTransform)).toEqual([]);
+      expect(durations(host.getAnimations())).toEqual([120]);
+    } finally {
+      stop();
+      host.remove();
+    }
+  });
+});
+
+describe('reduced motion (system setting, observed live)', () => {
+  it('follows a live prefers-reduced-motion change unless the in-app switch overrides it', () => {
+    const listeners: Array<(event: MediaQueryListEvent) => void> = [];
+    const query = {
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => listeners.push(listener),
+      removeEventListener: () => undefined,
+    } as unknown as MediaQueryList;
+    const matchMedia = vi.spyOn(window, 'matchMedia').mockReturnValue(query);
+    const change = (matches: boolean): void => {
+      for (const listener of listeners) listener({ matches } as MediaQueryListEvent);
+    };
+    const prefs = new MotionPrefs(null);
+    expect(matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)');
+    expect(prefs).toMatchObject({ system: false, reduced: false, scrollBehavior: 'smooth' });
+    change(true); // the user turns on "reduce motion" in the OS while the page is open
+    expect(prefs).toMatchObject({ system: true, reduced: true, scrollBehavior: 'auto' });
+    expect(document.documentElement.dataset['motion']).toBe('reduced');
+    change(false);
+    expect(prefs.reduced).toBe(false);
+    expect(document.documentElement.dataset['motion']).toBeUndefined();
+    prefs.override = 'reduce'; // the in-app switch wins over the system setting
+    change(false);
+    expect(prefs.reduced).toBe(true);
+    prefs.override = 'full';
+    change(true);
+    expect(prefs.reduced).toBe(false);
   });
 });
 
