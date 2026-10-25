@@ -7,9 +7,10 @@ import '../theme/base.css';
 import axe from 'axe-core';
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { i18n } from '../i18n/locale.svelte.ts';
 import AppHarness from './AppHarness.test-helper.svelte';
-import { AppState } from './app-state.svelte.ts';
+import { AppState, type UiError } from './app-state.svelte.ts';
 import { defaultResult } from './bootstrap.ts';
 import { FakeClient, flush } from './fake-client.test-helper.ts';
 
@@ -78,15 +79,24 @@ describe('counts line', () => {
     expect(text(root, '[data-testid="counts"]')).toContain('20,001 code points');
     expect(text(root, '[data-testid="counts"]')).toContain('tokens: press “Tokenize now”');
     expect(root.querySelector('[data-testid="stale-badge"]')).toBeNull();
+    const button = root.querySelector<HTMLButtonElement>('[data-testid="long-input-run"]');
+    button?.focus();
     const run = app.runOnDemand();
     flushSync();
-    const button = root.querySelector<HTMLButtonElement>('[data-testid="long-input-run"]');
-    expect(button?.disabled).toBe(true);
+    // Busy, yet still focusable (05 §8): aria-disabled with a guard, never `disabled`.
+    expect(button?.getAttribute('aria-disabled')).toBe('true');
+    expect(button?.disabled).toBe(false);
+    expect(document.activeElement).toBe(button);
     expect(button?.textContent).toBe('tokenizing');
+    expect(text(root, '[data-testid="counts"]')).toContain('tokens: waiting for the tokenizer');
+    const sent = client.encodes.length;
+    button?.click();
+    expect(client.encodes).toHaveLength(sent); // no second run while one is in flight
     client.encodes.at(-1)?.answer();
     await run;
     flushSync();
-    expect(button?.disabled).toBe(false);
+    expect(button?.getAttribute('aria-disabled')).toBe('false');
+    expect(document.activeElement).toBe(button);
     expect(text(root, '[data-testid="counts"]')).toContain('20,001 tokens');
     expect(root.querySelector('[data-testid="stale-badge"]')).toBeNull();
     app.setText(`${long}b`);
@@ -140,5 +150,42 @@ describe('error toast', () => {
     flushSync();
     expect(root.querySelector('[data-testid="error-action"]')).toBeNull();
     expect(root.querySelector('[data-testid="error-toast"]')?.getAttribute('data-informational')).toBe('true');
+  });
+
+  it('moves keyboard focus to a control that stays before its action or dismiss removes it (05 §8)', async () => {
+    const { app, root } = setup();
+    const textarea = document.createElement('textarea');
+    textarea.id = 'text-input';
+    const picker = document.createElement('button');
+    picker.id = 'picker-button';
+    root.prepend(textarea, picker);
+    /** Shows `error`'s toast, reaches `target` with Tab (keyboard focus) and presses Enter on it. */
+    const activate = async (error: UiError, target: string): Promise<void> => {
+      app.error = error;
+      flushSync();
+      textarea.focus();
+      for (let i = 0; i < 6 && document.activeElement?.getAttribute('data-testid') !== target; i++)
+        await userEvent.tab();
+      expect(document.activeElement?.getAttribute('data-testid')).toBe(target);
+      await userEvent.keyboard('{Enter}');
+      flushSync();
+      expect(root.querySelector('[data-testid="error-toast"]')).toBeNull();
+    };
+    const fetchError: UiError = {
+      code: 'fetch',
+      message: '',
+      retryable: true,
+      tokenizer: 'openai-o200k_base',
+      previous: null,
+    };
+    await activate(fetchError, 'error-action'); // Retry
+    expect(document.activeElement).toBe(textarea);
+    await activate(fetchError, 'error-dismiss');
+    expect(document.activeElement).toBe(textarea);
+    await activate(
+      { code: 'oom', message: '', retryable: false, tokenizer: 'google-gemma4', previous: 'openai-o200k_base' },
+      'error-action', // Go back
+    );
+    expect(document.activeElement).toBe(picker);
   });
 });

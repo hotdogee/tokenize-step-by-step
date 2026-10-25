@@ -33,6 +33,7 @@
 <div class="picker">
   <button
     type="button"
+    id="picker-button"
     class="btn chip"
     aria-haspopup="dialog"
     aria-busy={loading !== null}

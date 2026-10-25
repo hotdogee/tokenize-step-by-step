@@ -3,7 +3,9 @@
    * The long-input banners (AD-27, 05 §6): above 20,000 code points live tokenization pauses behind "Long input —
    * tokenize on demand" and a button that tokenizes the WHOLE (analysed) text once; above 200,000 code points a second
    * line says only the first 200,000 are analysed (the text stays in the textarea, never truncated). The banner text is
-   * a polite status, so pasting a long text announces it once.
+   * a polite status, so pasting a long text announces it once. While a run is in flight the button stays focusable
+   * (`aria-disabled`, not `disabled`, with a guard): disabling the focused button would drop keyboard focus to the body
+   * (05 §8).
    */
   import { i18n } from '../i18n/locale.svelte.ts';
   import { appState } from './context.ts';
@@ -12,6 +14,10 @@
   const app = appState();
   const shown = $derived(isOnDemand(app.longInput));
   const capped = $derived(app.longInput === 'capped');
+
+  function run(): void {
+    if (!app.running) void app.runOnDemand();
+  }
 </script>
 
 {#if shown}
@@ -24,9 +30,9 @@
       type="button"
       class="btn"
       data-testid="long-input-run"
-      disabled={app.running}
+      aria-disabled={app.running}
       aria-busy={app.running}
-      onclick={() => void app.runOnDemand()}>{app.running ? i18n.t('progress.encode') : i18n.t('longInput.run')}</button
+      onclick={run}>{app.running ? i18n.t('progress.encode') : i18n.t('longInput.run')}</button
     >
   </div>
 {/if}
@@ -61,5 +67,9 @@
 
   .btn {
     min-height: 2.5rem;
+  }
+
+  .btn[aria-disabled='true'] {
+    cursor: progress;
   }
 </style>
