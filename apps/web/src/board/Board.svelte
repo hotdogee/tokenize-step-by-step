@@ -733,8 +733,10 @@
   }
 
   /* The sheet height plus a gap, so a focused cell scrolled "nearest" never sits flush against the sheet: flush, its
-     focus ring is cut off, and a sub-pixel layout difference (fonts, scrollbars) already counts as overlap. */
+     focus ring is cut off, and a sub-pixel layout difference (fonts, scrollbars) already counts as overlap. The same gap
+     at the top edge keeps the ring of a cell scrolled up to it (Ctrl+Home, a long jump upward) whole. */
   :global(html) {
+    scroll-padding-block-start: 8px;
     scroll-padding-block-end: calc(var(--sheet-height, 0px) + 8px);
   }
 
