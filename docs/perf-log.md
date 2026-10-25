@@ -162,16 +162,16 @@ nightly timing step is soft.
 **Where:** the same machine as the baseline, after the wave 3 merges (WP09 rail and motion, WP10 drawer, WP12, WP11) on
 main at `0e974dd` plus the integration fixes; one serial run of each, machine otherwise idle.
 
-| Metric                                                                                         | Measured                     | 06 §3 budget    |                     |
-| ---------------------------------------------------------------------------------------------- | ---------------------------- | --------------- | ------------------- |
-| o200k load, `loaded.ms` (CDP Fast 4G)                                                          | 1,178–1,183 ms               | ≤ 2.5 s desktop | ✓                   |
-| keystroke → board update at 1k chars, p95 (incl. the 40 ms debounce)                           | 55.9–61.4 ms (p50 52.6–53.5) | ≤ 50 ms         | ✗ (soft; finding 2) |
-| keystroke → board update at 10k CJK, p95 (incl. the 40 ms debounce)                            | 70.9–71.0 ms                 | ≤ 120 ms        | ✓                   |
-| longest main-thread task while typing into 10k CJK (trace)                                     | 13.0–13.1 ms; 0 long tasks   | ≤ 50 ms         | ✓                   |
-| render 2,004 board cells, wall time result → DOM, median of 5                                  | 125–130 ms (max 218–226)     | ≤ 50 ms script  | ✗ (soft; finding 1) |
-| scrub one merge step at stop 5 (`.`, 300 chars, WP09 rail), keydown → frame, p95               | 42.9 ms                      | (recorded)      |                     |
-| longest main-thread task while scrubbing (trace, WP09 rail)                                    | 34.7 ms                      | ≤ 50 ms         | ✓ (finding 3)       |
-| stop 2→3 morph at 600 cells, longest frame (`TSBS_PERF=1 pnpm e2e pipeline-trace --workers=1`) | passes                       | ≤ 32 ms         | ✓                   |
+| Metric                                                                                                    | Measured                     | 06 §3 budget     |                     |
+| --------------------------------------------------------------------------------------------------------- | ---------------------------- | ---------------- | ------------------- |
+| o200k load, `loaded.ms` (CDP Fast 4G)                                                                     | 1,178–1,183 ms               | ≤ 2.5 s desktop  | ✓                   |
+| keystroke → board update at 1k chars, p95 (incl. the 40 ms debounce)                                      | 55.9–61.4 ms (p50 52.6–53.5) | ≤ 50 ms          | ✗ (soft; finding 2) |
+| keystroke → board update at 10k CJK, p95 (incl. the 40 ms debounce)                                       | 70.9–71.0 ms                 | ≤ 120 ms         | ✓                   |
+| longest main-thread task while typing into 10k CJK (trace)                                                | 13.0–13.1 ms; 0 long tasks   | ≤ 50 ms          | ✓                   |
+| render 2,004 board cells, wall time result → DOM, median of 5                                             | 125–130 ms (max 218–226)     | ≤ 50 ms script   | ✗ (soft; finding 1) |
+| scrub one merge step at stop 5 (`.`, 300 chars, WP09 rail), keydown → frame, p95                          | 42.9 ms                      | (recorded)       |                     |
+| longest main-thread task while scrubbing (trace, WP09 rail)                                               | 34.7 ms                      | ≤ 50 ms          | ✓ (finding 3)       |
+| stop 2→3 morph at 600 cells, longest main-thread task (`TSBS_PERF=1 pnpm e2e pipeline-trace --workers=1`) | passes                       | ≤ 32 ms per task | ✓                   |
 
 Finding 3 is re-measured on WP09's rail and scrubber: inside the long-task rule. The scrub spec now starts its walk at
 step 0 (Home on the scrubber), because `5` pressed at stop 6 lands on the last merge since WP09 (stop 6 ≡ stop 5 at
@@ -179,3 +179,8 @@ step 0 (Home on the scrubber), because `5` pressed at stop 6 lands on the last m
 byte-level 10k CJK 8.1–11.2 ms (≤ 15; Llama 4 11.2, Grok-2 9.9), 20k CJK 15.9–24.3 ms (≤ 40), spm 10k CJK 5.2–6.1 ms
 (≤ 20), o200k `readTsbv1` 6.7 ms (≤ 25), Gemma 4 `readTsbv1` 21.8 ms (≤ 40), Worker heap growth over 500 keystrokes
 −1.66 MB (o200k) / −0.20 MB (Gemma 4) (< 10 MB).
+
+The morph row bounds main-thread tasks (the commit frame 22.2–23.5 ms and the longest later task 19.7–22.5 ms in 3 of 3
+serial strict runs, wave 3 review), not presented frames: rAF intervals during the same morph reach 33.5–50 ms in serial
+headless chromium, and Playwright WebKit on Windows (WinCairo, not representative of Safari) showed a 42–46 ms commit
+frame. 06 §3 now says so; a manual macOS Safari morph check is on the release checklist (item 9).

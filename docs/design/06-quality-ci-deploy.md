@@ -51,7 +51,7 @@
 | `encode()` ≡ `encodeIncremental()` | identical results on every fixture case; a 20k-CJK `encodeIncremental` yields ≥ 5 times | `vitest` |
 | Keystroke → board update | p95 ≤ 50 ms at 1k chars, ≤ 120 ms at 10k (chromium trace) | nightly perf spec |
 | Render 2,000 cells | ≤ 50 ms script; virtualize beyond | Playwright trace |
-| Stop 2→3 morph | no frame > 32 ms at ≤ 600 cells | Playwright trace |
+| Stop 2→3 morph | no main-thread task > 32 ms at ≤ 600 cells: the commit frame (keydown task to the end of the task that paints it) and every later task while the morph plays. The bound is per task; presented frames (compositor cadence) are not bounded — serial headless chromium shows rAF intervals of 33.5–50 ms during the same morph, a headless artefact that says nothing about Safari — so macOS Safari is checked by hand before launch (§7 item 9) | Playwright trace (desktop chromium); Safari Web Inspector timeline (manual) |
 | o200k load end-to-end (Playwright CDP `Network.emulateNetworkConditions` **"Fast 4G": 9 Mbps down, 170 ms RTT**) | ≤ 2.5 s desktop / ≤ 4 s mid phone (1,025 KB ≈ 0.9 s on the wire + verify + gunzip + build) | perf spec (`loaded.ms`) |
 | Resident memory per tokenizer (Worker) | o200k ≤ 8 MB; Gemma 4 ≤ 12 MB (PCES copy + offsets + hash + CSR; the container is released) | `vitest bench` (Node `process.memoryUsage().arrayBuffers` delta) |
 | Worker heap growth while typing | 500 keystrokes into a 10k-CJK paragraph: < 10 MB growth (chunk cache ≤ 2 MiB; results are transferred) | Node harness in the nightly perf spec |
@@ -147,7 +147,7 @@ The `/tok/*` block removes any `Content-Type` the asset server derived from `.bi
 6. `curl -sI -H 'Accept-Encoding: zstd, br, gzip' <largest /tok/*.bin>` → `200`, **no** `Content-Encoding`, `Content-Length` = `bytesCompressed`, `Content-Type` **exactly** `application/octet-stream` (one value, §6), `Cache-Control: … immutable`, `X-Content-Type-Options: nosniff` (research §6.5 item 7; record transferred bytes and the loader's `layer`/`contentEncoding` diagnostics in `docs/perf-log.md`).
 7. `/assets/*.js` and `/examples/*.json` → `Content-Encoding` present (zstd/br/gzip), strong or weak ETag, `304` on `If-None-Match`.
 8. `/` → CSP header exactly as §6; `/index.html` → 307 to `/`; `/nope` → `404.html` with status 404; no dotfile reachable (`/.env` → 404).
-9. Lighthouse on the production URL meets §3; Safari 16.4 / iOS 16.4 smoke on BrowserStack (Playwright WebKit is newer than the floor); one mid-range Android Chrome run timed and recorded.
+9. Lighthouse on the production URL meets §3; Safari 16.4 / iOS 16.4 smoke on BrowserStack (Playwright WebKit is newer than the floor); one mid-range Android Chrome run timed and recorded; a manual macOS Safari morph check (Web Inspector › Timelines, the stop 2→3 morph at 600 cells = 150 ideographs, longest frame and dropped frames recorded in `docs/perf-log.md`), since the §3 morph bound is measured per main-thread task in chromium only.
 
 **Legal and content**:
 10. About renders every `shipIntent: ship` asset; xAI notice sentence exact with the owner-confirmed year; "Powered by xAI" visible with Grok-2 selected; "Built with Meta Llama 3" + Notice; Gemma Notice + Terms copy + Prohibited Use Policy link; MIT texts; MODIFIED statements; owner sign-off on wording (07 §6 open questions resolved or defaults accepted).

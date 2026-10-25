@@ -1,6 +1,6 @@
 /**
- * The stop 2→3 morph's frame budget on the real page (06 §3 "Stop 2→3 morph: no frame > 32 ms at ≤ 600 cells", 07 WP09),
- * chromium. 150 ideographs = 150 char boxes + 450 byte cells = 600 cells, all on screen:
+ * The stop 2→3 morph's frame budget on the real page (06 §3 "Stop 2→3 morph: no main-thread task > 32 ms at ≤ 600 cells",
+ * 07 WP09), chromium. 150 ideographs = 150 char boxes + 450 byte cells = 600 cells, all on screen:
  *
  * - nothing animates in the frame that paints the commit (the boxes keep their First geometry for that frame; flip.ts
  *   `Plan.startAfterPaint`) and the FLIP and the unfold start right after it; the U+ labels wait hidden while the boxes
@@ -9,6 +9,10 @@
  *   layout before the commit, and it is short;
  * - a chromium trace bounds the commit frame — from the start of the keydown task to the end of the task that paints
  *   it — and every later main-thread task while the morph plays.
+ *
+ * The bound is per main-thread task, not per presented frame: compositor cadence is not measured (serial headless
+ * chromium shows rAF intervals of 33.5–50 ms during this morph, a headless artefact) and WebKit is not traced at all, so
+ * 06 §3 leaves Safari to a manual Web Inspector check on the release checklist (`docs/release.md` item 9).
  *
  * Like the unit perf ceilings, the 32 ms bound holds on a quiet machine: it is enforced with `TSBS_PERF=1`, run serially
  * (`TSBS_PERF=1 pnpm e2e pipeline-trace --workers=1`); the default parallel run, where workers compete for the CPU,
@@ -27,7 +31,7 @@ import { openShell } from './shell-helpers.ts';
 test.skip(() => test.info().project.name !== 'chromium', 'desktop chromium: the trace');
 test.use({ trace: 'off' });
 
-/** 06 §3: no frame over 32 ms — enforced in a serial perf run (`TSBS_PERF=1`), doubled under parallel workers. */
+/** 06 §3: no main-thread task over 32 ms, enforced serially (`TSBS_PERF=1`); doubled under parallel workers. */
 const FRAME_CEILING_MS = process.env['TSBS_PERF'] === '1' ? 32 : 64;
 /** A forced layout of the re-rendered 600-cell board takes ≥ 5 ms on a fast machine; the pre-commit read, < 1 ms. */
 const PRE_COMMIT_LAYOUT_MS = 3;
@@ -133,7 +137,7 @@ async function animationsAroundCommit(page: Page, key: string): Promise<AroundCo
   });
 }
 
-test('the stop 2→3 morph at 600 cells: nothing animates in the commit frame, which reads no layout after the commit, and no frame is over 32 ms', async ({
+test('the stop 2→3 morph at 600 cells: nothing animates in the commit frame, which reads no layout after the commit, and no main-thread task is over 32 ms', async ({
   page,
   browser,
 }) => {
