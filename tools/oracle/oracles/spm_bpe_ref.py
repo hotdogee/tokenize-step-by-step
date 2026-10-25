@@ -12,6 +12,14 @@ SentencePiece 0.2.x for models with an identity normaliser:
 4. Map each symbol to its id; a symbol that is not in the vocabulary becomes
    one BYTE piece per UTF-8 byte when ``byte_fallback`` is on.
 
+``encode(text, match_specials=True)`` emulates the "match" special-token
+semantics that the sentencepiece library itself does not have: the CONTROL
+and UNK piece strings (``<bos>``, ``[BOS]``, ``<unk>`` ...) join the
+USER_DEFINED pieces in step 2's longest-first prefix match, as frozen symbols
+that map straight to their own ids (never to byte fallback). The dummy prefix
+is still prepended once, at the start of the text. This is the semantics the
+web app's SentencePiece engine implements for ``specialTokens: 'match'``.
+
 It exists so the fixtures are checked by an engine that shares no code with
 the ``sentencepiece`` library, and as a readable reference for a future
 TypeScript port that shows merge steps.
@@ -24,7 +32,7 @@ import heapq
 from sentencepiece import sentencepiece_model_pb2 as pb
 
 #: Bumped whenever the encoding logic changes; recorded in fixture ``crossCheck.version``.
-REFERENCE_VERSION = "1.0"
+REFERENCE_VERSION = "1.1"
 
 _Type = pb.ModelProto.SentencePiece.Type
 _MERGEABLE = {_Type.Value("NORMAL"), _Type.Value("USER_DEFINED"), _Type.Value("UNUSED")}
@@ -59,19 +67,32 @@ class SpmBpeReference:
                 self.unk_id = i
         self._user_defined = user_defined
         self._ud_lengths = sorted({len(p) for p in user_defined}, reverse=True)
+        #: CONTROL and UNK piece strings -> id: pre-matched only with ``match_specials``.
+        self.specials: dict[str, int] = {
+            sp.piece: i
+            for i, sp in enumerate(proto.pieces)
+            if sp.type in (_Type.Value("CONTROL"), _Type.Value("UNKNOWN"))
+        }
+        self._special_lengths = sorted({len(p) for p in (*user_defined, *self.specials)}, reverse=True)
 
     def piece_to_id(self, piece: str) -> int:
         """Return the id of ``piece`` (reserved pieces first), or the unknown id."""
         return self._reserved.get(piece, self._pieces.get(piece, self.unk_id))
 
-    def _symbols(self, normalized: str) -> list[tuple[str, bool]]:
-        """Split into (symbol, frozen) pairs using longest USER_DEFINED prefix matches."""
+    def _symbols(self, normalized: str, match_specials: bool) -> list[tuple[str, bool]]:
+        """Split into (symbol, frozen) pairs using longest prefix matches of the pre-matched pieces.
+
+        The pre-matched pieces are the USER_DEFINED ones, plus the CONTROL/UNK
+        ones when ``match_specials`` is set.
+        """
+        lengths = self._special_lengths if match_specials else self._ud_lengths
         out: list[tuple[str, bool]] = []
         i = 0
         while i < len(normalized):
-            for length in self._ud_lengths:
-                if normalized[i : i + length] in self._user_defined:
-                    out.append((normalized[i : i + length], True))
+            for length in lengths:
+                candidate = normalized[i : i + length]
+                if candidate in self._user_defined or (match_specials and candidate in self.specials):
+                    out.append((candidate, True))
                     i += length
                     break
             else:
@@ -79,16 +100,22 @@ class SpmBpeReference:
                 i += 1
         return out
 
-    def encode(self, text: str) -> list[int]:
-        """Encode ``text`` to ids without BOS/EOS."""
+    def encode(self, text: str, *, match_specials: bool = False) -> list[int]:
+        """Encode ``text`` to ids without BOS/EOS.
+
+        ``match_specials`` emulates matching CONTROL/UNK piece strings as single
+        special tokens (see the module docstring); the default is the library's
+        own behaviour, where they are ordinary text.
+        """
         if not text:
             return []
         normalized = text.replace(" ", "▁") if self.escape_whitespaces else text
         if self.add_dummy_prefix:
             normalized = "▁" + normalized
-        symbols = self._symbols(normalized)
+        symbols = self._symbols(normalized, match_specials)
         piece = [s for s, _ in symbols]
         frozen = [f for _, f in symbols]
+        special = [f and s in self.specials and s not in self._user_defined for s, f in symbols]
         nxt = list(range(1, len(piece))) + [-1]
         prv = list(range(-1, len(piece) - 1))
         agenda: list[tuple[float, int, int, int]] = []
@@ -119,8 +146,11 @@ class SpmBpeReference:
             push(left, nxt[left])
 
         ids: list[int] = []
-        for sym in piece:
+        for sym, is_special in zip(piece, special, strict=True):
             if not sym:
+                continue
+            if is_special:
+                ids.append(self.specials[sym])
                 continue
             pid = self.piece_to_id(sym)
             if pid == self.unk_id and self.byte_fallback:

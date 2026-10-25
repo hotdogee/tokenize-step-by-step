@@ -317,6 +317,10 @@ the classic layout.
   pieces include special-token strings such as `<start_of_turn>`, so those
   appear as single ids in `ids`.
 
+The generator asserts the value for the `.model` fixtures: `user-defined-atomic`
+needs at least one case whose `ids` hold a special-token-like USER_DEFINED
+piece, and `as-text` needs none.
+
 `policy.addBos` is `false` everywhere. `policy.notes` documents the exact
 encode call, the special-token handling and the alignment rule for that
 fixture.
@@ -336,7 +340,10 @@ fixture.
     `.model`, so its types come from the Gemma 3 proto, as `policy.notes`
     explains.
 - `idsWithSpecials`: present only where matching special-token strings changes
-  the ids.
+  the ids. For the tiktoken family and `google-gemma4` it comes from the
+  oracle's own specials mode. The sentencepiece library has no such mode, so
+  for `google-gemma2` and `xai-grok1` it is an **emulation** (see the
+  sentencepiece-bpe family below), as `policy.notes` states.
 
 **tiktoken family extras:**
 
@@ -465,13 +472,33 @@ SHA-256 of every cached file.
   - It never matches CONTROL or UNK pieces in text, so a literal `<bos>` is
     ordinary text.
   - It always matches USER_DEFINED pieces as single tokens.
-  - Grok-1 is `as-text` because no corpus special-token string is one of its
-    pieces.
+  - Grok-1 is `as-text` because no corpus text contains one of its
+    special-token-like USER_DEFINED pieces (`<|separator|>`, `<|mask|>`,
+    `<|control1|>` ...).
   - Gemma 1/2 is `user-defined-atomic`: `<start_of_turn>` (106) and
     `<end_of_turn>` (107) are USER_DEFINED, along with newline runs, `▁` runs,
     tab runs, `<unusedN>` and HTML tags.
   - Gemma 4 has no special:false added tokens, so with
     `encode_special_tokens=True` nothing is matched ahead of BPE.
+- **Emulated `idsWithSpecials` (Gemma 1/2, Grok-1):** the library cannot match
+  specials, so `spm_bpe_ref.py`'s `encode(text, match_specials=True)` emulates
+  "match" semantics:
+  - The CONTROL and UNK piece strings (`<pad>`, `<eos>`, `<bos>`, `<unk>`;
+    `[PAD]`, `[BOS]`, `[EOS]`, `[UNK]`) join the USER_DEFINED pieces in the
+    longest-first prefix match, as frozen symbols that map straight to their
+    own ids and never to byte fallback.
+  - The dummy prefix is still prepended only once, at the start of the text.
+    Grok-1's `x [BOS] y` therefore gives `▁x`, `▁`, `[BOS]`, `▁y`.
+  - This is the web app's `specialTokens: 'match'`.
+  - Every emulated result is checked three ways. It must differ from `ids`
+    exactly when the text contains a CONTROL or UNK string. Its tokens must
+    tile the input bytes, with each matched piece covering its own text. And
+    it must equal a rebuild from the library itself: the text is split at
+    the matched strings, each stretch of plain text is encoded by
+    sentencepiece (the dummy prefix only on the first stretch), and the
+    special ids go in between.
+  - The value is stored only where it differs from `ids`, e.g. Gemma 1/2
+    `special-bos`, where `[235322, 14084, 235313]` becomes `[2]`.
 - **Gemma 1/2 tab caveat:** a single tab is BYTE id 226 (`<0x09>`) in the
   `.model`. The HF `tokenizer.json` for Gemma 1/2 keys id 226 as a literal tab
   instead. A JSON-based port must therefore take a BYTE token's value from its

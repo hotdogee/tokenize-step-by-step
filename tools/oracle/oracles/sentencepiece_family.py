@@ -26,6 +26,10 @@ with a cursor while consuming pieces in order:
   starts with spaces still gets its own dummy ``'▁'``).
 
 The walk asserts that every byte is consumed exactly once.
+
+The sentencepiece library cannot match special-token strings, so for the two
+``.model`` fixtures ``idsWithSpecials`` is an emulation of "match" semantics
+(:func:`_emulated_match`), checked against a rebuild from the library itself.
 """
 
 from __future__ import annotations
@@ -165,11 +169,15 @@ def align_tokens(
     types: Sequence[str],
     first_byte_id: int,
     add_dummy_prefix: bool,
+    matched_specials: bool = False,
 ) -> list[dict[str, Any]]:
     """Return one fixture token per id with byte spans into ``text``'s UTF-8.
 
-    ``pieces``/``types`` are indexed by id. Raises :class:`SentencePieceFixtureError`
-    if a piece does not match the input at the cursor or bytes are left over.
+    ``pieces``/``types`` are indexed by id. With ``matched_specials`` a CONTROL
+    or UNK token (an emulated special-token match) covers its piece text
+    verbatim; otherwise such a token is an error. Raises
+    :class:`SentencePieceFixtureError` if a piece does not match the input at
+    the cursor or bytes are left over.
     """
     utf8 = text.encode("utf-8")
     cursor = 0
@@ -184,6 +192,8 @@ def align_tokens(
                     f"BYTE token {tid} (0x{value:02X}) does not match input at byte {cursor}"
                 )
             cursor += 1
+        elif matched_specials and kind in ("CONTROL", "UNK"):
+            cursor = _consume_literal(utf8, cursor, piece)
         elif kind in ("NORMAL", "USER_DEFINED"):
             for char in piece:
                 if dummy_pending:
@@ -216,6 +226,14 @@ def _consume(utf8: bytes, cursor: int, char: str, piece: str) -> int:
         if utf8.startswith(encoded, cursor):
             return cursor + len(encoded)
     raise SentencePieceFixtureError(f"piece {piece!r}: {char!r} does not match input at byte {cursor}")
+
+
+def _consume_literal(utf8: bytes, cursor: int, piece: str) -> int:
+    """Advance past the UTF-8 of ``piece``, which must be at ``cursor`` verbatim (no ``'▁'`` folding)."""
+    encoded = piece.encode("utf-8")
+    if not utf8.startswith(encoded, cursor):
+        raise SentencePieceFixtureError(f"special piece {piece!r} does not match input at byte {cursor}")
+    return cursor + len(encoded)
 
 
 def _case(name: str, text: str, ids: Sequence[int], tokens: list[dict[str, Any]]) -> dict[str, Any]:
@@ -533,7 +551,7 @@ def _build_spm(
     file_name: str,
     lab: str,
     claims: Sequence[ResearchClaim],
-    notes: Callable[[SpModel], str],
+    notes: Callable[[SpModel, list[str]], str],
     special_tokens: str,
     cases: list[dict[str, Any]],
     first_byte_id: int | None = None,
@@ -541,7 +559,11 @@ def _build_spm(
     """Fixture from ``sentencepiece`` on a ``.model``, cross-checked by :mod:`spm_bpe_ref`.
 
     ``first_byte_id``, when given, is the research value the BYTE range derived
-    from the piece types must start at.
+    from the piece types must start at. ``idsWithSpecials`` is the emulated
+    "match" result (:func:`_emulated_match`), stored only where it differs.
+    ``special_tokens`` is asserted: ``user-defined-atomic`` needs at least one
+    case whose ids hold a special-token-like USER_DEFINED piece, ``as-text``
+    needs none.
     """
     sha = common.vocab_sha256(asset, file_name)
     path = raw_path(asset, file_name)
@@ -560,15 +582,29 @@ def _build_spm(
         return align_tokens(text, ids, model.pieces, model.types, model.first_byte_id, model.add_dummy_prefix)
 
     _require(_check_claims(asset, claims, encode, align))
+    library_match = _LibraryMatch(model, sp, reference.specials)
     out_cases: list[dict[str, Any]] = []
     disagreed: list[str] = []
+    with_specials: list[str] = []
+    atomic: list[str] = []
     for case in cases:
         name, text = case["name"], case["text"]
         ids = encode(text)
-        out_cases.append(_case(name, text, ids, align(text, ids)))
+        entry = _case(name, text, ids, align(text, ids))
         if reference.encode(text) != ids:
             disagreed.append(name)
+        matched = _emulated_match(name, text, ids, model, reference, library_match)
+        if matched != ids:
+            entry["idsWithSpecials"] = matched
+            with_specials.append(name)
+        if any(model.types[i] == "USER_DEFINED" and _MARKUP.fullmatch(model.pieces[i]) for i in ids):
+            atomic.append(name)
+        out_cases.append(entry)
     _require([f"{asset}: spm_bpe_ref disagrees with sentencepiece on {n}" for n in disagreed])
+    if (special_tokens == "user-defined-atomic") != bool(atomic):
+        raise SentencePieceFixtureError(
+            f"{asset}: policy {special_tokens} contradicts the cases with special-like USER_DEFINED ids: {atomic}"
+        )
     return {
         "cases": out_cases,
         "crossCheck": {
@@ -581,11 +617,88 @@ def _build_spm(
         "generatedOn": common.GENERATED_ON,
         "lab": lab,
         "oracle": {"library": "sentencepiece", "version": common.library_version("sentencepiece")},
-        "policy": {"addBos": False, "notes": notes(model), "specialTokens": special_tokens},
+        "policy": {"addBos": False, "notes": notes(model, with_specials), "specialTokens": special_tokens},
         "tokenizer": asset,
         "vocabAsset": asset,
         "vocabSha256": sha,
     }
+
+
+class _LibraryMatch:
+    """Rebuild emulated "match" ids from the ``sentencepiece`` library, independently of :mod:`spm_bpe_ref`.
+
+    The raw text is split at the CONTROL/UNK piece strings (leftmost, longest
+    first); each stretch of plain text is encoded by the library and each
+    matched string becomes its own id. Only the first stretch gets the dummy
+    prefix (a no-dummy copy of the model encodes the others); when the text
+    starts with a special string, the dummy prefix stands alone as the bare
+    U+2581 piece, exactly as in the single-pass emulation. The split ignores a
+    USER_DEFINED piece overlapping a special string; no corpus text has one.
+    """
+
+    def __init__(self, model: SpModel, sp: spm.SentencePieceProcessor, specials: dict[str, int]) -> None:
+        self.model, self.sp, self.specials = model, sp, specials
+        self.pattern = re.compile("|".join(re.escape(s) for s in sorted(specials, key=len, reverse=True)))
+        rest = pb.ModelProto()
+        rest.CopyFrom(model.proto)
+        rest.normalizer_spec.add_dummy_prefix = False
+        self.sp_rest = spm.SentencePieceProcessor(model_proto=rest.SerializeToString())
+
+    def encode(self, text: str) -> list[int]:
+        """Library-built "match" ids for ``text``."""
+        out: list[int] = []
+        pos = 0
+        for m in self.pattern.finditer(text):
+            out += self._segment(text[pos : m.start()], first=pos == 0)
+            out.append(self.specials[m.group()])
+            pos = m.end()
+        return out + self._segment(text[pos:], first=pos == 0)
+
+    def _segment(self, segment: str, *, first: bool) -> list[int]:
+        if not first:
+            return self.sp_rest.encode(segment, add_bos=False, add_eos=False) if segment else []
+        if segment:
+            return self.sp.encode(segment, add_bos=False, add_eos=False)
+        bare = self.model.piece_id(SP_MARK)
+        return [bare] if self.model.add_dummy_prefix and bare is not None else []
+
+
+def _emulated_match(
+    name: str, text: str, ids: list[int], model: SpModel, reference: SpmBpeReference, library: _LibraryMatch
+) -> list[int]:
+    """The emulated ``specialTokens: 'match'`` ids for ``text`` (see :mod:`spm_bpe_ref`), checked three ways.
+
+    It must differ from ``ids`` exactly when the text contains a CONTROL/UNK
+    piece string, its tokens must tile the input bytes, and it must equal the
+    :class:`_LibraryMatch` rebuild.
+    """
+    matched = reference.encode(text, match_specials=True)
+    contains = any(special in text for special in reference.specials)
+    if (matched != ids) != contains:
+        raise SentencePieceFixtureError(f"{name}: emulated match differs={matched != ids}, special string={contains}")
+    if contains:
+        align_tokens(
+            text, matched, model.pieces, model.types, model.first_byte_id, model.add_dummy_prefix, matched_specials=True
+        )
+        rebuilt = library.encode(text)
+        if rebuilt != matched:
+            raise SentencePieceFixtureError(f"{name}: emulated match {matched} != library rebuild {rebuilt}")
+    return matched
+
+
+def _emulation_note(model: SpModel, with_specials: list[str]) -> str:
+    """Describe how ``idsWithSpecials`` emulates "match" semantics for a ``.model`` fixture."""
+    reserved = ", ".join(f"{model.pieces[i]} {i}" for i in model.ids_of_type("CONTROL") + model.ids_of_type("UNK"))
+    return (
+        "idsWithSpecials is an EMULATION of 'match' semantics: the sentencepiece library has no special-token"
+        " switch, so tools/oracle/oracles/spm_bpe_ref.py encode(text, match_specials=True) adds the CONTROL and"
+        f" UNK pieces ({reserved}) to its longest-first USER_DEFINED prefix match, as frozen symbols that map"
+        " straight to their own ids (never to byte fallback), with the dummy prefix still only at the start of the"
+        " text. This is the web app's specialTokens: 'match'. Each emulated result must tile the input bytes (a"
+        " matched piece covers its own text) and must equal the sentencepiece library's ids for the plain text"
+        " between the matched strings (dummy prefix only on the first stretch) joined by the special ids. It is"
+        f" present only where it differs from ids: {', '.join(with_specials) or 'no case'}."
+    )
 
 
 def build_grok1(cases: list[dict[str, Any]]) -> dict[str, Any]:
@@ -593,7 +706,7 @@ def build_grok1(cases: list[dict[str, Any]]) -> dict[str, Any]:
     return _build_spm(GROK1_ASSET, GROK1_FILE, "xAI", GROK1_CLAIMS, _grok1_notes, "as-text", cases)
 
 
-def _grok1_notes(model: SpModel) -> str:
+def _grok1_notes(model: SpModel, with_specials: list[str]) -> str:
     """Describe the special-token, dummy-prefix and alignment policy for Grok-1."""
     reserved = ", ".join(f"{model.pieces[i]} {i}" for i in model.ids_of_type("CONTROL") + model.ids_of_type("UNK"))
     user_defined = model.ids_of_type("USER_DEFINED")
@@ -609,8 +722,9 @@ def _grok1_notes(model: SpModel) -> str:
             f" text ({reserved}) and always matches the {len(user_defined)} USER_DEFINED pieces (ids"
             f" {_id_ranges(user_defined)}: newline runs, digits 0-9, tab runs, space runs, {named}). The"
             f" space-run pieces (ids {_id_ranges(spaced)}) contain U+0020 and can never match, because"
-            " escape_whitespaces rewrites every space to U+2581 before matching. No corpus special-token"
-            " string is a Grok-1 piece, so the policy is as-text and idsWithSpecials is never emitted.",
+            " escape_whitespaces rewrites every space to U+2581 before matching. No corpus text contains one of"
+            " the special-token-like USER_DEFINED pieces (asserted), so ids never hold one and the policy is as-text.",
+            _emulation_note(model, with_specials),
             "add_dummy_prefix=true: SentencePiece prepends one U+2581 to every non-empty input. It is always"
             " the first character of the first piece and covers zero bytes. When the first piece is the bare"
             f" U+2581 (id {bare_mark}) the token is zeroWidth with start == end == 0; when it is fused (for"
@@ -647,7 +761,7 @@ def build_gemma2(cases: list[dict[str, Any]]) -> dict[str, Any]:
     )
 
 
-def _gemma2_notes(model: SpModel) -> str:
+def _gemma2_notes(model: SpModel, with_specials: list[str]) -> str:
     """Describe the special-token, dummy-prefix and alignment policy for Gemma 1/2."""
     reserved = ", ".join(f"{model.pieces[i]} {i}" for i in model.ids_of_type("CONTROL") + model.ids_of_type("UNK"))
     user_defined = model.ids_of_type("USER_DEFINED")
@@ -676,7 +790,8 @@ def _gemma2_notes(model: SpModel) -> str:
             f" {len(unused)} <unusedN> slots, {len(html)} HTML tags such as <table> and </code>, and {named}."
             " Because the chat-turn markers <start_of_turn> and <end_of_turn> are USER_DEFINED, the corpus case"
             " special-start-of-turn begins with id 106; that is why specialTokens is user-defined-atomic rather"
-            " than as-text. The library has no other mode, so idsWithSpecials is never emitted.",
+            " than as-text (asserted).",
+            _emulation_note(model, with_specials),
             "add_dummy_prefix=false: nothing is prepended, so no token is zero-width, and a leading space is"
             " covered by an ordinary U+2581 piece (alone or fused with the following text).",
             "Byte spans: research section 5.2 cursor walk. A BYTE piece (ids"
