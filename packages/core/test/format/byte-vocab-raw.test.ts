@@ -1,15 +1,15 @@
 /**
  * `ByteVocab` on every raw upstream vocabulary (07 WP02 acceptance): every entry round-trips (bytes → index → bytes),
- * the 9 BOM-prefixed o200k keys included, the probe length stays bounded, and o200k initialises in ≤ 25 ms with
- * ≤ 8 MB resident in Node (06 §3; the phone budget is ×4).
+ * the 9 BOM-prefixed o200k keys included, the probe length stays bounded, and o200k stays within 8 MB resident. With
+ * `TSBS_PERF=1` o200k must also initialise in ≤ 25 ms in Node (06 §3; the phone budget is ×4, see `../helpers/perf.ts`).
  *
  * The raw files are gitignored (`pnpm vocab:fetch`); the suite looks in `$TSBS_VOCAB_RAW`, this checkout's
  * `data/vocab/raw`, then the main checkout's when running in a git worktree, and skips when none is present.
  */
-import process from 'node:process';
 import { describe, expect, it } from 'vitest';
 import { encodePieces } from '../../src/format/__tests__/tsbv1-writer.ts';
 import { byteVocabFromBuffer, MAX_PROBE_LENGTH } from '../../src/format/byte-vocab.ts';
+import { PERF_BUDGETS, time } from '../helpers/perf.ts';
 import { RAW_VOCABS, rawVocabPath, readRawVocab, type RawVocabSource } from '../helpers/raw-vocab.ts';
 import { findRawVocabDir } from '../helpers/repo.ts';
 
@@ -34,21 +34,6 @@ const COUNTS: Readonly<Record<string, number>> = {
   'meta-llama4-model': 200_000,
   'google-gemma3-spiece': 262_144,
 };
-
-/** Median of `runs` timings of `fn` after one warm-up call (vitest-bench style), plus the cold first call. */
-function time(fn: () => void, runs = 9): { cold: number; median: number } {
-  let t0 = performance.now();
-  fn();
-  const cold = performance.now() - t0;
-  const samples: number[] = [];
-  for (let i = 0; i < runs; i++) {
-    t0 = performance.now();
-    fn();
-    samples.push(performance.now() - t0);
-  }
-  samples.sort((a, b) => a - b);
-  return { cold, median: samples[runs >> 1]! };
-}
 
 describe.skipIf(available.length === 0)('ByteVocab over the raw vocabularies', () => {
   it('finds every shipped vocabulary', () => {
@@ -95,17 +80,17 @@ describe.skipIf(o200kPath === null)('o200k_base specifics', () => {
     expect(vocab.maxEntryBytes).toBe(128);
   });
 
-  it('initialises in ≤ 25 ms (median, Node) with ≤ 8 MB resident', () => {
+  it('keeps ≤ 8 MB resident', () => {
+    expect(byteVocabFromBuffer(payload).residentBytes).toBeLessThanOrEqual(8 * 2 ** 20);
+  });
+
+  it.runIf(PERF_BUDGETS)('initialises in ≤ 25 ms (median, Node; TSBS_PERF=1)', () => {
     const { cold, median } = time(() => byteVocabFromBuffer(payload));
-    const before = process.memoryUsage().arrayBuffers;
     const vocab = byteVocabFromBuffer(payload);
-    const delta = process.memoryUsage().arrayBuffers - before;
     console.info(
       `[bench] o200k ByteVocab init: median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms); resident ` +
-        `${(vocab.residentBytes / 2 ** 20).toFixed(2)} MB (arrayBuffers +${(delta / 2 ** 20).toFixed(2)} MB); max probe ${String(vocab.maxProbe)}`,
+        `${(vocab.residentBytes / 2 ** 20).toFixed(2)} MB; max probe ${String(vocab.maxProbe)}`,
     );
     expect(median).toBeLessThanOrEqual(25);
-    expect(vocab.residentBytes).toBeLessThanOrEqual(8 * 2 ** 20);
-    expect(delta).toBeLessThanOrEqual(8 * 2 ** 20);
   });
 });

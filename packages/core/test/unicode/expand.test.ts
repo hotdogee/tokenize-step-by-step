@@ -64,10 +64,9 @@ describe('templates (04 §2.2)', () => {
     expect(portPattern(UPSTREAM[key])).toBe(withContraction(key));
   });
 
-  it('agree with the upstream patterns shipped in the raw vocabulary files (when fetched)', () => {
-    const dir = findRawVocabDir();
-    if (dir === null) return;
-    const read = (path: string): unknown => JSON.parse(readFileSync(join(dir, path), 'utf8'));
+  const rawDir = findRawVocabDir();
+  it.skipIf(rawDir === null)('agree with the upstream patterns shipped in the raw vocabulary files', () => {
+    const read = (path: string): unknown => JSON.parse(readFileSync(join(rawDir!, path), 'utf8'));
     const claude = read('anthropic-claude-legacy/claude.json') as { pat_str: string };
     expect(claude.pat_str).toBe(UPSTREAM['claude-legacy']);
     const split = (doc: unknown) =>

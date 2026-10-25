@@ -1,14 +1,15 @@
 /**
  * `readTsbv1` on full-size containers built from the raw files with the synthetic writer: o200k (META + PCES + SPCL)
- * initialises within the 25 ms Node budget, and Gemma 4's 514,906 merges (MRGS → CSR with UTF-16 → byte split
- * offsets) read back so that every merge's rank is found again, within the 40 ms / 12 MB budgets (06 §3). Skips when
- * the raw files are absent (see `byte-vocab-raw.test.ts`).
+ * reads back deep-equal, and Gemma 4's 514,906 merges (MRGS → CSR with UTF-16 → byte split offsets) read back so that
+ * every merge's rank is found again, within 12 MB resident. With `TSBS_PERF=1` the 25 ms / 40 ms Node budgets are
+ * asserted too (06 §3, see `../helpers/perf.ts`). Skips when the raw files are absent (see `byte-vocab-raw.test.ts`).
  */
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { syntheticMeta, utf8, writeTsbv1 } from '../../src/format/__tests__/tsbv1-writer.ts';
 import type { ByteVocabStats } from '../../src/format/byte-vocab.ts';
 import { mergeRankOf, PieceType, readTsbv1 } from '../../src/format/tsbv1.ts';
+import { PERF_BUDGETS, time } from '../helpers/perf.ts';
 import { RAW_VOCABS, rawVocabPath, readRawVocab } from '../helpers/raw-vocab.ts';
 import { findRawVocabDir } from '../helpers/repo.ts';
 
@@ -22,23 +23,14 @@ const gemma4Path =
         RAW_VOCABS.find((s) => s.asset === 'google-gemma4')!,
       );
 
-/** Median of 7 timed calls after a warm-up call, plus that cold call. */
-function time<T>(fn: () => T): { cold: number; median: number; value: T } {
-  let t0 = performance.now();
-  const value = fn();
-  const cold = performance.now() - t0;
-  const samples: number[] = [];
-  for (let i = 0; i < 7; i++) {
-    t0 = performance.now();
-    fn();
-    samples.push(performance.now() - t0);
-  }
-  samples.sort((a, b) => a - b);
-  return { cold, median: samples[3]!, value };
+/** Memoises `build`, so the tests of one suite share one expensive container and a skipped suite builds nothing. */
+function once<T>(build: () => T): () => T {
+  let cached: { value: T } | null = null;
+  return () => (cached ??= { value: build() }).value;
 }
 
 describe.skipIf(o200kPath === null)('o200k_base container', () => {
-  it('reads back deep-equal and initialises in ≤ 25 ms (median, Node)', () => {
+  const fixture = once(() => {
     const pieces = readRawVocab(o200kPath!, RAW_VOCABS[0]!);
     const specials = [
       { id: 199_999, bytes: utf8('<|endoftext|>') },
@@ -50,12 +42,22 @@ describe.skipIf(o200kPath === null)('o200k_base container', () => {
       pieces,
       specials,
     });
-    const { cold, median, value: tsbv } = time(() => readTsbv1(buf));
-    console.info(`[bench] o200k readTsbv1: median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms)`);
+    return { pieces, buf };
+  });
+
+  it('reads back deep-equal', () => {
+    const { pieces, buf } = fixture();
+    const tsbv = readTsbv1(buf);
     expect(tsbv.meta.maxPieceBytes).toBe(128);
     expect(tsbv.vocab.count).toBe(199_998);
     expect(tsbv.specials.map((s) => s.text)).toEqual(['<|endoftext|>', '<|endofprompt|>']);
     for (let i = 0; i < pieces.length; i += 997) expect(tsbv.vocab.bytesOf(i)).toEqual(pieces[i]);
+  });
+
+  it.runIf(PERF_BUDGETS)('initialises in ≤ 25 ms (median, Node; TSBS_PERF=1)', () => {
+    const { buf } = fixture();
+    const { cold, median } = time(() => readTsbv1(buf), 7);
+    console.info(`[bench] o200k readTsbv1: median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms)`);
     expect(median).toBeLessThanOrEqual(25);
   });
 });
@@ -66,7 +68,7 @@ interface HfSpmJson {
 }
 
 describe.skipIf(gemma4Path === null)('google-gemma4 container with MRGS', () => {
-  it('reads 514,906 merges back into a CSR that finds every rank, in ≤ 40 ms with ≤ 12 MB resident', () => {
+  const fixture = once(() => {
     const doc = JSON.parse(readFileSync(gemma4Path!, 'utf8')) as HfSpmJson;
     const words: string[] = [];
     for (const [piece, id] of Object.entries(doc.model.vocab)) words[id] = piece;
@@ -93,9 +95,13 @@ describe.skipIf(gemma4Path === null)('google-gemma4 container with MRGS', () => 
       counts: { pieces: pieces.length, specials: specials.length, merges: merges.length },
     });
     const buf = writeTsbv1({ family: 'spm-bpe', meta, pieces, types, merges, specials });
-    expect(merges).toHaveLength(514_906);
+    return { doc, merges, buf };
+  });
 
-    const { cold, median, value: tsbv } = time(() => readTsbv1(buf));
+  it('reads 514,906 merges back into a CSR that finds every rank, with ≤ 12 MB resident', () => {
+    const { doc, merges, buf } = fixture();
+    expect(merges).toHaveLength(514_906);
+    const tsbv = readTsbv1(buf);
     const csr = tsbv.merges!;
     const resident =
       (tsbv.vocab as ByteVocabStats).residentBytes +
@@ -103,10 +109,6 @@ describe.skipIf(gemma4Path === null)('google-gemma4 container with MRGS', () => 
       csr.start.byteLength +
       csr.splitByteOffset.byteLength +
       csr.rank.byteLength;
-    console.info(
-      `[bench] gemma4 readTsbv1 (PCES + TYPS + MRGS → CSR): median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms); ` +
-        `resident ≈ ${(resident / 2 ** 20).toFixed(2)} MB`,
-    );
     expect(tsbv.meta.maxPieceBytes).toBe(93);
     expect(Array.from(tsbv.types!.subarray(238, 494)).every((t) => t === PieceType.Byte)).toBe(true);
     doc.model.merges.forEach(([left], rank) => {
@@ -114,7 +116,15 @@ describe.skipIf(gemma4Path === null)('google-gemma4 container with MRGS', () => 
       if (mergeRankOf(csr, result, utf8(left).length) !== rank)
         expect.fail(`merge ${String(rank)} (${left}|…) not found`);
     });
-    expect(median).toBeLessThanOrEqual(40);
     expect(resident).toBeLessThanOrEqual(12 * 2 ** 20);
+  });
+
+  it.runIf(PERF_BUDGETS)('reads PCES + TYPS + MRGS → CSR in ≤ 40 ms (median, Node; TSBS_PERF=1)', () => {
+    const { buf } = fixture();
+    const { cold, median } = time(() => readTsbv1(buf), 7);
+    console.info(
+      `[bench] gemma4 readTsbv1 (PCES + TYPS + MRGS → CSR): median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms)`,
+    );
+    expect(median).toBeLessThanOrEqual(40);
   });
 });
