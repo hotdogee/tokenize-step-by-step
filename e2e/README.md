@@ -9,6 +9,7 @@ pnpm --filter @tsbs/e2e exec playwright install chromium firefox webkit   # once
 pnpm e2e                                   # functional: specs/ on vite preview (+ headersMiddleware), chromium
 E2E_FULL_MATRIX=1 pnpm e2e                 # the whole matrix (below), as CI runs it
 E2E_FULL_MATRIX=1 E2E_ENGINE=webkit pnpm e2e --shard=1/3   # exactly one CI job
+pnpm e2e --project=chromium --repeat-each=20   # flake check (WP11 target < 1 % failures)
 pnpm e2e:headers                           # headers: headers/ on wrangler dev --assets apps/web/dist
 ```
 

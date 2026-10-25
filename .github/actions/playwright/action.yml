@@ -45,5 +45,5 @@ runs:
     - if: inputs.cjk-fonts == 'true'
       shell: bash
       run: |
-        sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+        sudo apt-get install -y --no-install-recommends fonts-noto-cjk fontconfig
         fc-list :lang=zh-tw family | grep -q 'Noto Sans CJK' || { echo "::error::fonts-noto-cjk did not install"; exit 1; }
