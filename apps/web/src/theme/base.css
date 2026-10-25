@@ -1,0 +1,55 @@
+/*
+ * Page-level base styles: design tokens plus the minimum every page needs (explicit background, font stack, focus ring).
+ * WP06 owns the theme (05 §10–§11); keep this small.
+ */
+@import '@tsbs/ui-tokens/tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    'Noto Sans',
+    sans-serif;
+  line-height: 1.5;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+:lang(zh) {
+  font-family:
+    'PingFang TC', 'Noto Sans TC', 'Noto Sans CJK TC', 'Microsoft JhengHei', 'Source Han Sans TC', system-ui, sans-serif;
+}
+
+:lang(ja) {
+  font-family:
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', Meiryo, system-ui,
+    sans-serif;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem;
+}

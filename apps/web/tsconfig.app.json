@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "tsBuildInfoFile": "../../node_modules/.cache/tsbuild/web-app.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts", "src/**/*.svelte"]
+}

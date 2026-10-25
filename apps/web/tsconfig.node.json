@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "composite": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "tsBuildInfoFile": "../../node_modules/.cache/tsbuild/web-node.tsbuildinfo"
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "plugins/**/*.ts"]
+}
