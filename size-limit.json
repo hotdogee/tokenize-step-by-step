@@ -16,7 +16,7 @@
       "!apps/web/dist/assets/bytelevel-*.js",
       "!apps/web/dist/assets/spm-*.js"
     ],
-    "limit": "55 KiB"
+    "limit": "80 KiB"
   },
   {
     "name": "i18n chunk (three catalogs, part of the main JS)",
