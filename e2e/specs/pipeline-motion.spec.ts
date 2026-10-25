@@ -117,6 +117,9 @@ test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls
   await expect(page.locator('[data-source="live"]')).toBeVisible();
   await motionReady(page);
   await expect(page.getByTestId('reduce-motion')).toBeChecked();
+  // Only rows in the viewport take part in a stage change, and at 320 px (or with wide fonts) the board starts below
+  // the fold: bring its first row on screen through the protocol (not Element.scrollIntoView, which `instrument` logs).
+  await grid(page).locator('.bd-row').first().scrollIntoViewIfNeeded();
   for (const key of ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5']) {
     await page.keyboard.press(key);
     await page.waitForTimeout(150);
@@ -126,8 +129,9 @@ test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls
     await page.waitForTimeout(150);
   }
   await page.keyboard.press('Digit6');
+  // A stage change's opacity swaps start after the next paint: read the log once they have.
+  await expect.poll(async () => (await logged(page)).length).toBeGreaterThan(0);
   const animations = await logged(page);
-  expect(animations.length).toBeGreaterThan(0);
   expect(animations.filter((a) => a.props.includes('transform'))).toEqual([]);
   expect(Math.max(...animations.map((a) => a.duration))).toBeLessThanOrEqual(150);
   const scrolls = await page.evaluate(() => (window as unknown as Record<string, unknown[]>)['__tsbsScrolls'] ?? []);
