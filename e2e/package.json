@@ -2,11 +2,17 @@
   "name": "@tsbs/e2e",
   "version": "0.0.0",
   "private": true,
-  "description": "Playwright end-to-end suites (functional, headers, axe, visual, perf). Skeleton until WP11.",
+  "description": "Playwright end-to-end suites: functional (vite preview), headers (wrangler dev / preview URL), axe, browser parity; visual and perf in later passes.",
   "license": "MIT",
   "type": "module",
+  "scripts": {
+    "e2e": "playwright test",
+    "e2e:headers": "playwright test --config playwright.headers.config.ts"
+  },
   "devDependencies": {
-    "@axe-core/playwright": "4.13.0",
-    "@playwright/test": "1.64.1"
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@tsbs/core": "workspace:*",
+    "esbuild": "0.28.2"
   }
 }

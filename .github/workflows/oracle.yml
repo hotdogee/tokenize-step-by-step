@@ -1,0 +1,59 @@
+# Oracle reproducibility (docs/design/06-quality-ci-deploy.md §1 "Oracle", §4): fixtures, licence docs and the Unicode
+# tables must regenerate byte-identically from the pinned oracles. Runs only when their inputs change.
+name: oracle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/oracle/**'
+      - 'fixtures/**'
+      - 'docs/licenses/**'
+      - '.github/workflows/oracle.yml'
+  pull_request:
+    paths:
+      - 'tools/oracle/**'
+      - 'fixtures/**'
+      - 'docs/licenses/**'
+      - '.github/workflows/oracle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oracle-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  oracle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # pnpm runs the root script; pnpm 12 installs before running a script anyway, so install explicitly (cached).
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          enable-cache: true
+          cache-dependency-glob: tools/oracle/uv.lock
+      - run: uv sync --project tools/oracle --locked
+      - name: ruff (lint + format)
+        run: |
+          uvx ruff@0.17.2 check tools/oracle
+          uvx ruff@0.17.2 format --check tools/oracle
+      - name: Restore raw vocabulary (keyed on the manifest hash)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/vocab/raw
+          key: vocab-raw-${{ hashFiles('tools/oracle/manifest.json') }}
+      # fetch_vocab.py (idempotent) · make_corpus.py --check · gen_fixtures.py --check · render_license_docs.py --check ·
+      # export_unicode_tables.py --check
+      - run: pnpm oracle:check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

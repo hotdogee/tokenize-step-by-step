@@ -1,7 +1,8 @@
 /**
  * Workspace test runner (`pnpm test` = `vitest run`, 02 §6). One Vitest project per package; each package keeps its tests
  * in `test/` (own tsconfig with Node types, so `src/` stays DOM-/Node-free where 02 §4 requires it). The web app has its
- * own config (Svelte plugin). Playwright specs under e2e/specs are not Vitest tests; e2e/test checks their config only.
+ * own config (Svelte plugin). Playwright specs under e2e/specs and e2e/headers are not Vitest tests; e2e/test checks the
+ * Playwright configuration and helpers, scripts/test the root tooling.
  */
 import { defineConfig } from 'vitest/config';
 
@@ -15,6 +16,8 @@ export default defineConfig({
       })),
       'apps/web/vitest.config.ts',
       { test: { name: 'e2e', root: 'e2e', include: ['test/**/*.test.ts'], environment: 'node' as const } },
+      // Root tooling: dist guards, deploy smoke, CI gates and the workflow/budget consistency checks (WP11).
+      { test: { name: 'scripts', root: 'scripts', include: ['test/**/*.test.ts'], environment: 'node' as const } },
     ],
   },
 });

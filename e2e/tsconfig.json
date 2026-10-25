@@ -1,12 +1,22 @@
 {
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2023", "DOM"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"],
     "composite": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "tsBuildInfoFile": "../node_modules/.cache/tsbuild/e2e.tsbuildinfo"
   },
-  "include": ["playwright.config.ts", "specs/**/*.ts", "test/**/*.ts"]
+  "include": [
+    "*.ts",
+    "specs/**/*.ts",
+    "headers/**/*.ts",
+    "parity/**/*.ts",
+    "support/**/*.ts",
+    "test/**/*.ts",
+    "../scripts/lib/smoke.ts",
+    "../scripts/lib/headers-file.ts"
+  ],
+  "references": [{ "path": "../packages/core" }]
 }

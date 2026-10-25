@@ -8,5 +8,6 @@
     "allowImportingTsExtensions": true,
     "tsBuildInfoFile": "node_modules/.cache/tsbuild/tools.tsbuildinfo"
   },
-  "include": ["vitest.config.ts", "scripts/**/*.ts"]
+  "include": ["vitest.config.ts", "scripts/**/*.ts"],
+  "references": [{ "path": "packages/core" }, { "path": "packages/conformance" }]
 }

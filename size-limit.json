@@ -2,7 +2,7 @@
   {
     "name": "dist/index.html",
     "path": "apps/web/dist/index.html",
-    "limit": "14 KB"
+    "limit": "14 KiB"
   },
   {
     "name": "Main JS: initial shell (Svelte runtime + app + i18n + inlined example + manifest summary)",
@@ -14,36 +14,41 @@
       "!apps/web/dist/assets/bytelevel-*.js",
       "!apps/web/dist/assets/spm-*.js"
     ],
-    "limit": "55 KB"
+    "limit": "55 KiB"
+  },
+  {
+    "name": "i18n chunk (three catalogs, part of the main JS)",
+    "path": "apps/web/dist/assets/i18n-*.js",
+    "limit": "8 KiB"
   },
   {
     "name": "Worker core (loader + protocol + host)",
     "path": "apps/web/dist/assets/entry-*.js",
-    "limit": "12 KB"
+    "limit": "12 KiB"
   },
   {
     "name": "Engine chunk: bytelevel (incl. Unicode tables)",
     "path": "apps/web/dist/assets/bytelevel-*.js",
-    "limit": "16 KB"
+    "limit": "16 KiB"
   },
   {
     "name": "Engine chunk: spm",
     "path": "apps/web/dist/assets/spm-*.js",
-    "limit": "10 KB"
+    "limit": "10 KiB"
   },
   {
     "name": "CSS",
     "path": "apps/web/dist/assets/*.css",
-    "limit": "20 KB"
+    "limit": "20 KiB"
   },
   {
     "name": "Stand-in font (WOFF2)",
     "path": "apps/web/dist/assets/*.woff2",
-    "limit": "4 KB"
+    "limit": "4 KiB"
   },
   {
     "name": "boot-[hash].js",
     "path": "apps/web/dist/assets/boot-*.js",
-    "limit": "0.5 KB"
+    "limit": "0.5 KiB"
   }
 ]
