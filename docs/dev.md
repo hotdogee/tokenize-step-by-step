@@ -39,7 +39,8 @@ TSBS_PERF=1 pnpm bench                           # vitest bench (vocab init, 10k
 pnpm build && pnpm e2e:perf                      # Playwright perf spec on vite preview (Fast 4G load, keystrokes, render, scrub)
 ```
 
-PowerShell: `$env:TSBS_PERF = '1'; $env:NODE_OPTIONS = '--expose-gc'; pnpm test:perf`.
+PowerShell: `$env:TSBS_PERF = '1'; $env:NODE_OPTIONS = '--expose-gc'; pnpm test:perf`. Without `--expose-gc` the
+Worker heap check fails under `TSBS_PERF=1` instead of skipping, so a green opt-in run always includes it.
 
 - **`pnpm test:fuzz`** (`packages/core/test/fuzz/`) needs `data/vocab/dist` (`pnpm vocab:build`: the engines decode the
   built `.bin` with `readTsbv1`), `data/vocab/raw` (`pnpm vocab:fetch`) and uv. It generates seeded strings (the corpus
@@ -48,10 +49,12 @@ PowerShell: `$env:TSBS_PERF = '1'; $env:NODE_OPTIONS = '--expose-gc'; pnpm test:
   opinions (gpt-tokenizer on o200k/cl100k, @huggingface/tokenizers on Gemma 4/Glimmer, and the fixture lane's Python
   cross-checks) are compared with the oracle; a disagreement there is an `oracle-divergence`, classified on its shrunken
   minimal repro (`unicode-version`, `case-fold`, `js-whitespace-class`, `special-string`, `gemma3-literal-special`,
-  `hf-vs-spm-tie-break`, `opinion-error`). Engine mismatches and divergences are written to
-  `fixtures/candidates/<tokenizer>-<seed>.json` (fixture case shape + `classification`); the run fails on an engine
-  mismatch, an oracle error or an `unclassified` divergence. In a git worktree without its own oracle venv, point the run
-  at the main checkout's: `TSBS_ORACLE_PROJECT=<main>/tools/oracle pnpm test:fuzz` (never `uv sync` a second venv).
+  `hf-vs-spm-tie-break`, `opinion-error`). The run fails on an engine mismatch, an oracle error or an `unclassified`
+  divergence; for such a tokenizer every case of its run is written to `fixtures/candidates/<tokenizer>-<seed>.json`
+  (fixture case shape + `classification`). Classified divergences alone are only printed (the divergence log: one line
+  each with its class and minimal repro); no candidates file is written for them. In a git worktree without its own
+  oracle venv, point the run at the main checkout's: `TSBS_ORACLE_PROJECT=<main>/tools/oracle pnpm test:fuzz` (never
+  `uv sync` a second venv).
 - **Timing runs are serial.** A parallel Vitest run shares the CPU between files and once pushed `readTsbv1` past its
   25 ms ceiling (30.3 ms) while serial runs pass, so `pnpm test:perf` uses `--no-file-parallelism` and the bench config
   (`packages/core/test/bench/vitest.bench.config.ts`) runs one file in one worker. Do the same for any ad-hoc
@@ -60,7 +63,8 @@ PowerShell: `$env:TSBS_PERF = '1'; $env:NODE_OPTIONS = '--expose-gc'; pnpm test:
   (`check-bench.ts`); with `TSBS_PERF=1` a median over its ceiling fails. Without it the table is a report.
 - **`pnpm e2e:perf`** (`e2e/perf/`, its own Playwright config, chromium, one worker, port `E2E_PERF_PORT` = 4174) is
   soft: a missed budget is a warning and the numbers go to `e2e/test-results/perf/perf-results.json`; `PERF_STRICT=1`
-  makes misses fail. `docs/perf-log.md` keeps the dated results.
+  makes misses fail. `E2E_PERF_BASE_URL=<url>` runs it against a deployed preview or production instead of a local
+  `vite preview`. `docs/perf-log.md` keeps the dated results.
 
 ## Tokenizer client (`?mock=1`)
 

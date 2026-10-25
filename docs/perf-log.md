@@ -21,8 +21,10 @@ because shared runners are slower than the quiet machine the Node ceilings assum
 
 ## 2026-10-25 — WP12 baseline (development machine)
 
-**Where:** AMD Ryzen 9 7950X (16 cores), Windows 11 Pro for Workstations, Node 26.12.1, Playwright 1.64.1 (chromium 156.0.8078.4),
-`vite preview` of the production bundle at commit `wp/12-fuzz-perf` (main after wave 2 plus WP12). This is a **shared**
+**Where:** AMD Ryzen 9 7950X (16 cores), Windows 11 Pro for Workstations, Node 26.12.1, Playwright 1.64.1 (chromium 156.0.8078.4).
+**What:** the engines and the production bundle of main at `5678a66` (after wave 2; WP12 changes no `apps/web` or
+`packages/*/src` code), served by `vite preview`. Harness: the fuzz, bench, opt-in and heap runs at `e2ba3e1`; the perf
+spec table at `10fb1ce` (re-run after the WP12 review on 2026-10-26, machine idle at ≈ 14 % CPU). This is a **shared**
 machine: other agents' worktrees were building and testing at the same time. The numbers below are from runs while the
 machine was quiet. Two runs under contention (other processes at 45–70 % CPU) are listed at the end, to show why timing
 runs must be serial and quiet.
@@ -47,7 +49,9 @@ xai-grok1                    2000     0      0      0  oracles.spm_bpe_ref (pure
 total: 18000 strings, ids + spans vs the Python oracle: 0 mismatch(es), 0 oracle error(s); 4 oracle divergence(s), 0 unclassified
 ```
 
-A nightly-sized run used seed 20261026 and 10,000 strings per tokenizer: 90,000 strings in 31.8 s, 0 mismatches,
+The classifier tightening of the review (`49fec3f`: shape-checked `hf-vs-spm-tie-break` and `case-fold`) re-ran both
+seeds with the same counts below, every divergence still classified. A nightly-sized run used seed 20261026 and 10,000
+strings per tokenizer: 90,000 strings in 31.8 s, 0 mismatches,
 0 oracle errors and 20 oracle divergences, every one classified. The divergences of both runs (24), with their minimal
 repros:
 
@@ -98,46 +102,51 @@ value before:
 
 ### Perf spec (`pnpm e2e:perf`: vite preview, chromium 1440×900, desktop, no CPU throttling)
 
-| Metric                                                                                                             | Measured                   | 06 §3 budget         |                                 |
-| ------------------------------------------------------------------------------------------------------------------ | -------------------------- | -------------------- | ------------------------------- |
-| o200k load, `loaded.ms` (CDP Fast 4G: 9 Mbps, 170 ms RTT; download + verify + gunzip + build)                      | 1,152–1,206 ms             | ≤ 2.5 s desktop      | ✓                               |
-| o200k load, navigation → live result (Fast 4G; incl. fonts + 2 rAF load trigger)                                   | 2.82–3.15 s                | (recorded)           |                                 |
-| o200k `.bin` transferred                                                                                           | 1,048,023 B                | (`other` ≤ 1,100 KB) |                                 |
-| keystroke → board update at 1k chars, p95, from the `encode` request                                               | 18.3–29.7 ms               | ≤ 50 ms              | ✓                               |
-| keystroke → board update at 1k chars, p95, from the keystroke (incl. the 40 ms debounce)                           | 63.8–78.6 ms               | (see finding 2)      |                                 |
-| keystroke → board update at 10k CJK, p95, from the `encode` request                                                | 34.1–52.7 ms               | ≤ 120 ms             | ✓                               |
-| keystroke → board update at 10k CJK, p95, from the keystroke                                                       | 79.0–102.4 ms              | ≤ 120 ms             | ✓                               |
-| longest main-thread task while typing into 10k CJK (trace)                                                         | 14.9–24.9 ms; 0 long tasks | ≤ 50 ms              | ✓                               |
-| paste 10k CJK → board update                                                                                       | 102–160 ms                 | (recorded)           |                                 |
-| render 2,672 board cells (K 51, 20 rows of ASCII), script from the Worker `result` to the updated DOM, median of 5 | 159–370 ms (max 276–544)   | ≤ 50 ms              | ✗ (soft; finding 1)             |
-| render 2,672 cells, result → next frame, median                                                                    | 210–439 ms                 | (recorded)           |                                 |
-| scrub one merge step at stop 5 (`.`, 300 chars), keydown → frame, p95                                              | 45.2–91.0 ms               | (recorded)           |                                 |
-| longest main-thread task while scrubbing (trace)                                                                   | 31.7–62.9 ms               | ≤ 50 ms              | ✗ 2 of 3 runs (soft; finding 3) |
+| Metric                                                                                                                                              | Measured                     | 06 §3 budget         |                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- | -------------------- | ------------------- |
+| o200k load, `loaded.ms` (CDP Fast 4G: 9 Mbps, 170 ms RTT; download + verify + gunzip + build)                                                       | 1,186–1,197 ms               | ≤ 2.5 s desktop      | ✓                   |
+| o200k load, navigation → live result (Fast 4G; incl. fonts + 2 rAF load trigger)                                                                    | 2.81–2.82 s                  | (recorded)           |                     |
+| o200k `.bin` transferred                                                                                                                            | 1,048,023 B                  | (`other` ≤ 1,100 KB) |                     |
+| keystroke → board update at 1k chars, p95, keystroke → frame (incl. the 40 ms debounce)                                                             | 54.9–64.9 ms (p50 52.7–53.0) | ≤ 50 ms              | ✗ (soft; finding 2) |
+| encode request → board update at 1k chars, p95 (diagnostic)                                                                                         | 13.4–22.7 ms                 | (recorded)           |                     |
+| keystroke → board update at 10k CJK, p95, keystroke → frame (incl. the 40 ms debounce)                                                              | 70.9–74.7 ms                 | ≤ 120 ms             | ✓                   |
+| encode request → board update at 10k CJK, p95 (diagnostic)                                                                                          | 28.7–29.3 ms                 | (recorded)           |                     |
+| longest main-thread task while typing into 10k CJK (trace)                                                                                          | 12.5–18.6 ms; 0 long tasks   | ≤ 50 ms              | ✓                   |
+| paste 10k CJK → board update                                                                                                                        | 96–116 ms                    | (recorded)           |                     |
+| render 2,004 board cells (K 51, 15 rows of ASCII sized by a calibration render), wall time from the Worker `result` to the updated DOM, median of 5 | 128–133 ms (max 223–298)     | ≤ 50 ms script       | ✗ (soft; finding 1) |
+| render 2,004 cells, result → next frame, median                                                                                                     | 160–164 ms                   | (recorded)           |                     |
+| render 2,004 cells, longest main-thread task under a trace                                                                                          | 262–296 ms                   | (recorded)           |                     |
+| scrub one merge step at stop 5 (`.`, 300 chars), keydown → frame, p95                                                                               | 36.4–38.4 ms                 | (recorded)           |                     |
+| longest main-thread task while scrubbing (trace)                                                                                                    | 24.9–31.0 ms                 | ≤ 50 ms              | ✓ (finding 3)       |
 
-The ranges come from three to four runs on the same evening. The spec soft-fails: a missed budget is a warning plus an
-entry in `e2e/test-results/perf/perf-results.json`. `PERF_STRICT=1` makes a miss fail the spec.
+The ranges come from three runs at `10fb1ce`. The spec soft-fails: a missed budget is a warning plus an entry in
+`e2e/test-results/perf/perf-results.json`. `PERF_STRICT=1` makes a miss fail the spec (checked: it fails on the 1k
+keystroke budget). The render number is wall time, an upper bound of the script time the budget names; the trace shows
+the same render as one long main-thread task, so the miss is real either way.
 
 ### Findings for the owners
 
-1. **The board render is about 3–7 times over budget** (WP08; WP13 owns the long-input tiers). A board of 2,672 cells
-   takes 160–370 ms of script, which is a single main-thread task of 150–660 ms under a trace. The budget is "Render
-   2,000 cells ≤ 50 ms script; virtualize beyond". The board mounts every row up to `VIRTUALIZE_ABOVE = 24` rows
-   (`apps/web/src/board/window.ts`), which is 2,400–3,600 cells at K ≈ 50. A CPU profile shows the Svelte runtime and
-   DOM insertion dominate. Each text change also renders the board twice: once as the pending text-only board, once with
+1. **The board render is about 2.5 times over budget** (WP08; WP13 owns the long-input tiers). A board of 2,004 cells
+   takes 128–133 ms (median; max 223–298 ms) from the Worker result to the updated DOM, which is a single main-thread
+   task of 262–296 ms under a trace. The budget is "Render 2,000 cells ≤ 50 ms script; virtualize beyond". The board
+   mounts every row up to `VIRTUALIZE_ABOVE = 24` rows (`apps/web/src/board/window.ts`), which is 2,400–3,600 cells at
+   K ≈ 50. A CPU profile shows the Svelte runtime and DOM insertion dominate. Each text change also renders the board twice: once as the pending text-only board, once with
    the result. Options: virtualize from about 8 rows, cut the work per cell, or render the pending board without tokens
    lazily.
-2. **The keystroke budget and the 40 ms debounce do not fit together.** `ENCODE_DEBOUNCE_MS = 40` (05 §6, IME pairs)
-   puts 40 ms in front of every encode. Measured from the keystroke, the 1k-char p95 is 76–79 ms, against "≤ 50 ms".
-   The spec holds the 06 §3 budget to the latency from the `encode` request that the debounce releases (24–30 ms), and
-   it records the from-keystroke number as well. The design owner or WP13 should decide whether to restate the budget
-   that way or to skip the debounce while no IME composition is active.
-3. **Scrubbing** at stop 5 had one task of 58–63 ms under a trace in two of three runs (32 ms in the quietest),
-   against the 50 ms long-task rule (soft). WP09's rail
-   and scrubber replace this path, so re-measure after wave 3.
+2. **The keystroke budget and the 40 ms debounce do not fit together** (open). `ENCODE_DEBOUNCE_MS = 40` (05 §6, IME
+   pairs) puts 40 ms in front of every encode (41.5–41.7 ms measured). The spec holds the 06 §3 budget to the interval
+   06 §3 defines, keystroke → frame: at 1k chars the p95 is 54.9–64.9 ms against "≤ 50 ms" (soft ✗), and even the p50
+   (≈ 53 ms) misses. The work after the debounce, encode request → frame, is 13.4–22.7 ms p95 and is recorded as a
+   diagnostic only. At 10k CJK the p95 is 70.9–74.7 ms against "≤ 120 ms" (✓). This stays open until a planner
+   amendment restates the budget or the debounce is skipped while no IME composition is active (design owner / WP13).
+3. **Scrubbing** at stop 5 had one task of 58–63 ms under a trace in two of three runs of the first baseline (at
+   `e2ba3e1`, on a busier machine), against the 50 ms long-task rule (soft). The three runs at `10fb1ce` stayed at
+   25–31 ms. WP09's rail and scrubber replace this path, so re-measure after wave 3.
 4. **Production and edge numbers are recorded at the first deploy** (WP13). These are LHCI on the preview and production
    URLs (06 §3), the 06 §7 item 6 curl smoke (transferred bytes, the loader's `layer` / `contentEncoding`), the Fast 4G
-   load on the real edge, and the one mid-range Android run that 07 WP12 requires before launch. `vite preview` serves
-   uncompressed JS and is never a budget target for transfer sizes.
+   load on the real edge, and the one mid-range Android run that 07 WP12 requires before launch (owner or WP13; not
+   met yet). `E2E_PERF_BASE_URL=<url> pnpm e2e:perf` runs the spec against a deployed URL without a code change.
+   `vite preview` serves uncompressed JS and is never a budget target for transfer sizes.
 
 ### Under contention (for the record, not baseline)
 
