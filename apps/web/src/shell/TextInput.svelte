@@ -9,7 +9,8 @@
    * `isComposing: true` before `compositionend`; Firefox and WebKit send `compositionend`, then an `input` with
    * `isComposing: false`), so `compositionend` schedules the encode from `textarea.value` read in the next animation frame,
    * and a later `input` with `isComposing === false` is the authoritative trigger; the 40 ms debounce collapses the pair
-   * into one request. A paste (`inputType` `insertFromPaste`) tokenizes at once. The caret position feeds the window a
+   * into one request, and when that `input` has already taken the committed text (a frame later than the debounce on a
+   * slow machine) the frame does nothing, so the commit never sends a second encode of the same text. A paste (`inputType` `insertFromPaste`) tokenizes at once. The caret position feeds the window a
    * long input's board shows (AD-27). WP13 wiring.
    */
   import { appState } from '../app/context.ts';
@@ -67,6 +68,7 @@
   function onCompositionEnd(event: CompositionEvent): void {
     const target = event.currentTarget as HTMLTextAreaElement;
     requestAnimationFrame(() => {
+      if (!app.composing && target.value === app.text) return; // the non-composing `input` already took it
       app.composing = false;
       app.setText(target.value);
     });

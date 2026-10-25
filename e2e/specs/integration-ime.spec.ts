@@ -39,10 +39,17 @@ async function emptyShell(page: Page): Promise<number> {
   return (await encodes(page)).length;
 }
 
-/** Waits past the encode debounce (40 ms) with margin, then returns the encodes posted after `from`. */
-async function encodesSince(page: Page, from: number): Promise<string[]> {
-  await page.waitForTimeout(200);
-  return (await encodes(page)).slice(from);
+/** How long no further encode may follow once the expected ones were posted (well past the 40 ms debounce). */
+const SETTLE_MS = 300;
+
+/**
+ * Asserts that the encodes posted after `from` are exactly `expected`: polls until they are (a slow runner may take
+ * longer than a frame + the 40 ms debounce + the client's hop), then waits `SETTLE_MS` and checks that none followed.
+ */
+async function expectEncodesSince(page: Page, from: number, expected: readonly string[]): Promise<void> {
+  await expect.poll(async () => (await encodes(page)).slice(from)).toEqual(expected);
+  await page.waitForTimeout(SETTLE_MS);
+  expect((await encodes(page)).slice(from)).toEqual(expected);
 }
 
 for (const order of ['firefox-webkit', 'chromium'] as const) {
@@ -83,7 +90,7 @@ for (const order of ['firefox-webkit', 'chromium'] as const) {
     }, order === 'chromium');
     await expect(page.getByTestId('counts')).toContainText('2 code points');
     await expect(grid(page)).not.toHaveAttribute('data-composing', '');
-    expect(await encodesSince(page, from)).toEqual(['日本']);
+    await expectEncodesSince(page, from, ['日本']);
     await expect(grid(page)).not.toHaveAttribute('data-pending', '');
   });
 }
@@ -104,7 +111,7 @@ test('while composing: the board shows the provisional text muted, nothing is en
   await expect(grid(page)).toHaveAttribute('data-composing', '');
   await expect(grid(page)).toHaveAttribute('data-pending', '');
   await expect(page.getByTestId('counts')).toContainText('2 code points');
-  expect(await encodesSince(page, from)).toEqual([]);
+  await expectEncodesSince(page, from, []);
   // A composing keydown (isComposing, key "Process" or keyCode 229) never reaches a global shortcut.
   await page.evaluate(() => {
     for (const init of [
@@ -136,7 +143,7 @@ test('a paste tokenizes at once; typing waits for the 40 ms debounce', async ({ 
   });
   expect(counts[1]).toBe(counts[0]); // debounced
   expect(counts[2]).toBe((counts[0] ?? 0) + 1); // immediate
-  expect(await encodesSince(page, from)).toEqual(['pasted']);
+  await expectEncodesSince(page, from, ['pasted']);
 });
 
 test('a real IME composition through CDP Input.imeSetComposition (chromium)', async ({ page, browserName }) => {
@@ -148,11 +155,11 @@ test('a real IME composition through CDP Input.imeSetComposition (chromium)', as
   await expect(grid(page)).toHaveAttribute('data-composing', '');
   await cdp.send('Input.imeSetComposition', { text: 'にほん', selectionStart: 3, selectionEnd: 3 });
   await expect(page.getByTestId('counts')).toContainText('3 code points');
-  expect(await encodesSince(page, from)).toEqual([]);
+  await expectEncodesSince(page, from, []);
   await cdp.send('Input.insertText', { text: '日本' });
   await expect(page.locator('#text-input')).toHaveValue('日本');
   await expect(grid(page)).not.toHaveAttribute('data-composing', '');
-  expect(await encodesSince(page, from)).toEqual(['日本']);
+  await expectEncodesSince(page, from, ['日本']);
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
   await expect(page.getByTestId('counts')).toContainText('2 code points');
 });
