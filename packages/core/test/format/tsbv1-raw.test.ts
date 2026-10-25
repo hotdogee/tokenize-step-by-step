@@ -51,7 +51,12 @@ describe.skipIf(o200kPath === null)('o200k_base container', () => {
     expect(tsbv.meta.maxPieceBytes).toBe(128);
     expect(tsbv.vocab.count).toBe(199_998);
     expect(tsbv.specials.map((s) => s.text)).toEqual(['<|endoftext|>', '<|endofprompt|>']);
-    for (let i = 0; i < pieces.length; i += 997) expect(tsbv.vocab.bytesOf(i)).toEqual(pieces[i]);
+    for (let i = 0; i < pieces.length; i++) {
+      const piece = pieces[i]!;
+      const back = tsbv.vocab.bytesOf(i);
+      if (back.length !== piece.length || back.some((b, k) => b !== piece[k]))
+        expect.fail(`entry ${String(i)} differs`);
+    }
   });
 
   it.runIf(PERF_BUDGETS)('initialises in ≤ 25 ms (median, Node; TSBS_PERF=1)', () => {
