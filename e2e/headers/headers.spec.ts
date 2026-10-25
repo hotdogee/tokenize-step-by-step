@@ -30,6 +30,17 @@ for (const { path } of PAGES) {
   });
 }
 
+// The Worker under the production headers (PA-8): worker-src 'self' admits assets/entry-*.js, script-src 'self' its lazy
+// engine import(), connect-src 'self' the /tok/*.bin fetch — a live result proves all three on workerd / the preview.
+test('/ tokenizes typed text live in the Worker with zero CSP violations', async ({ page }) => {
+  const guards = await watchPage(page);
+  await page.goto('/?lang=en');
+  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await page.locator('#text-input').fill('こんにちは台灣 123 abc');
+  await expect(page.getByTestId('counts')).toContainText('6 tokens'); // o200k: 95839 3735 133072 220 7633 75094
+  expect(await guards.cspViolations()).toEqual([]);
+});
+
 // The deploy smoke checks of 06 §7 items 6–8 (scripts/lib/smoke.ts): /index.html → 307 /, /nope → 404.html with 404,
 // dotfiles → 404, /tok/*.bin exact Content-Type / no Content-Encoding / Content-Length, /assets and /examples compressed +
 // immutable + 304, /licenses max-age. Running them here proves the smoke script against a real workerd on every PR.
