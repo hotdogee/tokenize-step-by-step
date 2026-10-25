@@ -20,12 +20,30 @@ test('"Powered by xAI" is visible iff Grok-2 is selected', async ({ page }) => {
 
 test('the picker announces progress and the loaded tokenizer', async ({ page }) => {
   await openShell(page, 'en');
+  // Until the Worker client (WP07) the download is the tokenizer's precomputed examples file: hold it so the progress
+  // bar is observable instead of racing a local fetch.
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/examples/openai-cl100k_base.*.json', async (route) => {
+    await held;
+    await route.continue();
+  });
   await page.getByTestId('picker-button').click();
   await page.getByRole('option', { name: /cl100k_base/ }).click();
-  await expect(page.getByRole('progressbar')).toBeVisible();
+  // Held before the first byte: the bar is at 0 % (scaleX(0), so not "visible" to Playwright) but announced.
+  const progress = page.getByRole('progressbar', { name: 'Loading cl100k_base (GPT-4 / GPT-3.5)…' });
+  await expect(progress).toBeAttached();
+  await expect(progress).toHaveAttribute('aria-valuetext', /cl100k_base/);
+  release();
   await expect(page.getByTestId('status')).toContainText('cl100k_base (GPT-4 / GPT-3.5) ready');
   await expect(page.getByRole('progressbar')).toHaveCount(0);
-  // The stub has no cl100k result for 台灣台南: the counts wait for the tokenizer instead of showing o200k's tokens.
+  // 台灣台南 is an example chip: cl100k answers it with the oracle's 5 tokens, 2 of them partial (灣 = E7 81 + A3).
+  await expect(page.getByTestId('counts')).toContainText('5 tokens');
+  await expect(page.getByTestId('counts')).toContainText('2 partial-character tokens');
+  // Text outside the chips has no result before the engines exist: the counts wait instead of showing stale tokens.
+  await page.locator('#text-input').fill('not an example');
   await expect(page.getByTestId('counts')).toContainText('waiting for the tokenizer');
 });
 

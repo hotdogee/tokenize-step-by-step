@@ -1,6 +1,6 @@
 /**
  * Shared setup for the WP06 shell suites (shell-*.spec.ts): locale via `?lang`, theme via the persisted choice that
- * boot.js reads before first paint, and a wait for the shell to be interactive (the stub client's live result).
+ * boot.js reads before first paint, and a wait for the shell to be interactive (the default tokenizer's live result).
  */
 import { expect, type Page } from '@playwright/test';
 
