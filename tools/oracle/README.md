@@ -2,7 +2,9 @@
 
 Python tooling for the tokenize-step-by-step visualizer. It lives apart from the
 web app and produces two committed outputs: provenance (pinned, hash-verified
-upstream vocabularies plus licence snapshots) and golden test fixtures.
+upstream vocabularies plus licence snapshots) and golden test fixtures. It
+also exports the Unicode tables that the web app's pre-tokenizer uses
+(`unicode_tables.json`).
 
 **Current stage.** Two stages are complete:
 
@@ -73,11 +75,15 @@ uv run --project tools/oracle python tools/oracle/gen_fixtures.py               
 uv run --project tools/oracle python tools/oracle/gen_fixtures.py --family sentencepiece --tokenizer google-gemma2
 uv run --project tools/oracle python tools/oracle/gen_fixtures.py --list               # registered families
 
+# Unicode tables for the web app's pre-tokenizer
+uv run --project tools/oracle python tools/oracle/export_unicode_tables.py             # rewrite unicode_tables.json
+
 # Full check suite (CI). Every command must exit 0.
 uv run --project tools/oracle python tools/oracle/fetch_vocab.py                       # idempotent: everything "cached"
 uv run --project tools/oracle python tools/oracle/make_corpus.py --check
 uv run --project tools/oracle python tools/oracle/gen_fixtures.py --check
 uv run --project tools/oracle python tools/oracle/render_license_docs.py --check
+uv run --project tools/oracle python tools/oracle/export_unicode_tables.py --check
 uvx ruff check tools/oracle
 uvx ruff format --check tools/oracle
 ```
@@ -508,6 +514,44 @@ SHA-256 of every cached file.
   11 (v4.8) tokens, with the content pieces quoted in research sections 3.2
   and 5.3.
 
+## Unicode tables (`export_unicode_tables.py`)
+
+`unicode_tables.json` (committed, generated) holds the character classes the
+web app's pre-tokenizer patterns need, as sorted inclusive `[first, last]`
+code-point ranges: `classes` has `L`, `Lu`, `Ll`, `Lt`, `Lm`, `Lo`, `M`, `N`
+and `White_Space`. `normalization` has `cccNonZero` and `nfkcQcNotYes` for
+the NFKC segment source map. The web app converts the file to TypeScript; the
+script writes nothing outside `tools/oracle/`.
+
+- **Unicode version.** The classes are at **Unicode 16.0**, the version of
+  the engines that produce the fixture ids. Both tiktoken 0.14.0 (Rust
+  `regex`) and HF tokenizers 0.23.3 (Oniguruma) assign Garay (16.0) and leave
+  CJK Extension J (17.0) unassigned. The pinned Python `regex` 2026.9.29 is
+  newer: its metadata says Unicode 18.0.0. So the script reads the classes
+  from tiktoken's own regex engine. tiktoken has no matcher API, so a BPE
+  probe does it: the text is `U+0000 X` for every code point X, and a merge
+  rank exists for `00` plus each possible first byte. The first token of each
+  pair is a merge exactly when the class matches X.
+- **Cross-checks** (any failure stops the export):
+  - Oniguruma must give identical sets.
+  - The Python `regex` module must agree everywhere except the code points it
+    assigns later (`regexModule.assignedLater`, 17,810 today) and the
+    general-category changes it makes (`regexModule.categoryChanges`: U+0295
+    moved from `Ll` to `Lo`).
+  - `regex`'s `\s` must equal `\p{White_Space}`.
+- **Fixture chunks.** The fixtures' `chunks` come from Python `regex`, so they
+  match these tables only because no corpus text contains a code point from
+  `regexModule.assignedLater` or U+0295. Keep it that way, or regenerate the
+  chunks with a Unicode 16.0 engine.
+- **Normalisation tables.** These come from Python `unicodedata` (Unicode
+  15.1), united with the same properties from `regex`. NFKC_Quick_Check is
+  derived: No when NFKC changes the code point on its own, Maybe for the
+  trailing half of a canonical composition pair and for Hangul V/T jamo. The
+  derivation is asserted equal to `regex` on every code point that 15.1
+  assigns. The union is deliberate: a larger "never cut before" set only makes
+  segments longer, which is always safe, so the tables stay correct for
+  browsers on any Unicode version from 15.1 to 18.0.
+
 ## Layout
 
 ```text
@@ -520,6 +564,7 @@ tools/oracle/
   oracle_lib/              small standard-library helpers (paths, jsonio, fsio, netio,
                            manifest, resolvers, archives, htmltext, report)
   make_corpus.py, corpus.json  golden-fixture corpus (generator and output, committed)
+  export_unicode_tables.py, unicode_tables.json  Unicode 16.0 class tables + NFKC tables (committed)
   gen_fixtures.py          build/check fixtures/ from the oracle families
   oracles/
     common.py              corpus loading, UTF-8 helpers, fixture writer and invariant checks
