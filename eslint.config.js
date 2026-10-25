@@ -4,7 +4,8 @@
  *
  * - typescript-eslint strictTypeChecked + stylisticTypeChecked (no `any`, no non-null assertions outside tests, no enums).
  * - eslint-plugin-svelte, plus the strict-CSP rules for apps/web: no transition:/in:/out:/animate: directives (they inject
- *   a runtime <style>) and svelte/no-inline-styles (Svelte clones static markup, so a static style="" is an inline style).
+ *   a runtime <style>) and no style="…"/style={…} attributes (Svelte clones static markup, so a style attribute is an
+ *   inline style); style: directives stay legal because they compile to element.style.setProperty (CSSOM, AD-15).
  * - Package boundaries: import/no-restricted-paths for relative paths, no-restricted-imports for package specifiers.
  * - eslint-plugin-compat on browser-shipped code against the browserslist floor in package.json (Safari 16.4 / Chrome 109 /
  *   Firefox 115).
@@ -27,6 +28,16 @@ const NO_ENUM = {
 const NO_REGEX_MODIFIERS = {
   selector: 'Literal[regex.pattern=/\\(\\?[imsx-]*[imsx]:/]',
   message: 'Inline regex modifiers like (?i:…) need Safari 26; expand the alternation instead (PD-5, 04 §2.2).',
+};
+/**
+ * PA-2a: a style attribute (static, `style={…}` or the `{style}` shorthand) is an inline style that style-src 'self'
+ * blocks. Only the attribute is matched: `style:` directives are SvelteStyleDirective nodes and compile to CSSOM writes,
+ * the mechanism AD-15 mandates.
+ */
+const NO_STYLE_ATTRIBUTE = {
+  selector: ':matches(SvelteAttribute, SvelteShorthandAttribute)[key.name="style"]',
+  message:
+    'style="…" is an inline style that style-src \'self\' blocks (PA-2a); set dynamic values with a style: directive (CSSOM, AD-15) or use a class.',
 };
 const NO_MOTION_DIRECTIVES = [
   {
@@ -184,8 +195,7 @@ export default defineConfig(
   {
     files: ['apps/web/src/**/*.ts', 'apps/web/src/**/*.svelte'],
     rules: {
-      'no-restricted-syntax': ['error', NO_ENUM, NO_REGEX_MODIFIERS, ...NO_MOTION_DIRECTIVES],
-      'svelte/no-inline-styles': ['error', { allowTransitions: false }],
+      'no-restricted-syntax': ['error', NO_ENUM, NO_REGEX_MODIFIERS, NO_STYLE_ATTRIBUTE, ...NO_MOTION_DIRECTIVES],
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
