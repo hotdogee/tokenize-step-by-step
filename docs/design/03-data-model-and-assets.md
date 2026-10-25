@@ -394,9 +394,9 @@ Resident memory (o200k): 1.56 MB PCES copy + 0.8 MB offsets + 2 MB hash table �
 |---|---|---|---|---|---|---|
 | openai-o200k_base | `o200k_base.tiktoken` 3,529 KB | 1,560 KB | **1,025 KB** | 809 KB | 1,030 KB | 8 ms |
 | openai-cl100k_base | `cl100k_base.tiktoken` 1,642 KB | 727 KB | **443 KB** | 372 KB | 446 KB | 5 ms |
-| meta-llama4-muse | Glimmer `tokenizer.json` 27,470 KB (> 25 MiB cap) | 1,575 KB (+ ~40 KB SPCL) | **≈ 1,045 KB** | ≈ 820 KB | 1,038 KB | 8 ms |
-| meta-llama3 | `tokenizer.model` 2,133 KB | 937 KB (+ 5 KB SPCL) | **≈ 572 KB** | 481 KB | 579 KB | 6 ms |
-| xai-grok2 | `tokenizer.tok.json` 7,544 KB | 936 KB (+ 3 KB SPCL) | **≈ 601 KB** | 498 KB | 606 KB | 6 ms |
+| meta-llama4-muse | Glimmer `tokenizer.json` 27,470 KB (> 25 MiB cap) | 1,575 KB (+ 69 KB SPCL) | **≈ 1,045 KB** | ≈ 820 KB | 1,038 KB | 8 ms |
+| meta-llama3 | `tokenizer.model` 2,133 KB | 937 KB (+ 8 KB SPCL) | **≈ 572 KB** | 481 KB | 579 KB | 6 ms |
+| xai-grok2 | `tokenizer.tok.json` 7,544 KB | 936 KB (+ 2 KB SPCL) | **≈ 601 KB** | 498 KB | 606 KB | 6 ms |
 | anthropic-claude-legacy | `claude.json` 680 KB | 464 KB | **277 KB** | 233 KB | 279 KB | 4 ms |
 | google-gemma4 | `tokenizer.json` 31,416 KB (> 25 MiB cap) | 3,782 KB (PCES 2,518 + TYPS 256 + MRGS 1,007) | **≈ 1,620 KB** | ≈ 1,270 KB | 1,650 KB | 13 + 10 ms |
 | google-gemma2 | `tokenizer.model` 4,142 KB | 2,638 KB (PCES 2,137 + TYPS 250 + PRIO 250 + SPCL) | **1,277 KB** | 1,022 KB | 1,286 KB | ≈ 15 ms (est.) |
