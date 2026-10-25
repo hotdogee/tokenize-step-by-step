@@ -163,6 +163,7 @@ jobs:
           retention-days: ${{ github.event_name == 'push' && 30 || 7 }}
 
   e2e:
+    name: e2e (${{ matrix.project }})
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -315,6 +316,10 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
+          cache: pnpm
+      # pnpm 12 installs before running a script anyway; @lhci/cli itself comes through `pnpm dlx` (exact version in the
+      # root `lhci` script) so its ~140 MB of Lighthouse dependencies stay out of every other job's install.
+      - run: pnpm install --frozen-lockfile
       # lighthouserc.json: mobile preset, Lighthouse "Slow 4G", the 06 §3 budgets as assertions. Never against vite preview.
       - run: pnpm lhci --collect.url="$URL"
         env:
