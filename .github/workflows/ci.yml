@@ -2,6 +2,7 @@
 #
 #   check ─────────────────────────────── lint · typecheck · format · knip · registry · unicode · audit
 #   vocab ──┬─ unit                        uv + raw-vocab cache · vocab:fetch · conformance gate · vocab:build · guard
+#           │                              (unit: registry:check --require-built on the vocab-dist artifact · pnpm test)
 #           ├─ build ──┬─ e2e              vite build · check:dist · wrangler deploy --dry-run → `dist` artifact
 #           │          ├─ e2e-headers      Playwright on `wrangler dev --assets apps/web/dist` (workerd applies _headers)
 #           │          └─ preview ── lighthouse   PRs only, and only when the Cloudflare secrets exist (cf-secrets)
@@ -133,6 +134,10 @@ jobs:
         with:
           path: data/vocab/raw
           key: vocab-raw-${{ hashFiles('tools/oracle/manifest.json') }}
+      # The built-asset half of registry:check (maxTokenBytes === META.maxPieceBytes, id facts; WP04 acceptance, Gate 3):
+      # the `check` job has no data/vocab/dist, so it runs here on the downloaded artifact and fails if nothing was compared.
+      - name: registry:check against the built assets
+        run: node packages/registry/scripts/registry-check.ts --require-built
       - run: pnpm test
 
   build:
