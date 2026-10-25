@@ -23,11 +23,13 @@ export function perfTarget(env: Readonly<Record<string, string | undefined>>): {
   const external = env['E2E_PERF_BASE_URL'];
   if (external !== undefined && external !== '') return { baseURL: external };
   const port = Number(env['E2E_PERF_PORT'] ?? 4174);
-  const baseURL = `http://localhost:${String(port)}`;
+  // 127.0.0.1, as in ../playwright.config.ts: vite preview listens on one address family and a browser that tries the
+  // other one gets ERR_CONNECTION_REFUSED.
+  const baseURL = `http://127.0.0.1:${String(port)}`;
   return {
     baseURL,
     webServer: {
-      command: `pnpm --filter @tsbs/web preview --port ${String(port)} --strictPort`,
+      command: `pnpm --filter @tsbs/web preview --host 127.0.0.1 --port ${String(port)} --strictPort`,
       url: baseURL,
       reuseExistingServer: false,
       timeout: 60_000,

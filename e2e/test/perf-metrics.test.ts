@@ -50,12 +50,12 @@ describe('perf config (e2e/perf/playwright.config.ts)', () => {
 
   it('starts its own vite preview unless E2E_PERF_BASE_URL names a deployed URL', () => {
     const local = perfTarget({});
-    expect(local.baseURL).toBe('http://localhost:4174');
+    expect(local.baseURL).toBe('http://127.0.0.1:4174');
     const webServer = Array.isArray(local.webServer) ? local.webServer[0] : local.webServer;
-    expect(webServer?.command).toContain('@tsbs/web preview');
-    expect(webServer?.url).toBe('http://localhost:4174');
+    expect(webServer?.command).toContain('@tsbs/web preview --host 127.0.0.1');
+    expect(webServer?.url).toBe('http://127.0.0.1:4174');
     expect(webServer?.reuseExistingServer).toBe(false);
-    expect(perfTarget({ E2E_PERF_PORT: '4180', E2E_PERF_BASE_URL: '' }).baseURL).toBe('http://localhost:4180');
+    expect(perfTarget({ E2E_PERF_PORT: '4180', E2E_PERF_BASE_URL: '' }).baseURL).toBe('http://127.0.0.1:4180');
     expect(perfTarget({ E2E_PERF_BASE_URL: 'https://pr-1.example.workers.dev' })).toEqual({
       baseURL: 'https://pr-1.example.workers.dev',
     });
