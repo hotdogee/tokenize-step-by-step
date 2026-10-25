@@ -2,11 +2,17 @@
  * The nine real vocabularies (skipped when `data/vocab/raw` is absent, e.g. in a CI job without the oracle cache):
  * known counts, META facts asserted by WP03's acceptance (maxPieceBytes, unusedCount, Gemma 4 TYPS), sizes against
  * 03 §C.3, the writer → independent reader round trip, and the joint WP02/WP03 gate through `readTsbv1` from
- * `@tsbs/core/format/tsbv1` (a todo until WP02 merges; a reader that exists but is broken fails, it is never skipped).
+ * `@tsbs/core/format/tsbv1` (a todo until WP02 merges; a reader that exists but is broken fails, it is never skipped):
+ * once on the in-memory containers and once on every `.bin` that `pnpm vocab:build` wrote to `data/vocab/dist` (that
+ * half is skipped while the directory has no vocab manifest, e.g. before the first build).
  */
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as core from '@tsbs/core';
-import { gzipDeterministic } from '../src/compress.ts';
+import type { Tsbv1, VocabManifest } from '@tsbs/core';
+import { MANIFEST_FILE } from '../src/build.ts';
+import { gunzip, gzipDeterministic, sha256Hex } from '../src/compress.ts';
 import { loadReadTsbv1 } from '../src/core-reader.ts';
 import { readOracleManifest, type OracleManifest } from '../src/oracle-manifest.ts';
 import { loadSourceInputs } from '../src/raw.ts';
@@ -14,7 +20,7 @@ import { ASSET_SOURCES, type AssetSource } from '../src/sources/index.ts';
 import { encodeTsbv1, type EncodedContainer } from '../src/tsbv-writer.ts';
 import { PieceType, type VocabTables } from '../src/tables.ts';
 import { upstreamOf } from '../src/licences.ts';
-import { HAS_RAW, ORACLE_MANIFEST, RAW } from './support/repo.ts';
+import { DIST, HAS_DIST, HAS_RAW, ORACLE_MANIFEST, RAW } from './support/repo.ts';
 import { readTestContainer } from './support/tsbv-test-reader.ts';
 
 /** Known facts per tokenizer: counts, maxPieceBytes and the 03 §C.3 sizes in KB (raw, gzip). Gemma 2 is the measured value. */
@@ -161,48 +167,73 @@ describe.skipIf(!HAS_RAW)('real vocabularies (data/vocab/raw)', () => {
     }
   });
 
+  /** Strict, and keeping a leading U+FEFF: a default TextDecoder drops it and shifts the split (Gemma 4 rank 316134). */
+  const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+
+  /** Asserts that `tsbv` (what readTsbv1 returned) holds exactly the parser's tables: pieces, TYPS, scores, SPCL, MRGS. */
+  const expectSameTables = (tsbv: Tsbv1, tables: VocabTables, id: string): void => {
+    expect(tsbv.family, id).toBe(tables.family);
+    expect(tsbv.vocab.count, id).toBe(tables.pieces.length);
+    for (let i = 0; i < tables.pieces.length; i++)
+      if (Buffer.compare(tsbv.vocab.bytesOf(i), tables.pieces[i] ?? new Uint8Array()) !== 0)
+        throw new Error(`${id} piece ${String(i)}`);
+    expect(tsbv.types === null ? null : [...tsbv.types], id).toEqual(tables.types === null ? null : [...tables.types]);
+    expect(tsbv.scores === null ? null : [...tsbv.scores], id).toEqual(
+      tables.scores === null ? null : [...tables.scores].map((s) => s + 0),
+    );
+    expect(
+      tsbv.specials.map((s) => ({ id: s.id, text: s.text })),
+      id,
+    ).toEqual(tables.specials);
+    if (tables.merges === null) expect(tsbv.merges, id).toBeNull();
+    else {
+      const m = tsbv.merges;
+      if (m === null) throw new Error(`${id}: readTsbv1 returned no merges`);
+      const byRank: Array<[number, number]> = [];
+      for (let piece = 0; piece + 1 < m.start.length; piece++)
+        for (let k = m.start[piece] ?? 0; k < (m.start[piece + 1] ?? 0); k++)
+          byRank[m.rank[k] ?? -1] = [piece, m.splitByteOffset[k] ?? -1];
+      tables.merges.resultId.forEach((resultId, rank) => {
+        const text = utf8.decode(tables.pieces[resultId]);
+        const splitBytes = Buffer.byteLength(text.slice(0, tables.merges?.splitUtf16[rank] ?? 0));
+        const got = byRank[rank];
+        if (got?.[0] !== resultId || got[1] !== splitBytes) throw new Error(`${id} merge rank ${String(rank)}`);
+      });
+    }
+  };
+
   const jointGate = 'joint WP02/WP03 gate: every container reads back deep-equal through readTsbv1';
   // TODO(WP02): a todo only while wp/02-unicode-format (readTsbv1 in @tsbs/core/format/tsbv1) has not merged.
   if (reader.kind === 'absent') it.todo(`${jointGate} — TODO(WP02): ${reader.reason}`);
-  else
+  else {
+    const read = reader.read;
     it(`${jointGate} (${reader.from})`, () => {
-      const read = reader.read;
-      /** Strict, and keeping a leading U+FEFF: a default TextDecoder drops it and shifts the split (Gemma 4 rank 316134). */
-      const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
       for (const { source, tables, container } of built.values()) {
         const tsbv = read(container.bytes.slice().buffer);
-        const id = source.tokenizerId;
-        expect(tsbv.family, id).toBe(tables.family);
-        expect(tsbv.meta, id).toEqual(container.meta);
-        expect(tsbv.vocab.count, id).toBe(tables.pieces.length);
-        for (let i = 0; i < tables.pieces.length; i++)
-          if (Buffer.compare(tsbv.vocab.bytesOf(i), tables.pieces[i] ?? new Uint8Array()) !== 0)
-            throw new Error(`${id} piece ${String(i)}`);
-        expect(tsbv.types === null ? null : [...tsbv.types], id).toEqual(
-          tables.types === null ? null : [...tables.types],
-        );
-        expect(tsbv.scores === null ? null : [...tsbv.scores], id).toEqual(
-          tables.scores === null ? null : [...tables.scores].map((s) => s + 0),
-        );
-        expect(
-          tsbv.specials.map((s) => ({ id: s.id, text: s.text })),
-          id,
-        ).toEqual(tables.specials);
-        if (tables.merges === null) expect(tsbv.merges, id).toBeNull();
-        else {
-          const m = tsbv.merges;
-          if (m === null) throw new Error(`${id}: readTsbv1 returned no merges`);
-          const byRank: Array<[number, number]> = [];
-          for (let piece = 0; piece + 1 < m.start.length; piece++)
-            for (let k = m.start[piece] ?? 0; k < (m.start[piece + 1] ?? 0); k++)
-              byRank[m.rank[k] ?? -1] = [piece, m.splitByteOffset[k] ?? -1];
-          tables.merges.resultId.forEach((resultId, rank) => {
-            const text = utf8.decode(tables.pieces[resultId]);
-            const splitBytes = Buffer.byteLength(text.slice(0, tables.merges?.splitUtf16[rank] ?? 0));
-            const got = byRank[rank];
-            if (got?.[0] !== resultId || got[1] !== splitBytes) throw new Error(`${id} merge rank ${String(rank)}`);
-          });
-        }
+        expect(tsbv.meta, source.tokenizerId).toEqual(container.meta);
+        expectSameTables(tsbv, tables, source.tokenizerId);
       }
     });
+
+    it.skipIf(!HAS_DIST)(`${jointGate}, on every .bin in data/vocab/dist`, async () => {
+      const manifest = JSON.parse(await readFile(join(DIST, MANIFEST_FILE), 'utf8')) as VocabManifest;
+      expect(Object.keys(manifest.assets).sort(), 'stale data/vocab/dist: run pnpm vocab:build').toEqual(
+        [...built.keys()].sort(),
+      );
+      for (const [id, entry] of Object.entries(manifest.assets)) {
+        const { tables } = get(id);
+        const file = new Uint8Array(await readFile(join(DIST, ...entry.path.slice(1).split('/'))));
+        expect(sha256Hex(file), id).toBe(entry.sha256);
+        const container = gunzip(file);
+        expect(sha256Hex(container), id).toBe(entry.sha256Raw);
+        const tsbv = read(container.slice().buffer);
+        expect(tsbv.meta.tokenizerId, id).toBe(id);
+        expect(tsbv.meta.family, id).toBe(entry.family);
+        expect(tsbv.meta.counts, id).toEqual(entry.counts);
+        expect(tsbv.meta.upstream, id).toEqual(entry.upstream);
+        expect(tsbv.meta, id).toMatchObject({ ...tables.config, maxPieceBytes: EXPECTED[id]?.maxPieceBytes });
+        expectSameTables(tsbv, tables, id);
+      }
+    });
+  }
 });

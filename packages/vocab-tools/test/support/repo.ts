@@ -1,6 +1,7 @@
 /**
  * Paths into the repository for tests that use committed data (fixtures, oracle manifest, licence snapshots) and,
- * when present, the raw vocabularies (`data/vocab/raw`, gitignored; `TSBS_RAW_DIR` overrides).
+ * when present, the raw vocabularies (`data/vocab/raw`, gitignored; `TSBS_RAW_DIR` overrides) and the converter output
+ * (`data/vocab/dist`, gitignored).
  */
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +12,10 @@ export const FIXTURES = join(REPO, 'fixtures');
 export const ORACLE_MANIFEST = join(REPO, 'tools', 'oracle', 'manifest.json');
 export const LICENSES = join(REPO, 'docs', 'licenses');
 export const RAW = process.env['TSBS_RAW_DIR'] ?? join(REPO, 'data', 'vocab', 'raw');
+/** Converter output of `pnpm vocab:build` (gitignored). */
+export const DIST = join(REPO, 'data', 'vocab', 'dist');
+/** True iff `pnpm vocab:build` has written a vocab manifest to `DIST`. */
+export const HAS_DIST = existsSync(join(DIST, 'vocab-manifest.generated.json'));
 
 /** True iff every raw vocabulary file of the nine shipped assets is present locally. */
 export const HAS_RAW = [
