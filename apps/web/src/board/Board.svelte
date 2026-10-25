@@ -586,7 +586,13 @@
     data-surface={viewport.surface}
     data-inspector={ti === null ? 'loading' : 'ready'}
   >
-    <div class="main" class:nfkc={nfkc !== null} bind:this={main} data-k={K}>
+    <div
+      class="main"
+      class:nfkc={nfkc !== null}
+      class:overflow={K * cellPx > contentWidth + 0.5}
+      bind:this={main}
+      data-k={K}
+    >
       <div class="probe" aria-hidden="true" bind:this={probe}></div>
       <!-- svelte-ignore a11y_interactive_supports_focus (the grid's single tab stop is its active gridcell, APG layout grid) -->
       <div
@@ -667,6 +673,17 @@
   .main {
     position: relative;
     min-width: 0;
+  }
+
+  /* K's floor of 8 columns can be wider than the column (cell size L at 320 px on a coarse pointer: 8 × 40 > 288 px):
+     the grid then scrolls inside the board region (exempt from 1.4.10 reflow) instead of widening the page. Only then,
+     so edge cells' focus rings are never clipped otherwise. */
+  .main.overflow {
+    overflow-x: auto;
+  }
+
+  .main.overflow :global(.bd-grid) {
+    touch-action: pan-x pan-y pinch-zoom;
   }
 
   .probe {

@@ -133,8 +133,14 @@
   height: 24px;
 }
 
+/*
+ * Chunk brackets are 14 px tall, under the 24 × 24 px pointer-target minimum (WCAG 2.5.8; 05 §3.3 targets), so they are
+ * keyboard-only: still focusable gridcells, but clicks and taps pass through. Pointer users reach the chunk through the
+ * char and byte inspectors, which name it (the "equivalent" exception).
+ */
 .bd-cell-chunk {
   height: 14px;
+  pointer-events: none;
 }
 
 .bd-cell-token {
