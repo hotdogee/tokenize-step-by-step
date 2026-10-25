@@ -162,6 +162,10 @@ test('the inspector catalog and the keyboard hint load on the first interaction,
     if (/\/lazy-catalogs-[\w-]+\.js$/.test(new URL(request.url()).pathname)) fetched.push(request.url());
   });
   await openShell(page, 'en');
+  // A resting pointer is no interaction: browsers send pointermove at its unchanged position as the page appears
+  // (headless chromium on Linux: at (0, 0) during startup).
+  await page.mouse.move(0, 0);
+  await page.mouse.move(0, 0);
   await page.waitForLoadState('networkidle');
   expect(fetched).toEqual([]);
   const layout = page.locator('#board [data-inspector]');

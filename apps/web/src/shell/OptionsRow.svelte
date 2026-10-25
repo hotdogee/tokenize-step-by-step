@@ -120,8 +120,10 @@
     gap: 0.5rem 1rem;
   }
 
+  /* Wraps the select under its label when both do not fit one line (320 px with wide fonts, WCAG 1.4.10). */
   .field {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.375rem;
   }

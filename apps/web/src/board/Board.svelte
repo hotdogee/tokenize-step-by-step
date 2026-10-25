@@ -58,7 +58,10 @@
   const HOVER_MS = 120;
   /** localStorage: the keyboard hint under the board is shown until the board keys have been used (05 §8). */
   const HINT_KEY = 'tsbs:boardKeysUsed';
-  /** The first of these anywhere on the page loads the inspector catalog (PA-7: it is not part of the startup JS). */
+  /**
+   * The first of these anywhere on the page loads the inspector catalog (PA-7: it is not part of the startup JS); a
+   * `pointermove` only once the pointer has really moved (`pointerMoved`).
+   */
   const ENGAGE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'focusin'] as const;
 
   const app = appState();
@@ -468,7 +471,18 @@
 
   onMount(() => {
     measure();
-    const loadCatalog = (): void => {
+    // A resting pointer is no interaction: browsers also send `pointermove` at its unchanged position when the page
+    // appears or the content under it changes (headless chromium on Linux: one at (0, 0) during startup), so a move
+    // counts only at a position other than the previous move's.
+    let resting: string | null = null;
+    const pointerMoved = (event: PointerEvent): boolean => {
+      const at = `${String(event.clientX)},${String(event.clientY)}`;
+      const moved = resting !== null && resting !== at;
+      resting = at;
+      return moved;
+    };
+    const loadCatalog = (event: Event): void => {
+      if (event.type === 'pointermove' && !pointerMoved(event as PointerEvent)) return;
       for (const type of ENGAGE_EVENTS) document.removeEventListener(type, loadCatalog, true);
       void import('../inspector/i18n/catalogs.ts').then(
         (catalog) => {

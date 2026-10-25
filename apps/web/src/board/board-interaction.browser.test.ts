@@ -158,6 +158,7 @@ describe('keyboard state machine on a 3-row fixture (05 §8)', () => {
     });
     try {
       expect(motionPrefs.system).toBe(false); // the OS setting is no-preference: only the switch reduces motion
+      motionPrefs.setReduced(false); // the switch starts off, whatever another test file left in storage
       const board = await show(fixtureResult('openai-o200k_base', 'ja-text'));
       board.grid.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
       await press('{ArrowRight}');

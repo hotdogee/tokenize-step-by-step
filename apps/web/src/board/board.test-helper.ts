@@ -83,8 +83,9 @@ export async function mountBoard(app: AppState, width?: number): Promise<Mounted
   flushSync();
   await frames(3);
   // The inspector's catalog is a lazy chunk loaded on the first interaction with the page: interact once (a pointer
-  // move), then wait for it so tests see the panel's content.
-  document.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'mouse' }));
+  // move between two positions; a resting pointer's move is none), then wait for it so tests see the panel's content.
+  for (const clientX of [1, 2])
+    document.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'mouse', clientX }));
   for (let i = 0; i < 200 && target.querySelector('[data-inspector="ready"]') === null; i++) await frames(1);
   const grid = target.querySelector<HTMLElement>('[role="grid"]');
   if (grid === null) throw new Error('board grid not rendered');
