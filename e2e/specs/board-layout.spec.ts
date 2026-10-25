@@ -9,7 +9,7 @@
  */
 import { devices, expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
-import { chooseExample, focusBoard, focusedCell, grid, intersects, rectOf } from './board-helpers.ts';
+import { chooseExample, focusBoard, focusedCell, focusRects, grid, intersects } from './board-helpers.ts';
 import { openShell } from './shell-helpers.ts';
 
 for (const width of [320, 360, 768, 1440, 2560]) {
@@ -31,12 +31,12 @@ for (const width of [320, 360, 768, 1440, 2560]) {
 }
 
 test('at 360 px the focused cell is never under the sheet or the header (WCAG 2.4.11)', async ({ page }) => {
+  test.slow(); // 120 key presses with a layout read after each: 15–25 s on WebKit, near the default 30 s timeout
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openShell(page, 'en');
   await chooseExample(page, 'zh-tw-paragraph');
   await focusBoard(page);
-  const header = await rectOf(page, 'header');
   for (const expanded of [false, true]) {
     if (expanded) {
       await page.getByTestId('sheet-handle').click();
@@ -45,15 +45,13 @@ test('at 360 px the focused cell is never under the sheet or the header (WCAG 2.
     }
     for (let i = 0; i < 60; i++) {
       await page.keyboard.press(i % 10 === 9 ? 'PageDown' : 'ArrowRight');
-      const sheet = await rectOf(page, '[data-testid="inspector-host"]');
-      const cell = await page.evaluate(() => {
-        const { top, bottom, left, right } = (document.activeElement as HTMLElement).getBoundingClientRect();
-        return { top, bottom, left, right };
-      });
+      // One round trip per step (120 steps): WebKit's evaluate latency made three per step outrun the test timeout.
+      const { cell, sheet, header } = await focusRects(page);
+      expect(cell, `step ${String(i)}: focused element`).not.toBeNull();
       expect(sheet).not.toBeNull();
+      if (cell === null) continue;
       if (sheet !== null) expect(intersects(cell, sheet), `step ${String(i)}`).toBe(false);
-      const headerNow = await rectOf(page, 'header');
-      if (headerNow !== null && header !== null) expect(intersects(cell, headerNow)).toBe(false);
+      if (header !== null) expect(intersects(cell, header), `step ${String(i)} (header)`).toBe(false);
     }
   }
 });

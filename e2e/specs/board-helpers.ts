@@ -38,14 +38,27 @@ export interface Rect {
   readonly right: number;
 }
 
-/** Bounding rectangle of the element matched by `selector`, or null. */
-export function rectOf(page: Page, selector: string): Promise<Rect | null> {
-  return page.evaluate((s) => {
-    const element = document.querySelector(s);
-    if (element === null) return null;
-    const { top, bottom, left, right } = element.getBoundingClientRect();
-    return { top, bottom, left, right };
-  }, selector);
+/** Rectangles of the focused element, the inspector host and the page header (null when absent), in one round trip. */
+export interface FocusRects {
+  readonly cell: Rect | null;
+  readonly sheet: Rect | null;
+  readonly header: Rect | null;
+}
+
+/** Reads `FocusRects` with one `page.evaluate` (the focus-not-obscured loops call it on every key press). */
+export function focusRects(page: Page): Promise<FocusRects> {
+  return page.evaluate(() => {
+    const rect = (element: Element | null): Rect | null => {
+      if (element === null || element === document.body) return null;
+      const { top, bottom, left, right } = element.getBoundingClientRect();
+      return { top, bottom, left, right };
+    };
+    return {
+      cell: rect(document.activeElement),
+      sheet: rect(document.querySelector('[data-testid="inspector-host"]')),
+      header: rect(document.querySelector('header')),
+    };
+  });
 }
 
 /** True when the two rectangles overlap (touching edges do not count). */

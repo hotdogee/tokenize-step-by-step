@@ -13,6 +13,7 @@
     "specs/**/*.ts",
     "headers/**/*.ts",
     "parity/**/*.ts",
+    "visual/**/*.ts",
     "support/**/*.ts",
     "test/**/*.ts",
     "../scripts/lib/smoke.ts",

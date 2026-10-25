@@ -9,6 +9,7 @@
  * strict CSP with zero violations and axe stays clean.
  */
 import { expect, test } from '@playwright/test';
+import { DESKTOP_VIEWPORT } from '../projects.ts';
 import { expectNoAxeViolations } from '../support/axe.ts';
 import { watchPage } from '../support/page-guards.ts';
 import { chooseExample, focusBoard, focusedCell, grid } from './board-helpers.ts';
@@ -26,50 +27,61 @@ test('the board is one tab stop between the controls and the inspector', async (
   await page.keyboard.press('Tab');
   const after = await focusedCell(page);
   expect(after.startsWith('char:') || after.startsWith('hex:') || after.startsWith('token:')).toBe(false);
-  expect(await page.evaluate(() => document.getElementById('inspector-panel')?.contains(document.activeElement))).toBe(
-    true,
-  );
+  // The next stop is the inspector's first control: inside the panel on the rail and anchored surfaces; on the bottom
+  // sheet (< 768 px, AD-34) its handle button, which precedes the panel.
+  const surface = await page.getByTestId('inspector-host').getAttribute('data-surface');
+  if (surface === 'sheet') await expect(page.getByTestId('sheet-handle')).toBeFocused();
+  else
+    expect(
+      await page.evaluate(() => document.getElementById('inspector-panel')?.contains(document.activeElement)),
+    ).toBe(true);
 });
 
-test('keyboard tour: arrows, edges, rows, pin, inspector and Esc (o200k 台灣台南)', async ({ page }, testInfo) => {
-  const guards = await watchPage(page);
-  await openShell(page, 'en');
-  await focusBoard(page);
-  const press = async (key: string, expected: string): Promise<void> => {
-    await page.keyboard.press(key);
-    await expect.poll(() => focusedCell(page)).toBe(expected);
-  };
-  await press('ArrowRight', 'char:1');
-  await press('ArrowUp', 'char:1'); // top tier: no-op
-  await press('ArrowDown', 'hex:3');
-  await press('ArrowDown', 'token:1');
-  await press('ArrowDown', 'token:1'); // bottom tier: no-op
-  await press('Home', 'token:0');
-  await press('End', 'token:3');
-  await press('Control+Home', 'token:0');
-  await press('ArrowUp', 'hex:0');
-  await press('Control+End', 'hex:11');
-  await expect(grid(page).locator('[tabindex="0"]')).toHaveCount(1);
+// The tour's expected cells assume 台灣台南 on one packed row (K ≥ 12): pinned to the desktop viewport so the device and
+// narrow projects run the same tour; the wrapped-row moves are the 360 px test below.
+test.describe('desktop layout', () => {
+  test.use({ viewport: DESKTOP_VIEWPORT });
 
-  await press('ArrowDown', 'token:3');
-  await page.keyboard.press('Enter');
-  await expect(page.getByTestId('status')).toContainText('pinned: token 4 of 4, id 14609');
-  await expect(grid(page).locator('[data-tier="token"][data-index="3"]')).toHaveAttribute('data-pinned', '');
-  await expect(page.locator('#inspector-heading')).toHaveText('Inspector — token 4 of 4');
-  await press('ArrowLeft', 'token:2'); // focus stays in the grid while pinned
-  await expect(page.locator('#inspector-heading')).toHaveText('Inspector — token 4 of 4');
-  await expectNoAxeViolations(page, testInfo, 'board-pinned', { include: ['#board'] });
+  test('keyboard tour: arrows, edges, rows, pin, inspector and Esc (o200k 台灣台南)', async ({ page }, testInfo) => {
+    const guards = await watchPage(page);
+    await openShell(page, 'en');
+    await focusBoard(page);
+    const press = async (key: string, expected: string): Promise<void> => {
+      await page.keyboard.press(key);
+      await expect.poll(() => focusedCell(page)).toBe(expected);
+    };
+    await press('ArrowRight', 'char:1');
+    await press('ArrowUp', 'char:1'); // top tier: no-op
+    await press('ArrowDown', 'hex:3');
+    await press('ArrowDown', 'token:1');
+    await press('ArrowDown', 'token:1'); // bottom tier: no-op
+    await press('Home', 'token:0');
+    await press('End', 'token:3');
+    await press('Control+Home', 'token:0');
+    await press('ArrowUp', 'hex:0');
+    await press('Control+End', 'hex:11');
+    await expect(grid(page).locator('[tabindex="0"]')).toHaveCount(1);
 
-  await page.keyboard.press('i');
-  await expect
-    .poll(() => page.evaluate(() => document.getElementById('inspector-panel')?.contains(document.activeElement)))
-    .toBe(true);
-  await press('Escape', 'token:2');
-  await page.keyboard.press('Escape');
-  await expect(page.getByTestId('status')).toContainText('unpinned');
-  await expect(grid(page).locator('[data-pinned]')).toHaveCount(0);
-  await press('Escape', 'text-input:');
-  expect(await guards.cspViolations()).toEqual([]);
+    await press('ArrowDown', 'token:3');
+    await page.keyboard.press('Enter');
+    await expect(page.getByTestId('status')).toContainText('pinned: token 4 of 4, id 14609');
+    await expect(grid(page).locator('[data-tier="token"][data-index="3"]')).toHaveAttribute('data-pinned', '');
+    await expect(page.locator('#inspector-heading')).toHaveText('Inspector — token 4 of 4');
+    await press('ArrowLeft', 'token:2'); // focus stays in the grid while pinned
+    await expect(page.locator('#inspector-heading')).toHaveText('Inspector — token 4 of 4');
+    await expectNoAxeViolations(page, testInfo, 'board-pinned', { include: ['#board'] });
+
+    await page.keyboard.press('i');
+    await expect
+      .poll(() => page.evaluate(() => document.getElementById('inspector-panel')?.contains(document.activeElement)))
+      .toBe(true);
+    await press('Escape', 'token:2');
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('status')).toContainText('unpinned');
+    await expect(grid(page).locator('[data-pinned]')).toHaveCount(0);
+    await press('Escape', 'text-input:');
+    expect(await guards.cspViolations()).toEqual([]);
+  });
 });
 
 test('a span wrapped over rows is one logical cell (360 px, token " 東京")', async ({ page }) => {

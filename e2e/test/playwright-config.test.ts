@@ -1,25 +1,47 @@
 import { describe, expect, it } from 'vitest';
 import config from '../playwright.config.ts';
 import headersConfig from '../playwright.headers.config.ts';
-import { allFunctionalProjects, fullMatrixRequested, functionalProjects, PARITY_TAG } from '../projects.ts';
+import {
+  allFunctionalProjects,
+  engineOf,
+  engineRequested,
+  fullMatrixRequested,
+  functionalProjects,
+  PARITY_TAG,
+  visualProject,
+} from '../projects.ts';
 
 const single = <T>(value: T | readonly T[] | undefined): T | undefined =>
   Array.isArray(value) ? (value as readonly T[])[0] : (value as T | undefined);
+
+const names = (projects: ReadonlyArray<{ name?: string }>): Array<string | undefined> =>
+  projects.map((project) => project.name);
 
 describe('functional config (playwright.config.ts)', () => {
   it('runs specs/ against vite preview of the built app and never reuses a running server', () => {
     expect(config.testDir).toBe('./specs');
     expect(config.use?.baseURL).toBe('http://localhost:4173');
+    expect(config.use?.trace).toBe('retain-on-failure');
     const webServer = single(config.webServer);
     expect(webServer?.command).toContain('@tsbs/web preview');
     expect(webServer?.reuseExistingServer).toBe(false);
   });
 
-  it('runs chromium only unless E2E_FULL_MATRIX=1 (PA-5)', () => {
-    expect(config.projects?.map((project) => project.name)).toEqual(['chromium']);
+  it('runs chromium only unless E2E_FULL_MATRIX=1', () => {
+    expect(names(config.projects ?? [])).toEqual(['chromium']);
     expect(fullMatrixRequested({})).toBe(false);
     expect(fullMatrixRequested({ E2E_FULL_MATRIX: '1' })).toBe(true);
-    expect(functionalProjects(false).map((project) => project.name)).toEqual(['chromium']);
+    expect(names(functionalProjects({ full: false }))).toEqual(['chromium']);
+  });
+
+  it('retries nothing by default; only the WebKit projects retry once, and only in CI (07 §5)', () => {
+    expect(config.retries).toBe(0);
+    const ci = functionalProjects({ full: true, ci: true });
+    expect(ci.filter((project) => project.retries === 1).map((project) => project.name)).toEqual([
+      'webkit',
+      'iphone-12',
+    ]);
+    expect(functionalProjects({ full: true, ci: false }).every((project) => (project.retries ?? 0) === 0)).toBe(true);
   });
 });
 
@@ -27,8 +49,8 @@ describe('the full matrix (06 §1)', () => {
   const projects = allFunctionalProjects();
   const byName = new Map(projects.map((project) => [project.name, project]));
 
-  it('defines 3 browsers, 2 devices and the 320/360/2560 viewports', () => {
-    expect(functionalProjects(true).map((project) => project.name)).toEqual([
+  it('defines 3 browsers, 2 devices, the 320/360/2560 viewports and the visual project', () => {
+    expect(names(functionalProjects({ full: true }))).toEqual([
       'chromium',
       'firefox',
       'webkit',
@@ -37,6 +59,7 @@ describe('the full matrix (06 §1)', () => {
       'chromium-320',
       'chromium-360',
       'chromium-2560',
+      'visual',
     ]);
     for (const name of ['chromium', 'firefox', 'webkit'])
       expect(byName.get(name)?.use?.viewport).toEqual({ width: 1440, height: 900 });
@@ -61,6 +84,32 @@ describe('the full matrix (06 §1)', () => {
       const skipsParity = project.grepInvert instanceof RegExp && project.grepInvert.test(PARITY_TAG);
       expect(skipsParity, project.name).toBe(!['chromium', 'firefox', 'webkit'].includes(project.name ?? ''));
     }
+  });
+
+  it('splits into one CI job per engine (E2E_ENGINE), every project in exactly one', () => {
+    expect(engineRequested({})).toBeNull();
+    expect(engineRequested({ E2E_ENGINE: 'webkit' })).toBe('webkit');
+    expect(() => engineRequested({ E2E_ENGINE: 'safari' })).toThrow(/E2E_ENGINE/);
+    const split = (['chromium', 'firefox', 'webkit'] as const).map((engine) =>
+      names(functionalProjects({ full: true, engine })),
+    );
+    expect(split).toEqual([
+      ['chromium', 'pixel-5', 'chromium-320', 'chromium-360', 'chromium-2560', 'visual'],
+      ['firefox'],
+      ['webkit', 'iphone-12'],
+    ]);
+    expect(engineOf({ name: 'x' })).toBe('chromium');
+  });
+
+  it('compares visual baselines with maxDiffPixelRatio 0.002 under visual/__screenshots__ per platform', () => {
+    const visual = visualProject();
+    expect(visual).toMatchObject({
+      testDir: './visual',
+      testMatch: '**/*.visual.ts',
+      snapshotPathTemplate: '{testDir}/__screenshots__/{arg}-{platform}{ext}',
+      expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.002 } },
+    });
+    expect(engineOf(visual)).toBe('chromium');
   });
 });
 
