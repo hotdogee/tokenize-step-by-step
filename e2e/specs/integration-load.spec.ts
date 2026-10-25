@@ -216,6 +216,7 @@ test('a second visit with /tok/* blocked loads o200k from the Cache API; About â
   await expect(diagnostics.getByTestId('diagnostics-cache')).toContainText(
     /\/tok\/openai-o200k_base\/[0-9a-f]+\.bin \(\d/,
   );
+  await expect(diagnostics.getByTestId('diagnostics-cache')).not.toContainText('__tsbs-index'); // vocabulary files only
   await expect(diagnostics.getByTestId('diagnostics-last-load')).toContainText('from the cache');
   await expect(diagnostics.getByTestId('diagnostics-worker')).toContainText('Web Crypto');
   await expect(diagnostics.getByTestId('diagnostics-unicode')).toContainText(

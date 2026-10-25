@@ -4,8 +4,8 @@
    *
    * - the features probed on the main thread, beside the Worker's own probe (`ready.features`) that `/` saved in
    *   sessionStorage the last time its tokenizer Worker started in this tab;
-   * - the Cache API contents (`caches.keys()` + `cache.keys()`, with each body's size) with "clear cache" and the Safari
-   *   7-day note;
+   * - the cached vocabulary files (`caches.keys()` + `cache.keys()`, `/tok/…` only, with each body's size; the loader's
+   *   index entry is not listed) with "clear cache" and the Safari 7-day note;
    * - the last `loaded` diagnostics `/` saved in sessionStorage: from the cache or the network, time, bytes transferred,
    *   the layer the loader verified and the response's content encoding;
    * - the Unicode probe of 04 §8 ("pre-tokenizer Unicode 16.0; your browser reports ≈ Unicode N", from U+2FFC / U+1CC00 /

@@ -30,7 +30,10 @@ export interface CachedEntry {
   readonly bytes: number | null;
 }
 
-/** Every response cached by the loader with its size (About › Diagnostics), or null without the Cache API. */
+/**
+ * Every vocabulary file (`/tok/…`) cached by the loader with its size (About › Diagnostics) — not the loader's own
+ * `/__tsbs-index` bookkeeping entry — or null without the Cache API.
+ */
 export async function cachedVocabEntries(): Promise<CachedEntry[] | null> {
   if (typeof caches === 'undefined') return null;
   try {
@@ -39,6 +42,7 @@ export async function cachedVocabEntries(): Promise<CachedEntry[] | null> {
       if (!name.startsWith(VOCAB_CACHE_PREFIX)) continue;
       const cache = await caches.open(name);
       for (const request of await cache.keys()) {
+        if (!new URL(request.url).pathname.startsWith('/tok/')) continue;
         const response = await cache.match(request);
         const length = Number(response?.headers.get('Content-Length') ?? Number.NaN);
         const bytes =
