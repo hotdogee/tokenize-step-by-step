@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "6.2.4",
-    "@vitest/browser": "4.1.12",
     "@vitest/browser-playwright": "4.1.12",
     "axe-core": "4.14.0",
     "lightningcss": "1.33.0",

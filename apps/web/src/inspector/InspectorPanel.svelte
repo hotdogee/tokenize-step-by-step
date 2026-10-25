@@ -65,9 +65,11 @@
     <h3 id="inspector-heading" class="heading">{model?.heading ?? i18n.t('inspector.heading')}</h3>
     {#if pinned}
       <span class="badge control-label">{i18n.t('inspector.pinnedBadge')}</span>
-      <button type="button" class="btn btn-quiet unpin" onclick={onunpin}>
-        <BoardIcon name="pin" size={14} /><span class="control-label">{i18n.t('inspector.unpin')}</span>
-      </button>
+      {#if !collapsed}
+        <button type="button" class="btn btn-quiet unpin" onclick={onunpin}>
+          <BoardIcon name="pin" size={14} /><span class="control-label">{i18n.t('inspector.unpin')}</span>
+        </button>
+      {/if}
     {/if}
   </div>
   {#if model === null}

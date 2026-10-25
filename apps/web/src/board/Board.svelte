@@ -426,13 +426,15 @@
     }
     const element = cellElement(inspected);
     if (element === null) return;
+    // Beside the active cell without covering its packed row (the vertical slice the panel explains): below the row,
+    // flipped above it only when it fits there and not below.
     const cell = element.getBoundingClientRect();
+    const row = (element.closest('.bd-row') ?? element).getBoundingClientRect();
     const box = layout.getBoundingClientRect();
     const width = Math.min(320, box.width);
-    const below = cell.bottom - box.top + 8;
     const panelHeight = host?.offsetHeight ?? 0;
-    const fitsBelow = cell.bottom + 8 + panelHeight <= window.innerHeight || cell.top - panelHeight - 8 < 0;
-    const top = fitsBelow ? below : cell.top - box.top - panelHeight - 8;
+    const above = row.bottom + 4 + panelHeight > window.innerHeight && row.top - panelHeight - 4 >= 0;
+    const top = above ? row.top - box.top - panelHeight - 4 : row.bottom - box.top + 4;
     const left = Math.min(Math.max(0, cell.left - box.left), Math.max(0, box.width - width));
     anchor = { top: Math.round(top), left: Math.round(left) };
   }
