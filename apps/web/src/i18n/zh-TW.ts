@@ -216,11 +216,8 @@ export const zhTW = {
   'help.key.play': '播放／暫停',
   'help.key.firstLast': '第一步／最後一步',
 
-  // ---- Live check ----
+  // ---- Live-check drawer trigger (the open drawer's strings are in src/byok/i18n) ----
   'liveCheck.heading': '用你自己的 API 金鑰即時檢查',
-  'liveCheck.privacy':
-    '金鑰只會留在這個分頁的記憶體中，只透過 HTTPS 傳給服務供應商，重新載入後就會被忘記。本網站沒有後端，也沒有分析追蹤。',
-  'liveCheck.unavailable': '這個版本尚未提供即時檢查。',
 
   // ---- Reserved for other work packages ----
   'a11y.fragment': '詞元 {index}（續，第 {part} 段，共 {parts} 段）',

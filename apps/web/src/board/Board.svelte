@@ -36,6 +36,7 @@
   import { placePanel, type Extent } from './anchor.ts';
   import type { InteractionState } from './cell-state.ts';
   import { nfkcSource, type BoardContext } from './cells.ts';
+  import { extraTier, extraTierFor } from './extra-tier.svelte.ts';
   import { appTier, columnsFor, GUTTER, tiersFor, tokenMode, type BoardTier } from './geometry.ts';
   import { spokenGlyph } from './labels.ts';
   import { navigate, navKeyOf, resolveAnchor as resolveAnchorIn } from './navigation.ts';
@@ -92,6 +93,8 @@
   );
   const fusedDummy = $derived(fusesDummy(result, app.entry));
   const nfkc = $derived(nfkcSource(result));
+  /** WP10's live token tier (extra-tier.svelte.ts): one more decorative track per row while it applies. */
+  const extra = $derived(extraTierFor(extraTier.current, result, stage, pending));
   const ctx: BoardContext = $derived({
     result,
     units,
@@ -590,6 +593,7 @@
     <div
       class="main"
       class:nfkc={nfkc !== null}
+      class:extra={extra !== null}
       class:overflow={K * cellPx > contentWidth + 0.5}
       bind:this={main}
       data-k={K}
@@ -599,6 +603,7 @@
       <div
         class="bd-grid"
         class:nfkc={nfkc !== null}
+        class:extra={extra !== null}
         role="grid"
         aria-labelledby="board-label"
         aria-rowcount={rows.length * tiers.length}
@@ -623,7 +628,7 @@
               style:height={`${String(gaps[k])}px`}
             ></div>{/if}
           {#if row !== undefined}
-            <Row {row} {ctx} {interaction} emptyLabel={i18n.t('a11y.cell.empty')} />
+            <Row {row} {ctx} {interaction} {extra} emptyLabel={i18n.t('a11y.cell.empty')} />
           {/if}
         {/each}
         {#if (gaps.at(-1) ?? 0) > 0}
@@ -699,6 +704,11 @@
 
   .main.nfkc .probe {
     height: calc(var(--row-h) + 16px);
+  }
+
+  /* The extra tier's track (board.css .bd-grid.extra --extra-h). */
+  .main.extra .probe {
+    height: calc(var(--row-h) + 32px);
   }
 
   .pending,

@@ -3,7 +3,8 @@
    * One packed row (05 §3.1, §8): fixed height per breakpoint; one ARIA `row` per shown tier (`aria-rowindex` =
    * packedRow × tiers + tier + 1), each a K-column grid of gridcells with `aria-colindex`/`aria-colspan` of the fragment;
    * the grapheme brackets, the NFKC source runs and the id line are decorative layers; the visually hidden `frag-…`
-   * descriptions of fragmented spans live in a hidden container referenced by `aria-describedby`.
+   * descriptions of fragmented spans live in a hidden container referenced by `aria-describedby`. An extra tier
+   * (extra-tier.svelte.ts: WP10's live token tier) is one more decorative, `aria-hidden` layer under the id line.
    */
   import type { RowModel } from '@tsbs/core';
   import BoardIcon from './BoardIcon.svelte';
@@ -13,6 +14,7 @@
   import ChunkCell from './ChunkCell.svelte';
   import { cellState, placeClass, type InteractionState } from './cell-state.ts';
   import { rowCells, type BoardContext } from './cells.ts';
+  import type { ExtraTier } from './extra-tier.svelte.ts';
   import { ariaRowIndex, type BoardTier } from './geometry.ts';
   import MarkerCell from './MarkerCell.svelte';
   import TokenChip from './TokenChip.svelte';
@@ -22,8 +24,10 @@
     ctx: BoardContext;
     interaction: InteractionState;
     emptyLabel: string;
+    /** The extra tier to draw under this row (null: none). */
+    extra?: ExtraTier | null;
   }
-  let { row, ctx, interaction, emptyLabel }: Props = $props();
+  let { row, ctx, interaction, emptyLabel, extra = null }: Props = $props();
 
   /** Row names per tier (both byte rows are "Bytes"). */
   const TIER_NAMES = {
@@ -127,6 +131,11 @@
       {#each cells.ids as id (id.index)}
         <span class={`bd-idl mono ${placeClass(id.col, id.span)}`} class:odd={id.odd}>{id.text}</span>
       {/each}
+    </div>
+  {/if}
+  {#if extra !== null}
+    <div class="bd-extra" aria-hidden="true" data-testid="extra-tier">
+      <extra.component {row} result={ctx.result} />
     </div>
   {/if}
   {#if cells.descriptions.length > 0}

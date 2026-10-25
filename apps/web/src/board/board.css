@@ -99,6 +99,29 @@
   grid-row: ids;
 }
 
+/*
+ * The extra tier (extra-tier.svelte.ts; WP10's live token tier): while it applies, every packed row grows by one 32 px
+ * decorative track at its bottom, a K-column grid like the tiers above it (Board.svelte's probe adds the same height).
+ */
+.bd-grid.extra {
+  --extra-h: 32px;
+}
+
+.bd-grid.extra .bd-row {
+  height: calc(var(--row-h) + var(--src-h) + var(--extra-h));
+  contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h) + var(--extra-h));
+}
+
+.bd-extra {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: var(--extra-h);
+  display: grid;
+  grid-template-columns: repeat(var(--k), var(--cell));
+  align-items: center;
+}
+
 /* ---- Cells (gridcells span their columns; the visual inside is inset) ---- */
 
 .bd-cell {
