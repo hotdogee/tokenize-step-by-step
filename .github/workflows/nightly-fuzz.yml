@@ -1,6 +1,14 @@
-# Nightly fuzz vs oracles, long property runs and the perf spec (docs/design/06-quality-ci-deploy.md §1, §4). Skeleton
-# from WP11; WP12 wires the commands (07 §2 WP12 "nightly-fuzz.yml wiring"). Each step runs only once its implementation
-# exists, so the schedule stays green before WP12 lands. On failure: an issue with the seed, and the candidates artifact.
+# Nightly fuzz vs oracles, long property runs and performance (docs/design/06-quality-ci-deploy.md §1, §4; WP12).
+#
+#   fuzz        pnpm test:fuzz --seed <YYYYMMDD> --n 10000: the nine engines (built .bin via readTsbv1) against the Python
+#               oracle lane (tools/oracle/fuzz_oracle.py: ids + byte spans) and the second opinions (PA-9)
+#   property    fast-check suites of @tsbs/core with FAST_CHECK_NUM_RUNS=20000 (1,000 per PR)
+#   perf        Worker heap check (hard); Node timing ceilings and vitest bench (TSBS_PERF=1, serial; soft — shared
+#               runners are slower than the quiet machine the 06 §3 Node ceilings assume); the Playwright perf spec on
+#               vite preview (budget misses are warnings, the results JSON is the trend artifact)
+#
+# On failure: an issue with the seed, and the fixtures/candidates artifact (engine mismatches and oracle divergences in
+# the fixture case shape, each with its classification).
 name: nightly-fuzz
 
 on:
@@ -40,6 +48,8 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: tools/oracle/uv.lock
+      # The Python oracle lane (tiktoken, sentencepiece, tokenizers) that fuzz_oracle.py runs on.
+      - run: uv sync --project tools/oracle --locked
       - name: Restore raw vocabulary (keyed on the manifest hash)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -48,6 +58,8 @@ jobs:
       - run: pnpm vocab:fetch
         env:
           GITHUB_TOKEN: ${{ github.token }}
+      # The engines under fuzz decode the built assets, exactly as the Worker does; the perf spec needs them in dist/.
+      - run: pnpm vocab:build --conformance strict
       - id: plan
         env:
           SEED_INPUT: ${{ inputs.seed }}
@@ -55,25 +67,56 @@ jobs:
         run: |
           echo "seed=${SEED_INPUT:-$(date -u +%Y%m%d)}" >> "$GITHUB_OUTPUT"
           echo "n=${N_INPUT:-10000}" >> "$GITHUB_OUTPUT"
-          if jq -e '.scripts["test:fuzz"] | contains("scripts/pending.ts")' package.json > /dev/null; then
-            echo "fuzz=false" >> "$GITHUB_OUTPUT"; echo "::notice::test:fuzz is still the WP12 stub; fuzz skipped."
-          else
-            echo "fuzz=true" >> "$GITHUB_OUTPUT"
-          fi
       - name: Fuzz vs oracles (10,000 strings × 9 tokenizers, date seed)
-        if: steps.plan.outputs.fuzz == 'true'
         run: pnpm test:fuzz --seed "$SEED" --n "$N"
         env:
           SEED: ${{ steps.plan.outputs.seed }}
           N: ${{ steps.plan.outputs.n }}
-      # 20,000 fast-check runs per property (1,000 per PR); WP12 makes the property suites read FAST_CHECK_NUM_RUNS.
+      # 20,000 fast-check runs per property (1,000 per PR): every property suite lives in the core project and reads
+      # FAST_CHECK_NUM_RUNS (packages/core/test/helpers/runs.ts); 20× the runs needs a longer per-test timeout.
       - name: Property tests (20,000 runs)
-        run: pnpm test
+        run: pnpm generate && pnpm exec vitest run --project core --test-timeout 600000
         env:
           FAST_CHECK_NUM_RUNS: '20000'
-      - name: Perf spec (WP12)
-        if: hashFiles('e2e/perf/**') != ''
-        run: pnpm --filter @tsbs/e2e exec playwright test --config perf/playwright.config.ts
+      # 06 §3: 500 keystrokes into a 10k-CJK paragraph grow the Worker's memory by < 10 MB (Node harness, forced GC).
+      - name: Worker heap check
+        run: pnpm generate && pnpm exec vitest run --project worker --no-file-parallelism -t "Worker heap"
+        env:
+          TSBS_PERF: '1'
+          NODE_OPTIONS: --expose-gc
+      # Serial timing runs (one file at a time): the TSBS_PERF=1 ceilings, then vitest bench + check-bench.ts. Soft:
+      # the medians are in the log and the bench JSON artifact; the assertion that counts runs on a quiet machine.
+      - name: Node ceilings and vitest bench (TSBS_PERF=1, serial; soft)
+        continue-on-error: true
+        run: pnpm test:perf && pnpm bench
+        env:
+          TSBS_PERF: '1'
+          NODE_OPTIONS: --expose-gc
+      - id: playwright
+        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @tsbs/e2e exec playwright install-deps chromium
+      - name: Build the site for the perf spec
+        run: pnpm --filter @tsbs/web build
+      # Fast 4G load, keystroke latency at 1k/10k, 2,000-cell render, scrub traces. Budget misses are warnings.
+      - name: Perf spec (vite preview, chromium)
+        run: pnpm e2e:perf
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: perf-trend-${{ steps.plan.outputs.seed }}
+          path: |
+            e2e/test-results/perf/perf-results.json
+            packages/core/node_modules/.cache/tsbs/bench.json
+          if-no-files-found: ignore
+          retention-days: 90
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
