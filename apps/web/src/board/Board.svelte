@@ -9,7 +9,10 @@
    *   focused cell, keyed by a byte-offset anchor that survives re-tokenization, a new K and virtual remounts), the
    *   05 §8 keys, and `scrollIntoView` on every focus move with the sheet height as scroll padding;
    * - arithmetic virtualization (fixed row heights, `content-visibility: auto`), always mounting the focused and pinned
-   *   rows;
+   *   rows and, at stop 5, the row holding the part the current step formed (the motion director marks it and follow
+   *   mode scrolls to it, so a jump far away — End, a merge-list row, "show this step" — lands on a mounted row); those
+   *   kept rows carry `data-keep` and opt out of `content-visibility` (WebKit ignores `scrollIntoView` into a row it has
+   *   never rendered; PA-13);
    * - pointer/touch: hover after 120 ms (fine pointers), click/tap pins, tap elsewhere unpins;
    * - the inspector host (side rail / anchored panel / bottom sheet by viewport width) and selection sync with the
    *   textarea (CSS Custom Highlight API where supported).
@@ -155,13 +158,19 @@
 
   // ---- virtual window ----
   const range = $derived(visibleRows(viewTop, viewHeight, rowPx, rows.length));
-  const mounted = $derived(
-    mountedRows(
-      range,
-      [focusRef === null ? null : units.rowOf(focusRef), pinRef === null ? null : units.rowOf(pinRef)],
-      rows.length,
-    ),
+  /** At stop 5: the packed row of the part the current step formed (−1: none), where the director marks and follows. */
+  const mergedRow = $derived(
+    stage === 5 && parts !== null && parts.justMerged >= 0
+      ? units.rowOf({ tier: 'token', index: parts.justMerged })
+      : -1,
   );
+  /** Rows mounted and rendered wherever the window is: the focused, the pinned and the just-merged row (−1: none). */
+  const kept = $derived([
+    focusRef === null ? -1 : units.rowOf(focusRef),
+    pinRef === null ? -1 : units.rowOf(pinRef),
+    mergedRow,
+  ]);
+  const mounted = $derived(mountedRows(range, kept, rows.length));
   const gaps = $derived(spacers(mounted, rows.length, rowPx));
 
   const pendingText = $derived(
@@ -630,7 +639,7 @@
               style:height={`${String(gaps[k])}px`}
             ></div>{/if}
           {#if row !== undefined}
-            <Row {row} {ctx} {interaction} {extra} emptyLabel={i18n.t('a11y.cell.empty')} />
+            <Row {row} {ctx} {interaction} {extra} keep={kept.includes(r)} emptyLabel={i18n.t('a11y.cell.empty')} />
           {/if}
         {/each}
         {#if (gaps.at(-1) ?? 0) > 0}

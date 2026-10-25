@@ -36,6 +36,13 @@
   contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h));
 }
 
+/* Rows holding the focused, pinned or just-merged cell (Board.svelte sets `data-keep`) always render: WebKit ignores
+   `scrollIntoView` on a cell inside a `content-visibility: auto` row it has never rendered, which would leave a far
+   focus move (Ctrl+End) or follow mode's jump off screen (PA-13). An attribute, not `:has()` (Firefox 115–120). */
+.bd-row[data-keep] {
+  content-visibility: visible;
+}
+
 /* 480–767: the 136 px --row-h holds U+ labels, chunk brackets and the 16 px id line (05 §3.3), so the tiers sit flush. */
 @media (min-width: 480px) {
   .bd-row {

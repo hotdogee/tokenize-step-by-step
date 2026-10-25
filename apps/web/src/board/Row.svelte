@@ -5,6 +5,8 @@
    * the grapheme brackets, the NFKC source runs and the id line are decorative layers; the visually hidden `frag-…`
    * descriptions of fragmented spans live in a hidden container referenced by `aria-describedby`. An extra tier
    * (extra-tier.svelte.ts: WP10's live token tier) is one more decorative, `aria-hidden` layer under the id line.
+   * `keep` (the row holds the focused, pinned or just-merged cell) sets `data-keep`, which opts the row out of
+   * `content-visibility: auto` (board.css) so `scrollIntoView` reaches it in WebKit even before it has been rendered.
    */
   import type { RowModel } from '@tsbs/core';
   import BoardIcon from './BoardIcon.svelte';
@@ -26,8 +28,10 @@
     emptyLabel: string;
     /** The extra tier to draw under this row (null: none). */
     extra?: ExtraTier | null;
+    /** The row holds the focused, pinned or just-merged cell: always rendered (`data-keep`). */
+    keep?: boolean;
   }
-  let { row, ctx, interaction, emptyLabel, extra = null }: Props = $props();
+  let { row, ctx, interaction, emptyLabel, extra = null, keep = false }: Props = $props();
 
   /** Row names per tier (both byte rows are "Bytes"). */
   const TIER_NAMES = {
@@ -47,7 +51,7 @@
   }
 </script>
 
-<div class="bd-row" role="none" data-row={row.index}>
+<div class="bd-row" role="none" data-row={row.index} data-keep={keep ? '' : undefined}>
   {#if cells.sources.length > 0}
     <div class="bd-sources" aria-hidden="true">
       {#each cells.sources as source (source.key)}

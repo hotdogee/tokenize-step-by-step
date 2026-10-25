@@ -10,7 +10,9 @@
  * "merged at this step" description added to the cell's `aria-describedby` (restored before the next commit, so the
  * board's own attributes are never left changed), the byte-tier caret under a merge's junction (`data-merge-caret`), the
  * pulse after a forward step and, in follow mode, a `scrollIntoView({ block: 'nearest' })` with the reduced-motion
- * behaviour.
+ * behaviour — after every step change, also one that arrives at stop 5 from another stop ("show this step" or a
+ * merge-list row from stop 6). On a virtualized board the board keeps the row holding that part mounted (Board.svelte
+ * `mergedRow`), so the cells are there to mark and scroll to however far the jump went.
  *
  * The choreography (choreography.ts + flip.ts) is a lazy chunk loaded on the first interaction with the page; until it
  * arrives changes are discrete. Once loaded it also slides the bottom sheet in when it expands (`watchSheet`).
@@ -173,9 +175,9 @@ export function directMotion(app: AppState, options: DirectorOptions): MotionDir
       mark(cells);
       carets = junctionCells(grid, view, step);
       for (const el of carets) el.dataset['mergeCaret'] = '';
-      const stepped = previous !== null && previous.result === result && previous.stage === 5 && previous.step !== step;
-      if (!stepped) return;
-      if (step === previous.step + 1 && last.at - previous.at >= FAST_SCRUB_MS) {
+      const moved = previous !== null && previous.result === result && previous.step !== step;
+      if (!moved) return;
+      if (previous.stage === 5 && step === previous.step + 1 && last.at - previous.at >= FAST_SCRUB_MS) {
         if (!motionPrefs.reduced) {
           choreography?.pulse(cells);
           choreography?.revealCaret(carets);

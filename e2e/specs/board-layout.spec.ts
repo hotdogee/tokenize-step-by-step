@@ -2,10 +2,12 @@
  * WP08 E2E layout (05 §3.3, §5, §9; WCAG 1.4.10, 2.4.11, 2.5.8): zero horizontal overflow at 320/360/768/1440/2560 px
  * (and at 320 px with cell size L on a coarse pointer, where K's floor scrolls inside the board); at 360 px the focused
  * cell never sits under the bottom sheet or the header while arrowing through a whole paragraph, and at 768–1023 px never
- * under the anchored panel while a cell is pinned; the inspector surface follows the viewport width; touch pins and
- * unpins; coarse-pointer targets are ≥ 24 × 24 (cells 36 px wide) at 393 px and at stop 4 at 600 px, where the 14 px
- * chunk brackets are keyboard-only; forced colours draw the borders in CanvasText and the hatch and the focus outline in
- * Highlight; no inline style violates the CSP.
+ * under the anchored panel while a cell is pinned; at every project's viewport Ctrl+End and Ctrl+Home on the virtualized
+ * paragraph leave the focused cell inside the viewport, clear of the sheet and of the top edge (PA-13: WebKit ignored
+ * `scrollIntoView` into a `content-visibility: auto` row it had never rendered); the inspector surface follows the
+ * viewport width; touch pins and unpins; coarse-pointer targets are ≥ 24 × 24 (cells 36 px wide) at 393 px and at stop 4
+ * at 600 px, where the 14 px chunk brackets are keyboard-only; forced colours draw the borders in CanvasText and the
+ * hatch and the focus outline in Highlight; no inline style violates the CSP.
  */
 import { devices, expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
@@ -53,6 +55,31 @@ test('at 360 px the focused cell is never under the sheet or the header (WCAG 2.
       if (sheet !== null) expect(intersects(cell, sheet), `step ${String(i)}`).toBe(false);
       if (header !== null) expect(intersects(cell, header), `step ${String(i)} (header)`).toBe(false);
     }
+  }
+});
+
+test('Ctrl+End and Ctrl+Home leave the focused cell in the viewport, clear of the sheet and the top edge (PA-13)', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' }); // instant scrolls: the checks read the settled position
+  await openShell(page, 'en');
+  await chooseExample(page, 'zh-tw-paragraph'); // a long paragraph: its last row has never rendered
+  await focusBoard(page);
+  const focused = page.locator('[data-testid="board-grid"] :focus');
+  for (const key of ['Control+End', 'Control+Home']) {
+    await page.keyboard.press(key);
+    if (key === 'Control+End') await expect.poll(() => focusedCell(page)).not.toBe('char:0');
+    else await expect.poll(() => focusedCell(page)).toBe('char:0');
+    await expect(focused, key).toBeInViewport({ ratio: 1 });
+    // The focused row opts out of content-visibility (board.css `.bd-row[data-keep]`).
+    expect(await focused.evaluate((cell) => cell.closest('.bd-row')?.hasAttribute('data-keep') ?? false)).toBe(true);
+    const { cell, sheet, header } = await focusRects(page);
+    expect(cell, key).not.toBeNull();
+    if (cell === null) continue;
+    // scroll-padding-block-start: 8px keeps the ring (2–4 px) clear of the top edge; a margin for sub-pixel layouts.
+    expect(cell.top, `${key}: top edge`).toBeGreaterThanOrEqual(4);
+    if (sheet !== null) expect(intersects(cell, sheet), `${key}: sheet`).toBe(false);
+    if (header !== null) expect(intersects(cell, header), `${key}: header`).toBe(false);
   }
 });
 

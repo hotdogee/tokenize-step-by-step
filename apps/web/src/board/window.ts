@@ -1,7 +1,8 @@
 /**
  * Arithmetic virtualization (05 §3.3, AD-27): rows have a fixed height per breakpoint, so the rows in view follow from the
  * scroll offset alone (`scrollTop → row`), and rows outside the window are not mounted. The window always includes the
- * rows holding the focused and the pinned cell (05 §8), so roving `tabindex` never loses its element.
+ * rows holding the focused and the pinned cell (05 §8), so roving `tabindex` never loses its element, and at stop 5 the
+ * row holding the part the current step formed, so follow mode can mark and reach it after a jump (05 §2, PA-13).
  */
 
 /** Rows mounted beyond each edge of the viewport. */
@@ -35,7 +36,7 @@ export function visibleRows(
   return { first, last };
 }
 
-/** The mounted row indices: the window plus every row in `keep` (focused, pinned), sorted and unique. */
+/** The mounted row indices: the window plus every row in `keep` (focused, pinned, just merged), sorted and unique. */
 export function mountedRows(range: RowRange, keep: ReadonlyArray<number | null>, rowCount: number): number[] {
   const rows = new Set<number>();
   for (let r = range.first; r <= range.last; r++) rows.add(r);
