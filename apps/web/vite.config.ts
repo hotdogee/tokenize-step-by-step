@@ -18,12 +18,44 @@ const page = (path: string): string => fileURLToPath(new URL(path, import.meta.u
  * File names of the Worker's lazy chunks (PA-8), the names size-limit.json budgets: the engine re-export modules of
  * `@tsbs/worker` (`src/engines/bytelevel.ts`, `src/engines/spm.ts`) become `assets/bytelevel-[hash].js` and
  * `assets/spm-[hash].js`; the core code both engines share (agenda loop, result builder, text analysis, …) is split out
- * by Rollup and named `assets/engine-core-[hash].js`, budgeted with each engine (it loads with the first one).
+ * by Rollup and named `assets/engine-core-[hash].js`, budgeted with each engine (it loads with the first one); the
+ * entry's own imports are `assets/entry-core-[hash].js` (see `workerManualChunks`).
  */
 function workerChunkFileName(chunk: Rollup.PreRenderedChunk): string {
+  if (chunk.name === WORKER_ENTRY_CORE) return `assets/${WORKER_ENTRY_CORE}-[hash].js`;
   const id = (chunk.facadeModuleId ?? '').replaceAll('\\', '/');
   const engine = /\/packages\/worker\/src\/engines\/(bytelevel|spm)\.ts$/.exec(id)?.[1];
   return engine === undefined ? 'assets/engine-core-[hash].js' : `assets/${engine}-[hash].js`;
+}
+
+/** The Worker's entry module (`@tsbs/worker/entry`, PA-8). */
+const WORKER_ENTRY = '/packages/worker/src/entry.ts';
+/** Chunk of everything the Worker entry imports statically; `entry-*.js` in size-limit.json covers it ("Worker core"). */
+const WORKER_ENTRY_CORE = 'entry-core';
+
+/**
+ * Nothing may import the Worker's entry chunk: WebKit evaluates a module Worker's top-level script a second time when
+ * another module imports its URL, which started a second host that answered every later message with `not-loaded`
+ * (found by the webkit e2e projects, WP11 wave 3). Left alone, Rollup puts the code the host and the engines share
+ * (`core/format`: TSBV1 reader, `ByteVocab`) into the entry chunk and makes the lazy engine chunks import it from there.
+ * So every module the entry reaches through static imports goes to `entry-core`, which the entry and the engines
+ * import, and the entry chunk keeps only `entry.ts`. `check:dist` fails if any chunk imports `entry-<hash>.js` again.
+ */
+function workerManualChunks(id: string, meta: Rollup.ManualChunkMeta): string | undefined {
+  const isEntry = (module: string): boolean => module.replaceAll('\\', '/').endsWith(WORKER_ENTRY);
+  if (isEntry(id)) return undefined;
+  const seen = new Set<string>();
+  const queue = [id];
+  for (let module = queue.pop(); module !== undefined; module = queue.pop()) {
+    for (const importer of meta.getModuleInfo(module)?.importers ?? []) {
+      if (isEntry(importer)) return WORKER_ENTRY_CORE;
+      if (!seen.has(importer)) {
+        seen.add(importer);
+        queue.push(importer);
+      }
+    }
+  }
+  return undefined;
 }
 
 export default defineConfig({
@@ -62,6 +94,7 @@ export default defineConfig({
       output: {
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: workerChunkFileName,
+        manualChunks: workerManualChunks,
       },
     },
   },

@@ -26,6 +26,11 @@
   let open = $state(false);
   let root: HTMLDivElement | undefined = $state();
   let button: HTMLButtonElement | undefined = $state();
+  /**
+   * A pointer press inside the menu is in progress. WebKit does not focus a radio (or button) on mousedown: it blurs the
+   * focused radio with no `relatedTarget`, which must not close the panel before the click selects the new choice.
+   */
+  let pressing = false;
 
   function close(returnFocus: boolean): void {
     open = false;
@@ -40,6 +45,7 @@
   }
 
   function onFocusOut(event: FocusEvent): void {
+    if (pressing) return;
     if (open && !(event.relatedTarget instanceof Node && root?.contains(event.relatedTarget) === true)) close(false);
   }
 
@@ -53,9 +59,26 @@
   }
 </script>
 
-<svelte:window onpointerdown={onWindowPointer} />
+<svelte:window
+  onpointerdown={onWindowPointer}
+  onpointerup={() => {
+    pressing = false;
+  }}
+  onpointercancel={() => {
+    pressing = false;
+  }}
+/>
 
-<div class="menu" bind:this={root} onkeydown={onKeydown} onfocusout={onFocusOut} role="presentation">
+<div
+  class="menu"
+  bind:this={root}
+  onkeydown={onKeydown}
+  onfocusout={onFocusOut}
+  onpointerdown={() => {
+    pressing = true;
+  }}
+  role="presentation"
+>
   <button
     bind:this={button}
     type="button"
@@ -79,6 +102,9 @@
             checked={choice.value === value}
             onchange={() => {
               onchange(choice.value);
+            }}
+            onclick={(event) => {
+              event.currentTarget.focus(); // WebKit leaves focus on <body> after a click; Esc and Tab-out need it here
             }}
           />
           <span class="control-label" lang={choice.lang}>{choice.label}</span>
