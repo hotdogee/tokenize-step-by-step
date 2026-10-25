@@ -10,6 +10,7 @@
  * that mode).
  */
 import { buildResult } from '../model/build-result.ts';
+import { CancelledError } from '../model/cancelled.ts';
 import {
   ChunkKind,
   TokenKind,
@@ -33,18 +34,7 @@ import type { ExamplesWire } from './examples-wire.ts';
 import type { Fixture } from './fixture-types.ts';
 import { fromFixtureCase, type FixtureTokenizerRef, type FromFixtureOptions } from './from-fixture-case.ts';
 
-/** The single rejection name for a superseded or cancelled request (AD-21). */
-export class CancelledError extends Error {
-  override readonly name = 'cancelled';
-  constructor() {
-    super('cancelled');
-  }
-}
-
-/** True for `CancelledError` and anything else named `cancelled` (the real client's rejection). */
-export function isCancelled(error: unknown): boolean {
-  return error instanceof Error && error.name === 'cancelled';
-}
+export { CancelledError, isCancelled } from '../model/cancelled.ts';
 
 /** A mock failure carrying a protocol `ErrorCode`. */
 export class MockClientError extends Error {

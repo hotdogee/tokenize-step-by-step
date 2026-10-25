@@ -18,7 +18,7 @@
  * event) respawns the same way, once per tokenizer; a second crash on the same tokenizer surfaces `oom` (AD-19).
  */
 import type { EncodeOptions, TokenizationResult, TokenizerId } from '@tsbs/core/model/result';
-import { CancelledError } from '@tsbs/core/fixture/mock-client';
+import { CancelledError } from '@tsbs/core/model/cancelled';
 import type {
   AssetSummary,
   Features,
@@ -32,7 +32,7 @@ import type {
 import { cachedTokenizerIds, type CacheStorageLike } from './cache-store.ts';
 import { TokenizerError } from './errors.ts';
 
-export { CancelledError, isCancelled } from '@tsbs/core/fixture/mock-client';
+export { CancelledError, isCancelled } from '@tsbs/core/model/cancelled';
 export { TokenizerError } from './errors.ts';
 
 /** Name given to the tokenizer Worker (`new TokWorker({ name })`) so it is identifiable in devtools and crash reports. */

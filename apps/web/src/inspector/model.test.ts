@@ -118,6 +118,15 @@ describe('crossing, zero-width, fused dummy, byte fallback, direct hit', () => {
     expect(notes(merged)).toContain(`formed at step ${String(step?.step)}: E7 + 81`);
   });
 
+  it('names the forming step once: the Step section carries the sentence and the only "show this step"', () => {
+    const merged = modelOf(caseResult('openai-cl100k_base', 'zh-tw-tainan'), { tier: 'token', index: 1 });
+    const k = merged.sections.find((section) => section.kind === 'step')?.step ?? 0;
+    expect(k).toBeGreaterThan(0);
+    expect(merged.sections.filter((section) => section.step === k)).toHaveLength(1);
+    expect(merged.sections.find((section) => section.kind === 'token')?.step).toBeNull();
+    expect(notes(merged).filter((note) => note.startsWith(`formed at step ${String(k)}`))).toHaveLength(1);
+  });
+
   it('a live part without an id says so (stop 5)', () => {
     const result = caseResult('openai-o200k_base', 'ja-text');
     const model = modelOf(result, { tier: 'token', index: 0 }, { stage: 5, step: 0 });

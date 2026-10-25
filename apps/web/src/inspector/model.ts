@@ -430,6 +430,18 @@ function headingOf(input: InspectorInput, tier: BoardTier, index: number): strin
   }
 }
 
+/**
+ * The Step section owns the "formed at step k" sentence and the "show this step" action, so when both sections are shown
+ * the Token section drops them instead of repeating them.
+ */
+function pushTokenAndStep(sections: InspectorSection[], token: InspectorSection, step: InspectorSection | null): void {
+  if (step === null) {
+    sections.push(token);
+    return;
+  }
+  sections.push({ ...token, notes: token.notes.filter((note) => !step.notes.includes(note)), step: null }, step);
+}
+
 /** The inspector model of `input.ref`. */
 export function inspectorModel(input: InspectorInput): InspectorModel {
   const { result, units, ref, t } = input;
@@ -465,16 +477,11 @@ export function inspectorModel(input: InspectorInput): InspectorModel {
     }
     case 'token': {
       if (units.parts === null) {
-        const section = tokenSection(input, index);
-        sections.push(section);
         const formed = result.tokens.stepFormed[index] ?? -1;
-        const step = stepSection(input, formed);
-        if (step !== null) sections.push(step);
+        pushTokenAndStep(sections, tokenSection(input, index), stepSection(input, formed));
       } else {
-        sections.push(partSection(input, index));
         const formed = mergeThatFormed(result, start, end, input.step);
-        const step = stepSection(input, formed);
-        if (step !== null) sections.push(step);
+        pushTokenAndStep(sections, partSection(input, index), stepSection(input, formed));
       }
       if (end > start) sections.push(charSection(input, result.byteToChar[start] ?? 0));
       const coverage =

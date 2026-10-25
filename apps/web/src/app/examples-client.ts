@@ -18,7 +18,8 @@ import type {
 } from '@tsbs/core';
 import type { ExamplesWire } from '@tsbs/core/fixture/examples-wire';
 import type { FixtureTokenizerRef } from '@tsbs/core/fixture/from-fixture-case';
-import { CancelledError, isCancelled, MockClientError, MockTokenizerClient } from '@tsbs/core/fixture/mock-client';
+import { MockClientError, MockTokenizerClient } from '@tsbs/core/fixture/mock-client';
+import { CancelledError, isCancelled } from '@tsbs/core/model/cancelled';
 import { NoPrecomputedResultError } from './no-precomputed.ts';
 
 type Fetch = (url: string) => Promise<Response>;
