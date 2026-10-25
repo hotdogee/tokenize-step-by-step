@@ -1,14 +1,14 @@
 <script lang="ts">
   /**
    * The `/` page frame (05 §1): regions in DOM order = tab order — header (wordmark, picker, language, theme, help) →
-   * input panel → pipeline rail → board → notices strip + footer → live-check drawer. The rail, board and drawer are
-   * placeholders until WP09 / WP08 / WP10 land. Also owns the global single-key shortcuts (AD-22) and the two dialogs,
+   * input panel → pipeline rail → board → notices strip + footer → live-check drawer. The rail and drawer are placeholders
+   * until WP09 / WP10 land; the board is WP08's. Also owns the global single-key shortcuts (AD-22) and the two dialogs,
    * which load on first open: neither is needed for first paint, and the picker brings the model rows and licence tags
    * with it (registry-details.ts), so both stay out of the initial Main JS of `/` (06 §3).
    */
   import { onMount } from 'svelte';
+  import Board from '../board/Board.svelte';
   import { i18n } from '../i18n/locale.svelte.ts';
-  import BoardPlaceholder from '../shell/BoardPlaceholder.svelte';
   import CountsLine from '../shell/CountsLine.svelte';
   import ExampleChips from '../shell/ExampleChips.svelte';
   import Footer from '../shell/Footer.svelte';
@@ -160,7 +160,7 @@
     <CountsLine />
   </section>
   <StagePlaceholder />
-  <BoardPlaceholder />
+  <Board />
 
   {#if PickerDialog !== null}
     <PickerDialog

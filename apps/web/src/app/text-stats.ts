@@ -1,12 +1,10 @@
 /**
- * Main-thread text figures for the counts line, the stage announcements and the board placeholder, from WP01's
+ * Main-thread text figures for the counts line and the stage announcements, from WP01's
  * `analyzeText` (`@tsbs/core/text/analyze`): code points and UTF-8 bytes follow TextEncoder semantics (a lone surrogate is
  * U+FFFD, 3 bytes) and grapheme clusters come from `Intl.Segmenter`, or one per code point without it (PD-4). They need
  * no tokenizer, so they stay live in every long-input tier (AD-27).
  */
 import { analyzeText } from '@tsbs/core/text/analyze';
-
-export { codePointLabel, hexByte as byteHex } from '@tsbs/core/text/utf8';
 
 /** One code point of the text. */
 export interface CodePointInfo {

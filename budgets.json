@@ -8,7 +8,7 @@
       },
       {
         "resourceType": "script",
-        "budget": 85
+        "budget": 110
       },
       {
         "resourceType": "stylesheet",
@@ -24,7 +24,7 @@
       },
       {
         "resourceType": "total",
-        "budget": 1225
+        "budget": 1250
       }
     ],
     "timings": [

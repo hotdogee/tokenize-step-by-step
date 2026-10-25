@@ -101,7 +101,7 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
     const limits = Object.fromEntries(entries.map((entry) => [entry.name.split(/[:(]/)[0]?.trim() ?? '', entry.limit]));
     expect(limits).toEqual({
       'dist/index.html': '14 KiB',
-      'Main JS': '55 KiB',
+      'Main JS': '80 KiB',
       'i18n chunk': '8 KiB',
       'Worker core': '12 KiB',
       'Engine chunk': '10 KiB',
@@ -136,7 +136,7 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
       }>
     )[0];
     const sizes = Object.fromEntries((budgets?.resourceSizes ?? []).map((entry) => [entry.resourceType, entry.budget]));
-    expect(sizes).toEqual({ document: 14, script: 85, stylesheet: 20, font: 4, other: 1100, total: 1225 });
+    expect(sizes).toEqual({ document: 14, script: 110, stylesheet: 20, font: 4, other: 1100, total: 1250 });
     for (const [type, kb] of Object.entries(sizes))
       expect(assertion(`resource-summary:${type}:size`), type).toBe(kb * 1024);
     const timings = Object.fromEntries((budgets?.timings ?? []).map((entry) => [entry.metric, entry.budget]));

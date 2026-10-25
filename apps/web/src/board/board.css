@@ -1,0 +1,598 @@
+/*
+ * The alignment board (05 §3–§4, §8, §9, §11). Global classes under `.bd-*` shared by Row and its cell components.
+ *
+ * Grid model: each packed row is a CSS grid of fixed-height tracks per breakpoint (05 §3.3 row heights; tiers absent at a
+ * stage leave their track empty, so nothing shifts), and each tier inside it is a grid of K uniform `--cell` columns
+ * (`--k` is set once on the board through the CSSOM). Cells are placed with the generated `.c<n>`/`.s<n>` classes (AD-15),
+ * never with inline styles. Gridcells span their full columns (the touch target); the visible box/chip is inset 1 px so
+ * neighbours keep a 2 px gap. Non-colour cues: the 1 px `--border`, the two-tone hatch and the brackets (AD-35).
+ */
+
+.bd-grid {
+  --src-h: 0px;
+  position: relative;
+  width: calc(var(--k) * var(--cell));
+  touch-action: pan-y pinch-zoom;
+}
+
+.bd-grid.nfkc {
+  --src-h: 16px;
+}
+
+.bd-spacer {
+  display: block;
+}
+
+/* ---- Packed rows and their tracks (05 §3.3) ---- */
+
+.bd-row {
+  position: relative;
+  display: grid;
+  grid-template-rows:
+    [source] var(--src-h) [bracket] 6px [char] 42px [bytes1] 26px [bytes2] 0 [chunk] 0 [token] 30px
+    [ids] 0;
+  height: calc(var(--row-h) + var(--src-h));
+  content-visibility: auto;
+  contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h));
+}
+
+/* 480–767: the 136 px --row-h holds U+ labels, chunk brackets and the 16 px id line (05 §3.3), so the tiers sit flush. */
+@media (min-width: 480px) {
+  .bd-row {
+    grid-template-rows:
+      [source] var(--src-h) [bracket] 6px [char] 48px [bytes1] 24px [bytes2] 0 [chunk] 14px [token] 28px
+      [ids] 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .bd-row {
+    grid-template-rows:
+      [source] var(--src-h) [bracket] 6px [char] 56px [bytes1] 26px [bytes2] 0 [chunk] 16px [token] 30px
+      [ids] 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .bd-row {
+    grid-template-rows:
+      [source] var(--src-h) [bracket] 6px [char] 55px [bytes1] 25px [bytes2] 25px [chunk] 15px [token] 29px
+      [ids] 15px;
+  }
+}
+
+.bd-tier,
+.bd-brackets,
+.bd-ids,
+.bd-sources {
+  display: grid;
+  grid-template-columns: repeat(var(--k), var(--cell));
+  min-width: 0;
+}
+
+.bd-tier {
+  align-items: end;
+}
+
+.bd-sources {
+  grid-row: source;
+}
+.bd-brackets {
+  grid-row: bracket;
+}
+.bd-tier-char {
+  grid-row: char;
+}
+.bd-track-bytes1 {
+  grid-row: bytes1;
+}
+.bd-track-bytes2 {
+  grid-row: bytes2;
+}
+.bd-tier-chunk {
+  grid-row: chunk;
+}
+.bd-tier-token {
+  grid-row: token;
+}
+.bd-ids {
+  grid-row: ids;
+}
+
+/* ---- Cells (gridcells span their columns; the visual inside is inset) ---- */
+
+.bd-cell {
+  position: relative;
+  min-width: 0;
+  outline: none;
+  cursor: pointer;
+}
+
+.bd-cell:focus-visible {
+  z-index: 2;
+  box-shadow: none;
+}
+
+.bd-cell-char {
+  height: 40px;
+}
+
+@media (min-width: 480px) {
+  .bd-cell-char {
+    height: 48px;
+  }
+}
+
+@media (min-width: 768px) {
+  .bd-cell-char {
+    height: 54px;
+  }
+}
+
+.bd-cell-byte {
+  height: 24px;
+}
+
+/*
+ * Chunk brackets are 14 px tall, under the 24 × 24 px pointer-target minimum (WCAG 2.5.8; 05 §3.3 targets), so they are
+ * keyboard-only: still focusable gridcells, but clicks and taps pass through. Pointer users reach the chunk through the
+ * char and byte inspectors, which name it (the "equivalent" exception).
+ */
+.bd-cell-chunk {
+  height: 14px;
+  pointer-events: none;
+}
+
+.bd-cell-token {
+  height: 28px;
+}
+
+.bd-cell-empty {
+  height: 24px;
+  grid-column: 1 / -1;
+}
+
+.bd-vis {
+  position: absolute;
+  inset: 0 1px;
+  border-radius: var(--radius);
+}
+
+.bd-cell:focus-visible > .bd-vis {
+  box-shadow: var(--focus);
+}
+
+.bd-grid:focus-within .bd-cell[data-active] > .bd-vis {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.bd-cell[data-pinned] > .bd-vis {
+  outline: 2px solid var(--fg);
+  outline-offset: -2px;
+}
+
+.bd-cell[data-slice] > .bd-vis::after {
+  content: '';
+  position: absolute;
+  inset-inline: 2px;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.bd-cell[data-selected] > .bd-vis {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+/* Token tints (05 §11): one class per hue; consumers use --tint. */
+.bd-t0 {
+  --tint: var(--tok-h0);
+}
+.bd-t1 {
+  --tint: var(--tok-h1);
+}
+.bd-t2 {
+  --tint: var(--tok-h2);
+}
+.bd-t3 {
+  --tint: var(--tok-h3);
+}
+.bd-t4 {
+  --tint: var(--tok-h4);
+}
+.bd-t5 {
+  --tint: var(--tok-h5);
+}
+.bd-t6 {
+  --tint: var(--tok-h6);
+}
+.bd-t7 {
+  --tint: var(--tok-h7);
+}
+
+/* Two-tone hatch (AD-35): the --fg stripe is ≥ 4.5:1 on its own tint, so the hatch is ≥ 3:1 by construction. */
+.bd-hatch,
+.bd-slice.bd-cut::before,
+.bd-face.bd-cut::before,
+.bd-chip.hatch-start::before,
+.bd-chip.hatch-end::after {
+  background: repeating-linear-gradient(45deg, var(--fg) 0 1.5px, var(--tint, var(--surface)) 1.5px 3px);
+}
+
+/* ---- Char tier: two-layer box (AD-17), glyph drawn once, background sliced per byte column ---- */
+
+.bd-box {
+  left: calc(var(--dx, 0) * var(--cell) + 1px);
+  right: auto;
+  width: calc(var(--w, 1) * var(--cell) - 2px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+}
+
+.bd-slices {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.bd-slice {
+  position: relative;
+  flex: 1 1 0;
+}
+
+.bd-slice.tinted {
+  background: var(--surface-2);
+  background: color-mix(in oklch, var(--tint) 25%, var(--surface));
+}
+
+.bd-slice.bd-cut::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: -1px;
+  width: 2px;
+}
+
+.bd-glyph {
+  position: relative;
+  font-size: 1.25rem;
+  line-height: 1;
+  white-space: pre;
+}
+
+.bd-glyph.cjk {
+  font-size: 1.375rem;
+}
+
+.bd-glyph.standin {
+  font-family: var(--font-standin);
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+}
+
+.bd-ulabel {
+  position: absolute;
+  bottom: 2px;
+  left: 0;
+  right: 0;
+  font-size: 0.5625rem;
+  line-height: 1;
+  text-align: center;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+@media (min-width: 480px) {
+  .bd-glyph {
+    margin-bottom: 10px;
+  }
+}
+
+/* ---- Byte tier ---- */
+
+.bd-face {
+  display: grid;
+  place-items: center;
+  border: var(--border-width) solid var(--border);
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.bd-face.tinted {
+  background: color-mix(in oklch, var(--tint) 40%, var(--surface));
+}
+
+.bd-face.lead {
+  font-weight: 700;
+}
+
+.bd-face.bd-cut::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  left: -2px;
+  width: 2px;
+}
+
+/* ---- Chunk tier: brackets with index + rule ---- */
+
+.bd-chunk {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding-inline: 3px;
+  border: var(--border-width) solid var(--border);
+  border-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.bd-chunk.open-start {
+  border-left-style: dashed;
+  border-bottom-left-radius: 0;
+}
+
+.bd-chunk.open-end {
+  border-right-style: dashed;
+  border-bottom-right-radius: 0;
+}
+
+/* ---- Token tier: chips, parts, markers ---- */
+
+.bd-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding-inline: 2px;
+  overflow: hidden;
+  border: var(--border-width) solid var(--border);
+  background: var(--tint, var(--surface));
+  font-size: 0.75rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.bd-chip.hatch-start {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding-left: 6px;
+}
+
+.bd-chip.hatch-end {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  padding-right: 6px;
+}
+
+.bd-chip.hatch-start::before,
+.bd-chip.hatch-end::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 4px;
+}
+
+.bd-chip.hatch-start::before {
+  left: 0;
+}
+
+.bd-chip.hatch-end::after {
+  right: 0;
+}
+
+.bd-chip.cont-start {
+  border-left-style: dashed;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.bd-chip.cont-end {
+  border-right-style: dashed;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.bd-chip.special {
+  border-style: dashed;
+}
+
+.bd-chip.marker {
+  border-style: dotted;
+  border-width: 2px;
+  background: var(--surface);
+  flex-direction: column;
+  gap: 0;
+}
+
+.bd-chip.byte-fallback {
+  flex-direction: column;
+  gap: 1px;
+}
+
+.bd-chip-text {
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.bd-piece {
+  font-size: 0.5625rem;
+}
+
+.bd-badge {
+  padding: 0 2px;
+  border: var(--border-width) solid currentColor;
+  border-radius: 2px;
+  font-size: 0.5rem;
+  letter-spacing: 0.04em;
+}
+
+.bd-marker-text {
+  font-size: 0.6875rem;
+}
+
+.bd-part-text {
+  font-size: 0.6875rem;
+  letter-spacing: 0.02em;
+}
+
+.bd-icon {
+  flex: none;
+}
+
+/* ---- Decorative lines: grapheme brackets, NFKC sources, id line ---- */
+
+.bd-gbracket {
+  height: 5px;
+  margin-inline: 3px;
+  border: var(--border-width) solid var(--border);
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+}
+
+.bd-gbracket.open-start {
+  margin-left: 0;
+  border-left: 0;
+  border-top-left-radius: 0;
+}
+
+.bd-gbracket.open-end {
+  margin-right: 0;
+  border-right: 0;
+  border-top-right-radius: 0;
+}
+
+.bd-src {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.6875rem;
+  line-height: 1;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.bd-src.changed {
+  color: var(--fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.bd-idl {
+  font-size: 0.625rem;
+  line-height: 1;
+  color: var(--fg-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: visible;
+  align-self: start;
+}
+
+.bd-idl.odd {
+  align-self: end;
+}
+
+::highlight(tsbs-selection) {
+  background-color: var(--accent);
+  color: var(--bg);
+}
+
+/* ---- ≥ 2560 px (05 §3.3): --row-h = 4·cell + 44 px; tracks, cells and type scale from --cell (type via clamp()) ---- */
+
+@media (min-width: 2560px) {
+  .bd-row {
+    grid-template-rows:
+      [source] var(--src-h) [bracket] 6px [char] calc(var(--cell) + 22px) [bytes1] calc(var(--cell) / 2 + 8px)
+      [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px)
+      [ids] calc(var(--cell) / 2);
+  }
+
+  .bd-cell-char {
+    height: calc(var(--cell) + 21px);
+  }
+
+  .bd-cell-byte {
+    height: calc(var(--cell) / 2 + 7px);
+  }
+
+  .bd-cell-chunk {
+    height: calc(var(--cell) / 4 + 5px);
+  }
+
+  .bd-cell-token {
+    height: calc(var(--cell) * 0.75 + 5px);
+  }
+
+  .bd-glyph {
+    margin-bottom: calc(var(--cell) * 0.3);
+    font-size: clamp(1.25rem, var(--cell) * 0.625, 1.75rem);
+  }
+
+  .bd-glyph.cjk {
+    font-size: clamp(1.375rem, var(--cell) * 0.6875, 1.875rem);
+  }
+
+  .bd-glyph.standin {
+    font-size: clamp(0.875rem, var(--cell) * 0.4375, 1.25rem);
+  }
+
+  .bd-ulabel,
+  .bd-piece {
+    font-size: clamp(0.5625rem, var(--cell) * 0.28, 0.8125rem);
+  }
+
+  .bd-face,
+  .bd-chip {
+    font-size: clamp(0.75rem, var(--cell) * 0.375, 1.0625rem);
+  }
+
+  .bd-chunk,
+  .bd-idl {
+    font-size: clamp(0.625rem, var(--cell) * 0.3125, 0.875rem);
+  }
+
+  .bd-src,
+  .bd-marker-text,
+  .bd-part-text {
+    font-size: clamp(0.6875rem, var(--cell) * 0.34, 0.9375rem);
+  }
+}
+
+/* ---- Pointer and preferences (05 §9, §11) ---- */
+
+@media (forced-colors: active) {
+  .bd-box,
+  .bd-face,
+  .bd-chip,
+  .bd-chunk,
+  .bd-gbracket {
+    border-color: CanvasText;
+  }
+
+  .bd-hatch,
+  .bd-slice.bd-cut::before,
+  .bd-face.bd-cut::before,
+  .bd-chip.hatch-start::before,
+  .bd-chip.hatch-end::after {
+    forced-color-adjust: none;
+    background: repeating-linear-gradient(45deg, Highlight 0 1.5px, Canvas 1.5px 3px);
+  }
+
+  .bd-cell:focus-visible > .bd-vis,
+  .bd-cell[data-pinned] > .bd-vis {
+    outline: 2px solid Highlight;
+  }
+}
