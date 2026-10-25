@@ -1,4 +1,4 @@
-/** Entry of `/about/`. The generated About page (fidelity, licences, engine, diagnostics) is WP06's (05 §14). */
+/** Entry of `/about/` (05 §14): no Worker, no vocabulary — licences, fidelity, engine notes, keyboard and diagnostics. */
 import '../theme/base.css';
 import { mount } from 'svelte';
 import About from './About.svelte';

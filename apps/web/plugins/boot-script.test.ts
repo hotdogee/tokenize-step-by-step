@@ -13,7 +13,7 @@ interface BootEnv {
 }
 
 /** Runs the compiled boot script against a minimal fake browser and returns what it wrote on <html>. */
-function run(code: string, env: BootEnv): { lang: string; theme: string | undefined } {
+function run(code: string, env: BootEnv): { lang: string; theme: string | undefined; cellSize: string | undefined } {
   const html = { lang: '', dataset: {} as Record<string, string> };
   const store = env.storage;
   runInNewContext(code, {
@@ -28,7 +28,7 @@ function run(code: string, env: BootEnv): { lang: string; theme: string | undefi
       },
     },
   });
-  return { lang: html.lang, theme: html.dataset['theme'] };
+  return { lang: html.lang, theme: html.dataset['theme'], cellSize: html.dataset['cellSize'] };
 }
 
 describe('bootScript()', () => {
@@ -59,6 +59,12 @@ describe('bootScript()', () => {
   it('sets data-theme from storage, defaulting to auto, and survives blocked storage', () => {
     expect(run(code, { storage: { 'tsbs:theme': 'dark' } }).theme).toBe('dark');
     expect(run(code, { storage: { 'tsbs:theme': 'purple' } }).theme).toBe('auto');
-    expect(run(code, { storage: 'throws', languages: ['ja'] })).toEqual({ lang: 'ja', theme: 'auto' });
+    expect(run(code, { storage: 'throws', languages: ['ja'] })).toEqual({ lang: 'ja', theme: 'auto', cellSize: 'M' });
+  });
+
+  it('sets data-cell-size from storage (S | M | L, default M) so the board height is right on first paint', () => {
+    expect(run(code, { storage: { 'tsbs:cellSize': 'L' } }).cellSize).toBe('L');
+    expect(run(code, { storage: { 'tsbs:cellSize': 'XL' } }).cellSize).toBe('M');
+    expect(run(code, {}).cellSize).toBe('M');
   });
 });

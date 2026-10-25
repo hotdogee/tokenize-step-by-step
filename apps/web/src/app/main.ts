@@ -1,4 +1,7 @@
-/** Entry of `/` (index.html). Mounts the app shell; the real shell, board and pipeline arrive with WP06–WP09 and WP13. */
+/**
+ * Entry of `/` (index.html). boot.js has already set `<html lang>` and `data-theme`; App builds its AppState
+ * (bootstrap.ts) with the precomputed default example on screen and loads o200k after first paint (06 §3).
+ */
 import '../theme/base.css';
 import { mount } from 'svelte';
 import App from './App.svelte';

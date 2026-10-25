@@ -1,0 +1,228 @@
+/**
+ * 日本語 catalog. Same keys and placeholders as en.ts (type-checked). Glossary (05 §10, binding): token トークン ·
+ * byte バイト · code point コードポイント · grapheme cluster 書記素クラスタ · merge マージ · chunk チャンク ·
+ * tokenizer トークナイザー · partial-character token 部分文字トークン · zero-width ゼロ幅 · byte fallback バイトフォールバック ·
+ * confirmed 確認済み · inferred 推定 · legacy レガシー. Fullwidth punctuation（「」、。）. Ships as drafted with an
+ * invitation for corrections on About (07 §6 answer 5).
+ */
+import type { Catalog } from './en.ts';
+
+export const ja = {
+  // ---- App and page meta ----
+  'app.name': 'Tokenize step by step',
+  'meta.main.title': 'Tokenize step by step・トークン化を一歩ずつ',
+  'meta.main.description':
+    'テキストがトークンになる過程を表示します。コードポイント、UTF-8 バイト、事前トークン化のチャンク、そして BPE のマージを一つずつ。すべてブラウザー内で動作します。',
+  'meta.about.title': 'このサイトについて・Tokenize step by step',
+  'meta.about.description':
+    'このトークン化ビジュアライザーが示すもの、各トークナイザーの確度、同梱する語彙ファイルのライセンス。',
+  'meta.notFound.title': 'ページが見つかりません・Tokenize step by step',
+  'notFound.heading': 'ページが見つかりません',
+  'notFound.body': 'このアドレスには何もありません。',
+  'notFound.back': 'トークナイザーに戻る',
+
+  // ---- Navigation ----
+  'nav.skip': '対応表へ移動',
+  'nav.skipMain': 'メインコンテンツへ移動',
+  'nav.home': 'トークナイザーに戻る',
+  'nav.about': 'このサイトについて',
+  'nav.licences': 'ライセンスと出典',
+  'nav.source': 'ソースコード',
+
+  // ---- Header controls ----
+  'a11y.localeMenu': '表示言語',
+  'a11y.themeToggle': 'カラーテーマ',
+  'a11y.help': 'キーボードショートカットとヘルプ',
+  'locale.en': 'English',
+  'locale.zh-TW': '繁體中文',
+  'locale.ja': '日本語',
+  'theme.auto': '自動（システム設定）',
+  'theme.light': 'ライト',
+  'theme.dark': 'ダーク',
+
+  // ---- Tokenizer picker ----
+  'picker.change': 'トークナイザーを変更',
+  'picker.title': 'トークナイザーを選択',
+  'picker.description':
+    '読み込むトークナイザーは一度に一つです。新しいトークナイザーの準備ができるまで、現在の結果を表示したままにします。',
+  'picker.vocab': { other: '{n} トークン' },
+  'picker.wire': 'ダウンロード {size}',
+  'picker.downloaded': 'ダウンロード済み',
+  'picker.more': '{lab} のその他のトークナイザー',
+  'picker.covers': '対応モデル',
+  'picker.evidence': '根拠',
+  'picker.checkedOn': '{date} 確認',
+  'picker.licence': 'ライセンス：{licence}',
+  'picker.notClaude3': 'Claude 3 以降のトークナイザーではありません',
+  'picker.claude3': 'Claude 3 以降 → ライブチェック',
+  'picker.claude3Hint':
+    'Claude 3 以降のモデルは非公開のトークナイザーを使います。ご自身の API キーでトークン数を数えられます。',
+  'picker.close': '閉じる',
+  'picker.details': '詳細：{name}',
+  'lab.openai': 'OpenAI',
+  'lab.anthropic': 'Anthropic',
+  'lab.google': 'Google',
+  'lab.meta': 'Meta',
+  'lab.xai': 'xAI',
+
+  // ---- Fidelity badges ----
+  'fidelity.confirmed': '確認済み',
+  'fidelity.inferred': '推定',
+  'fidelity.legacy': 'レガシー',
+  'fidelity.reconstruction': '再構成',
+  'fidelity.unavailable': '公開トークナイザーなし',
+
+  // ---- Loading progress ----
+  'progress.cache': 'キャッシュを確認中',
+  'progress.download': 'ダウンロード中',
+  'progress.verify': '検証中',
+  'progress.decompress': '展開中',
+  'progress.build': 'テーブルを構築中',
+  'progress.encode': 'トークン化中',
+  'a11y.progress': '{name}：{phase}、{percent}',
+  'status.loading': '{name} を読み込み中…',
+  'status.ready': '{name} の準備ができました',
+
+  // ---- Input panel ----
+  'input.label': 'トークン化するテキスト',
+  'input.placeholder': 'テキストを入力または貼り付け',
+  'textLang.label': 'テキストの言語',
+  'textLang.auto': '自動',
+  'textLang.zh-Hant': '繁体字中国語',
+  'textLang.ja': '日本語',
+  'textLang.en': '英語',
+  'examples.label': '例',
+  'a11y.chipSplits': 'このトークナイザーでは文字が分割されます',
+  'options.label': 'オプション',
+  'option.specialTokens': '特殊トークンを照合',
+  'option.addBos': 'BOS を追加',
+  'option.normalize': 'NFKC 正規化',
+  'byteView.label': 'バイト値',
+  'byteView.hex': 'HEX',
+  'byteView.dec': 'DEC',
+  'byteView.both': '両方',
+  'graphemes.toggle': '書記素クラスタの括弧',
+  'counts.label': 'カウント',
+  'counts.codePoints': { other: '{n} コードポイント' },
+  'counts.graphemes': { other: '{n} 書記素クラスタ' },
+  'counts.bytes': { other: '{n} バイト' },
+  'counts.tokens': { other: '{n} トークン' },
+  'counts.partial': { other: '{n} 部分文字トークン' },
+  'counts.tokensPending': 'トークン：トークナイザーを待っています',
+  'counts.stale': '古い結果',
+  'badge.precomputed': '事前計算',
+  'badge.live': 'ライブ',
+
+  // ---- Pipeline stages ----
+  'stage.1': 'テキスト',
+  'stage.2': 'コードポイント',
+  'stage.3': 'UTF-8 バイト',
+  'stage.4.chunks': 'チャンク',
+  'stage.4.symbols': 'シンボル',
+  'stage.5': 'マージ',
+  'stage.6': 'トークン',
+  'a11y.pipeline': '処理の段階',
+  'a11y.stop': '6 段階中 {n}：{name}',
+  'status.stage': '{name}：{detail}',
+
+  // ---- Board ----
+  'board.label': '対応表',
+  'board.tier.char': '文字',
+  'board.tier.byte': 'バイト',
+  'board.tier.token': 'トークン',
+  'board.loading': 'トークナイザーを読み込み中… {percent}',
+  'board.pending': 'トークナイザーの準備ができるとトークンが表示されます。',
+  'board.cell.char': '{glyph}、{cp}',
+  'board.cell.byte': 'バイト {hex}',
+  'board.cell.token': 'トークン ID {id}',
+
+  // ---- Notices strip and footer ----
+  'notices.label': '{name} に関する表示',
+  'footer.fidelity': '確度：',
+  'footer.privacy': 'すべてブラウザー内で動作します。アクセス解析も Cookie もありません。',
+  'footer.build': 'ビルド {sha}・{date}',
+
+  // ---- Errors ----
+  'error.fetch': '新しいバージョンがあります。再読み込みしてください',
+  'error.integrity': 'ダウンロードしたファイルが壊れています。再試行してください',
+  'error.oom': 'このデバイスでは {name} を読み込むメモリが足りません。{fallback} をお試しください',
+  'error.quota': 'オフラインキャッシュは使えませんが、トークナイザーは動作します。',
+  'error.internal': '問題が発生しました：{message}',
+  'action.reload': '再読み込み',
+  'action.retry': '再試行',
+  'action.back': '戻る',
+  'action.dismiss': '閉じる',
+
+  // ---- Help dialog ----
+  'help.title': 'キーボードショートカット',
+  'help.intro': '* の付いたキーは単一キーのショートカットです。邪魔な場合はオフにできます。',
+  'help.singleKey': '単一キーのショートカット',
+  'help.singleKeyHint':
+    '矢印キー、Enter、Space、Esc、Home、End、Page Up、Page Down、i、c は対応表とコントロールの中で常に使えます。',
+  'help.singleKeyMark': '単一キーのショートカット',
+  'help.close': '閉じる',
+  'help.group.global': 'どこでも',
+  'help.group.board': '対応表の中',
+  'help.group.scrubber': 'ステップのスライダー上',
+  'help.key.stops': '前／次の段階',
+  'help.key.steps': '前／次のマージ（Shift で 10 ステップ）',
+  'help.key.jump': '段階 1〜6 へ移動',
+  'help.key.byteView': 'HEX／DEC／両方を切り替え',
+  'help.key.graphemes': '書記素クラスタの括弧を表示・非表示',
+  'help.key.picker': 'トークナイザーの選択を開く',
+  'help.key.focusText': 'テキスト欄へ移動',
+  'help.key.help': 'このヘルプを表示',
+  'help.key.move': '前／次のセル',
+  'help.key.tier': '段を切り替え',
+  'help.key.rowEdges': '行頭／行末（Ctrl で表の先頭／末尾）',
+  'help.key.rows': '前／次の行',
+  'help.key.pin': 'インスペクターを固定・解除',
+  'help.key.inspector': 'インスペクターへ移動',
+  'help.key.escape': '戻る・固定解除・閉じる',
+  'help.key.copy': 'フォーカス中の値をコピー',
+  'help.key.play': '再生／一時停止',
+  'help.key.firstLast': '最初／最後のステップ',
+
+  // ---- Live check ----
+  'liveCheck.heading': 'ご自身の API キーでライブチェック',
+  'liveCheck.privacy':
+    'キーはこのタブのメモリーにのみ保持され、HTTPS でプロバイダーにだけ送信され、再読み込みすると消去されます。このサイトにはバックエンドもアクセス解析もありません。',
+  'liveCheck.unavailable': 'このビルドではライブチェックはまだ利用できません。',
+
+  // ---- Reserved for other work packages ----
+  'a11y.fragment': 'トークン {index}（続き、{parts} 個中 {part} 個目）',
+  'a11y.combining': '「{base}」に付く結合文字 {cp}',
+  'a11y.variationSelector': '「{base}」に付く異体字セレクター {cp}',
+  'a11y.marker.continued': '前の行から続く',
+  'a11y.marker.continues': '次の行へ続く',
+  'a11y.marker.zeroWidthDummy': 'ダミー接頭辞、0 バイト',
+  'a11y.marker.zeroWidthBos': '系列開始トークン、0 バイト',
+  'a11y.marker.splits': 'このトークナイザーでは文字が分割されます',
+  'a11y.marker.partialCut': 'この文字の中にトークンの境界があります',
+  'a11y.marker.byteFallback': 'バイトフォールバックのピース {hex}',
+  'a11y.marker.userDefined': '事前に照合される記号、マージされません',
+  'a11y.marker.special': '特殊トークン',
+  'a11y.marker.justMerged': 'このステップでマージ',
+  'a11y.standin.space': 'スペース',
+  'a11y.standin.tab': 'タブ',
+  'a11y.standin.lineFeed': '改行',
+  'a11y.standin.carriageReturn': '復帰',
+  'a11y.standin.noBreakSpace': 'ノーブレークスペース',
+  'a11y.standin.whiteSpace': '空白文字 {cp}',
+  'a11y.standin.control': '制御文字 {cp}',
+  'a11y.standin.bom': 'バイト順マーク',
+  'a11y.standin.zwj': 'ゼロ幅接合子',
+  'a11y.standin.zwnj': 'ゼロ幅非接合子',
+  'a11y.standin.escapedSpace': 'エスケープされたスペース',
+  'inspector.heading': 'インスペクター',
+  'inspector.headingToken': 'インスペクター：{count} 個中 {index} 個目のトークン',
+  'status.pinned': '固定：{count} 個中 {index} 個目のトークン、ID {id}',
+  'status.copied': 'コピーしました：{value}',
+  'step.sentence': 'ステップ {step} / {stepCount}・{left} + {right} → {id}（{chars}）',
+  'stage.5.pending': 'トークナイザーを読み込むとマージを再生できます',
+  'status.replayScope': '{count} 個中 {index} 個目のチャンクを再生中',
+  'status.replayLimited': 'マージの再生は最初の {n} ステップまでです',
+  'longInput.banner': '長いテキスト：必要なときにトークン化',
+  'longInput.run': '今すぐトークン化',
+  'longInput.capped': '最初の {n} コードポイントのみを解析します',
+} as const satisfies Catalog;

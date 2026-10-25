@@ -26,7 +26,8 @@ export default defineConfig({
       // boot.ts is NOT an input (it would become a deferred ES module); bootScript() emits it. 404.html is an input so it
       // gets the boot script and the hashed stylesheet too.
       input: { main: page('./index.html'), about: page('./about/index.html'), notFound: page('./404.html') },
-      // WP06 adds `manualChunks: { i18n: ['./src/i18n/en.ts', './src/i18n/zh-TW.ts', './src/i18n/ja.ts'] }` with the catalogs.
+      // All three catalogs ship together in one `i18n` chunk shared by every page (AD-29; 06 §3 budgets it at ≤ 8 KB br).
+      output: { manualChunks: { i18n: ['./src/i18n/en.ts', './src/i18n/zh-TW.ts', './src/i18n/ja.ts'] } },
     },
     reportCompressedSize: true,
   },

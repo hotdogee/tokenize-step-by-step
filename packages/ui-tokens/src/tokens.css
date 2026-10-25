@@ -1,9 +1,10 @@
 /*
- * @tsbs/ui-tokens — design tokens (docs/design/05-ui-ux.md §11). SKELETON from WP00: every token name of §11 exists with
- * the value the table gives; WP06 owns the values, the per-breakpoint layout tokens (§3.3) and check-contrast.mjs.
+ * @tsbs/ui-tokens — design tokens (docs/design/05-ui-ux.md §3.3, §10, §11; AD-18, AD-35).
  *
  * Light values sit on :root; dark values apply under prefers-color-scheme unless the page forces light, and always when it
- * forces dark (boot.js sets data-theme="auto" | "light" | "dark" before first paint, AD-29).
+ * forces dark (boot.js sets data-theme="auto" | "light" | "dark" before first paint, AD-29). The two dark blocks are kept
+ * identical (test/tokens.test.ts). `pnpm -F @tsbs/ui-tokens check` (check-contrast.mjs) asserts the §11 contrast contract
+ * on the values below, so change a colour here and run it.
  */
 
 :root {
@@ -19,6 +20,7 @@
 
   /* The 1 px border is the WCAG 1.4.1 / 1.4.11 conformance cue: >= 3:1 against all tints and surfaces (AD-35). */
   --border: oklch(0.5 0 0);
+  --border-width: 1px;
   --accent: oklch(0.5 0.12 200);
   --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 
@@ -36,12 +38,39 @@
   --hatch-tint: var(--tok-h0);
   --hatch: repeating-linear-gradient(45deg, var(--fg) 0 1.5px, var(--hatch-tint) 1.5px 3px);
 
-  /* Layout (per-breakpoint values in §3.3 are WP06/WP08's; these are the M cell at 1024-1439 px). */
-  --cell: 30px;
+  /* Font stacks (05 §10): system fonts only; the stand-in subset (fonts.css) is listed first for stand-in cells. */
+  --font-latin: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+  --font-zh:
+    'PingFang TC', 'Noto Sans TC', 'Noto Sans CJK TC', 'Microsoft JhengHei', 'Source Han Sans TC', system-ui, sans-serif;
+  --font-ja:
+    'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Noto Sans CJK JP', 'Yu Gothic UI', Meiryo, system-ui,
+    sans-serif;
+  --font-ko: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Noto Sans CJK KR', 'Malgun Gothic', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, 'Noto Sans Mono', monospace;
+  --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  --font-standin: 'TSBS Stand-ins', var(--font-mono);
+
+  /*
+   * Layout (05 §3.3, AD-18). --cell-s/-m/-l are the breakpoint's cell sizes for the S / M / L setting; --cell is the active
+   * one (html[data-cell-size]); coarse pointers floor every size at 36 px. K is never a token: WP08 computes it from
+   * --cell, --gutter and the board width.
+   */
+  --gutter: 16px;
+  --cell-s-base: 32px;
+  --cell-m-base: 36px;
+  --cell-l-base: 40px;
+  --cell-s: var(--cell-s-base);
+  --cell-m: var(--cell-m-base);
+  --cell-l: var(--cell-l-base);
+  --cell: var(--cell-m);
   --gap: 2px;
-  --row-h: 172px;
+  --row-h: 106px;
   --radius: 4px;
+  --header-h: 48px;
+  --rail-w: 0px;
+  --board-max: none;
   --sheet-height: 0px;
+  --target-min: 24px;
 
   /* Motion. */
   --dur-fast: 120ms;
@@ -96,4 +125,85 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+}
+
+/* ---- Layout by breakpoint (05 §3.3). Below 480 px the :root values above apply. ---- */
+
+@media (min-width: 480px) {
+  :root {
+    --row-h: 136px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --cell-s-base: 29px;
+    --cell-m-base: 32px;
+    --cell-l-base: 37px;
+    --row-h: 150px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --cell-s-base: 27px;
+    --cell-m-base: 30px;
+    --cell-l-base: 35px;
+    --row-h: 172px;
+    --rail-w: 320px;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --cell-s-base: 29px;
+    --cell-m-base: 32px;
+    --cell-l-base: 37px;
+    --board-max: 1600px;
+  }
+}
+
+@media (min-width: 2560px) {
+  :root {
+    --cell-m-base: clamp(32px, 1.6vw, 44px);
+    --cell-s-base: calc(var(--cell-m-base) * 0.9);
+    --cell-l-base: calc(var(--cell-m-base) * 1.15);
+    --row-h: calc(var(--cell) * 4 + 44px);
+    --rail-w: 420px;
+    --board-max: 2400px;
+  }
+}
+
+/* AD-18: coarse pointers floor every cell size at 36 px (S -> 36, M 36, L 40 on phones). */
+@media (pointer: coarse) {
+  :root {
+    --cell-s: max(36px, var(--cell-s-base));
+    --cell-m: max(36px, var(--cell-m-base));
+    --cell-l: max(36px, var(--cell-l-base));
+  }
+}
+
+:root[data-cell-size='S'] {
+  --cell: var(--cell-s);
+}
+
+:root[data-cell-size='L'] {
+  --cell: var(--cell-l);
+}
+
+/* ---- User preferences (05 §11). :is() lifts specificity to (0,2,0) so these follow the theme blocks above. ---- */
+
+@media (prefers-contrast: more) {
+  :root:is([data-theme], :not([data-theme])) {
+    --border: var(--fg);
+    --border-width: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  :root:is([data-theme], :not([data-theme])) {
+    --border: CanvasText;
+    --accent: Highlight;
+    --hatch: repeating-linear-gradient(45deg, Highlight 0 1.5px, Canvas 1.5px 3px);
+  }
 }
