@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { appWith, fixtureResult, frames } from '../board/board.test-helper.ts';
 import { animatesTransform, durations, mountRail, type MountedRail } from '../pipeline/pipeline.test-helper.ts';
 import { cancelAll, heldCount, runningCount } from './flip.ts';
-import { MotionPrefs, motionPrefs } from './motion-prefs.svelte.ts';
+import { MOTION_KEY, MotionPrefs, motionPrefs } from './motion-prefs.svelte.ts';
 import { crossfade, startViewTransitionOf, wrapSwitches } from './view-transition.ts';
 
 let mounted: MountedRail | null = null;
@@ -30,6 +30,8 @@ afterEach(() => {
   mounted = null;
   cancelAll();
   motionPrefs.override = null;
+  // The switch persists its override; the next test file's fresh MotionPrefs would read it (one origin, one storage).
+  localStorage.removeItem(MOTION_KEY);
   delete document.documentElement.dataset['motion'];
   vi.restoreAllMocks();
 });
