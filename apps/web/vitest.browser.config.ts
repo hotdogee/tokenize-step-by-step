@@ -2,10 +2,12 @@
  * Component tests in Vitest browser mode (06 §1 "Component"): `src/**` `*.browser.test.ts` run in chromium through the
  * Playwright provider, with the same Svelte plugin as the app and the generated grid placement classes. Run by
  * `pnpm test:browser` (chained into `pnpm test`). They need Playwright's chromium for the pinned `playwright`
- * (`pnpm exec playwright install chromium`); without it the project collects no files and says so, rather than failing
- * every unit run on a machine without browsers.
+ * (`pnpm --filter @tsbs/e2e exec playwright install chromium`, the same version). On a developer machine without it the
+ * project collects no files and says so, rather than failing every unit run; under CI (`CI` set) a missing chromium is
+ * an error, so the component tests can never pass by running nothing.
  */
 import { existsSync } from 'node:fs';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { playwright } from '@vitest/browser-playwright';
@@ -22,11 +24,15 @@ function chromiumInstalled(): boolean {
   }
 }
 
+const CI = process.env['CI'] !== undefined && process.env['CI'] !== '';
+const INSTALL = 'pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium';
 const enabled = chromiumInstalled();
 if (!enabled) {
-  console.warn(
-    '[web-browser] Playwright chromium is not installed: component tests are skipped (pnpm exec playwright install chromium).',
-  );
+  if (CI)
+    throw new Error(
+      `[web-browser] Playwright chromium is not installed, and CI never skips the component tests (${INSTALL}).`,
+    );
+  console.warn(`[web-browser] Playwright chromium is not installed: component tests are skipped (${INSTALL}).`);
 }
 
 export default defineConfig({
