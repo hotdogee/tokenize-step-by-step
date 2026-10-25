@@ -4,13 +4,16 @@
  *
  * - `<html lang>`: `?lang` → `localStorage` → `navigator.languages` (zh-TW / zh-Hant* / zh → zh-TW; ja* → ja; else en).
  * - `<html data-theme>`: the persisted choice `auto | light | dark` (default `auto`; tokens.css follows the OS for `auto`).
+ * - `<html data-cell-size>`: the persisted board cell size `S | M | L` (default `M`), so `--cell` — and with it the board's
+ *   reserved height — is right on first paint (05 §1.1, §3.3; CLS ≈ 0).
  *
  * No imports: this file is transformed on its own, not bundled. Storage access is guarded (private mode, blocked storage).
  */
 
-/** localStorage keys shared with the locale and theme stores (WP06). */
+/** localStorage keys shared with src/app/storage.ts (this file cannot import it). */
 const LOCALE_KEY = 'tsbs:locale';
 const THEME_KEY = 'tsbs:theme';
+const CELL_SIZE_KEY = 'tsbs:cellSize';
 
 type Locale = 'zh-TW' | 'ja' | 'en';
 
@@ -48,8 +51,14 @@ function resolveTheme(): 'auto' | 'light' | 'dark' {
   return theme === 'light' || theme === 'dark' ? theme : 'auto';
 }
 
+function resolveCellSize(): 'S' | 'M' | 'L' {
+  const size = stored(CELL_SIZE_KEY);
+  return size === 'S' || size === 'L' ? size : 'M';
+}
+
 const root = document.documentElement;
 root.lang = resolveLocale();
 root.dataset['theme'] = resolveTheme();
+root.dataset['cellSize'] = resolveCellSize();
 
 export {};

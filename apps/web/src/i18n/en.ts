@@ -1,0 +1,234 @@
+/**
+ * English catalog — the SOURCE OF TRUTH for message keys (05 §10). `MessageKey` is derived from this object; zh-TW.ts and
+ * ja.ts must define exactly the same keys with the same placeholder names (type-checked here, and by catalogs.test.ts).
+ *
+ * Rules: named placeholders only; plural messages select on `n`; legal strings (licence notices) are NOT in the catalogs
+ * — they come verbatim from the registry. Keys reserved for other work packages are listed in reserved.ts.
+ */
+import type { Message } from './types.ts';
+
+export const en = {
+  // ---- App and page meta ----
+  'app.name': 'Tokenize step by step',
+  'meta.main.title': 'Tokenize step by step',
+  'meta.main.description':
+    'Watch text become tokens: code points, UTF-8 bytes, pre-tokenizer chunks and every BPE merge, entirely in your browser.',
+  'meta.about.title': 'About · Tokenize step by step',
+  'meta.about.description':
+    'What the tokenize-step-by-step visualizer shows, how faithful each tokenizer is, and the licences of every vocabulary it ships.',
+  'meta.notFound.title': 'Not found · Tokenize step by step',
+  'notFound.heading': 'Page not found',
+  'notFound.body': 'There is nothing at this address.',
+  'notFound.back': 'Back to the tokenizer',
+
+  // ---- Navigation ----
+  'nav.skip': 'Skip to the board',
+  'nav.skipMain': 'Skip to the main content',
+  'nav.home': 'Back to the tokenizer',
+  'nav.about': 'About',
+  'nav.licences': 'Licences & provenance',
+  'nav.source': 'Source code',
+
+  // ---- Header controls ----
+  'a11y.localeMenu': 'Interface language',
+  'a11y.themeToggle': 'Colour theme',
+  'a11y.help': 'Keyboard shortcuts and help',
+  'locale.en': 'English',
+  'locale.zh-TW': '繁體中文',
+  'locale.ja': '日本語',
+  'theme.auto': 'Auto (system)',
+  'theme.light': 'Light',
+  'theme.dark': 'Dark',
+
+  // ---- Tokenizer picker ----
+  'picker.change': 'change tokenizer',
+  'picker.title': 'Choose a tokenizer',
+  'picker.description':
+    'One tokenizer is loaded at a time. The current result stays on screen until the new tokenizer is ready.',
+  'picker.vocab': { one: '{n} token', other: '{n} tokens' },
+  'picker.wire': '{size} download',
+  'picker.downloaded': 'downloaded',
+  'picker.more': 'More from {lab}',
+  'picker.covers': 'Covers',
+  'picker.evidence': 'evidence',
+  'picker.checkedOn': 'checked {date}',
+  'picker.licence': 'licence: {licence}',
+  'picker.notClaude3': 'not the Claude 3+ tokenizer',
+  'picker.claude3': 'Claude 3+ → live check',
+  'picker.claude3Hint':
+    'Claude 3 and later use a tokenizer that is not public. Count their tokens with your own API key.',
+  'picker.close': 'Close',
+  'picker.details': 'Details: {name}',
+  'lab.openai': 'OpenAI',
+  'lab.anthropic': 'Anthropic',
+  'lab.google': 'Google',
+  'lab.meta': 'Meta',
+  'lab.xai': 'xAI',
+
+  // ---- Fidelity badges ----
+  'fidelity.confirmed': 'confirmed',
+  'fidelity.inferred': 'inferred',
+  'fidelity.legacy': 'legacy',
+  'fidelity.reconstruction': 'reconstruction',
+  'fidelity.unavailable': 'no public tokenizer',
+
+  // ---- Loading progress (picker bar, status region) ----
+  'progress.cache': 'checking the cache',
+  'progress.download': 'downloading',
+  'progress.verify': 'verifying',
+  'progress.decompress': 'decompressing',
+  'progress.build': 'building tables',
+  'progress.encode': 'tokenizing',
+  'a11y.progress': '{phase} {name}, {percent}',
+  'status.loading': 'Loading {name}…',
+  'status.ready': '{name} ready',
+
+  // ---- Input panel ----
+  'input.label': 'Text to tokenize',
+  'input.placeholder': 'Type or paste any text',
+  'textLang.label': 'Text language',
+  'textLang.auto': 'Auto',
+  'textLang.zh-Hant': 'Traditional Chinese',
+  'textLang.ja': 'Japanese',
+  'textLang.en': 'English',
+  'examples.label': 'Examples',
+  'a11y.chipSplits': 'splits a character on this tokenizer',
+  'options.label': 'Options',
+  'option.specialTokens': 'Match special tokens',
+  'option.addBos': 'Add BOS',
+  'option.normalize': 'NFKC normalize',
+  'byteView.label': 'Byte values',
+  'byteView.hex': 'Hex',
+  'byteView.dec': 'Dec',
+  'byteView.both': 'Both',
+  'graphemes.toggle': 'Grapheme brackets',
+  'counts.label': 'Counts',
+  'counts.codePoints': { one: '{n} code point', other: '{n} code points' },
+  'counts.graphemes': { one: '{n} grapheme cluster', other: '{n} grapheme clusters' },
+  'counts.bytes': { one: '{n} byte', other: '{n} bytes' },
+  'counts.tokens': { one: '{n} token', other: '{n} tokens' },
+  'counts.partial': { one: '{n} partial-character token', other: '{n} partial-character tokens' },
+  'counts.tokensPending': 'tokens: waiting for the tokenizer',
+  'counts.stale': 'stale',
+  'badge.precomputed': 'precomputed',
+  'badge.live': 'live',
+
+  // ---- Pipeline stages (rail, help, status) ----
+  'stage.1': 'Text',
+  'stage.2': 'Code points',
+  'stage.3': 'UTF-8 bytes',
+  'stage.4.chunks': 'Chunks',
+  'stage.4.symbols': 'Symbols',
+  'stage.5': 'Merges',
+  'stage.6': 'Tokens',
+  'a11y.pipeline': 'pipeline stage',
+  'a11y.stop': '{n} of 6: {name}',
+  'status.stage': '{name}: {detail}',
+
+  // ---- Board (placeholder until WP08) ----
+  'board.label': 'Alignment board',
+  'board.tier.char': 'Characters',
+  'board.tier.byte': 'Bytes',
+  'board.tier.token': 'Tokens',
+  'board.loading': 'tokenizer loading… {percent}',
+  'board.pending': 'Tokens appear when the tokenizer is ready.',
+  'board.cell.char': '{glyph}, {cp}',
+  'board.cell.byte': 'byte {hex}',
+  'board.cell.token': 'token id {id}',
+
+  // ---- Notices strip and footer ----
+  'notices.label': 'Notices for {name}',
+  'footer.fidelity': 'Fidelity:',
+  'footer.privacy': 'Runs entirely in your browser. No analytics, no cookies.',
+  'footer.build': 'build {sha} · {date}',
+
+  // ---- Errors (05 §12) ----
+  'error.fetch': 'A new version is available — reload',
+  'error.integrity': 'Download was corrupted — retry',
+  'error.oom': 'Not enough memory to load {name} on this device — try {fallback}',
+  'error.quota': 'The offline cache is not available; the tokenizer still works.',
+  'error.internal': 'Something went wrong: {message}',
+  'action.reload': 'Reload',
+  'action.retry': 'Retry',
+  'action.back': 'Go back',
+  'action.dismiss': 'Dismiss',
+
+  // ---- Help dialog (AD-22) ----
+  'help.title': 'Keyboard shortcuts',
+  'help.intro': 'Keys marked * are single-key shortcuts. Turn them off if they get in your way.',
+  'help.singleKey': 'Single-key shortcuts',
+  'help.singleKeyHint':
+    'Arrow keys, Enter, Space, Esc, Home, End, Page Up, Page Down, i and c keep working inside the board and the controls.',
+  'help.singleKeyMark': 'single-key shortcut',
+  'help.close': 'Close',
+  'help.group.global': 'Anywhere',
+  'help.group.board': 'In the board',
+  'help.group.scrubber': 'On the step scrubber',
+  'help.key.stops': 'Previous / next stage',
+  'help.key.steps': 'Previous / next merge step (with Shift: 10 steps)',
+  'help.key.jump': 'Jump to stage 1–6',
+  'help.key.byteView': 'Cycle hex / dec / both',
+  'help.key.graphemes': 'Show or hide grapheme brackets',
+  'help.key.picker': 'Open the tokenizer picker',
+  'help.key.focusText': 'Focus the text box',
+  'help.key.help': 'Show this help',
+  'help.key.move': 'Previous / next cell',
+  'help.key.tier': 'Change tier',
+  'help.key.rowEdges': 'Row start / end (with Ctrl: board start / end)',
+  'help.key.rows': 'Previous / next row',
+  'help.key.pin': 'Pin or unpin the inspector',
+  'help.key.inspector': 'Move focus into the inspector',
+  'help.key.escape': 'Back, unpin, close',
+  'help.key.copy': 'Copy the focused value',
+  'help.key.play': 'Play / pause',
+  'help.key.firstLast': 'First / last step',
+
+  // ---- Live check (placeholder until WP10) ----
+  'liveCheck.heading': 'Live check with your own API key',
+  'liveCheck.privacy':
+    'Your key stays in this tab’s memory, is sent only to the provider over HTTPS and is forgotten when you reload. This site has no backend and no analytics.',
+  'liveCheck.unavailable': 'Live checks are not available in this build yet.',
+
+  // ---- Reserved for other work packages (see reserved.ts) ----
+  'a11y.fragment': 'token {index}, continued (part {part} of {parts})',
+  'a11y.combining': 'combining mark {cp} attached to {base}',
+  'a11y.variationSelector': 'variation selector {cp} attached to {base}',
+  'a11y.marker.continued': 'continued from the previous row',
+  'a11y.marker.continues': 'continues on the next row',
+  'a11y.marker.zeroWidthDummy': 'dummy prefix, 0 bytes',
+  'a11y.marker.zeroWidthBos': 'beginning-of-sequence token, 0 bytes',
+  'a11y.marker.splits': 'splits a character on this tokenizer',
+  'a11y.marker.partialCut': 'token boundary inside this character',
+  'a11y.marker.byteFallback': 'byte-fallback piece {hex}',
+  'a11y.marker.userDefined': 'pre-matched symbol, never merges',
+  'a11y.marker.special': 'special token',
+  'a11y.marker.justMerged': 'merged at this step',
+  'a11y.standin.space': 'space',
+  'a11y.standin.tab': 'tab',
+  'a11y.standin.lineFeed': 'line feed',
+  'a11y.standin.carriageReturn': 'carriage return',
+  'a11y.standin.noBreakSpace': 'no-break space',
+  'a11y.standin.whiteSpace': 'white space {cp}',
+  'a11y.standin.control': 'control character {cp}',
+  'a11y.standin.bom': 'byte order mark',
+  'a11y.standin.zwj': 'zero-width joiner',
+  'a11y.standin.zwnj': 'zero-width non-joiner',
+  'a11y.standin.escapedSpace': 'escaped space',
+  'inspector.heading': 'Inspector',
+  'inspector.headingToken': 'Inspector — token {index} of {count}',
+  'status.pinned': 'pinned: token {index} of {count}, id {id}',
+  'status.copied': 'copied: {value}',
+  'step.sentence': 'step {step} / {stepCount} · {left} + {right} → {id} ({chars})',
+  'stage.5.pending': 'merge replay available once the tokenizer is loaded',
+  'status.replayScope': 'replaying chunk {index} of {count}',
+  'status.replayLimited': 'merge replay limited to the first {n} steps',
+  'longInput.banner': 'Long input — tokenize on demand',
+  'longInput.run': 'Tokenize now',
+  'longInput.capped': 'Only the first {n} code points are analysed',
+} as const satisfies Readonly<Record<string, Message>>;
+
+/** Every message key (the typed `t()` key union). */
+export type MessageKey = keyof typeof en;
+
+/** A complete catalog: every key, any message shape. */
+export type Catalog = Readonly<Record<MessageKey, Message>>;

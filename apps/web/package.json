@@ -12,6 +12,8 @@
     "svelte-check": "svelte-check --tsconfig ./tsconfig.app.json --threshold error"
   },
   "dependencies": {
+    "@tsbs/core": "workspace:*",
+    "@tsbs/registry": "workspace:*",
     "@tsbs/ui-tokens": "workspace:*",
     "svelte": "5.57.2"
   },
