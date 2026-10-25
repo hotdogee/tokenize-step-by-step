@@ -123,6 +123,17 @@ describe('keyboard state machine on a 3-row fixture (05 §8)', () => {
     expect(focused()).toBe('token:1'); // 133072 = 灣 covers byte 5
     expect(tabStops(board)).toBe(1);
   });
+
+  it('keeps one tab stop on empty text whose only cell is a trailing BOS marker (Llama 3 + addBos)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('meta-llama3', 'empty', { addBos: true }));
+    const stop = board.grid.querySelector<HTMLElement>('[tabindex="0"]');
+    expect(tabStops(board)).toBe(1);
+    expect(stop?.dataset['variant']).toBe('marker');
+    stop?.focus();
+    await press('{ArrowUp}');
+    expect(focused()).toBe('token:0'); // the char and byte tiers are empty
+  });
 });
 
 describe('inspector region (05 §5, AD-34)', () => {
@@ -155,6 +166,28 @@ describe('inspector region (05 §5, AD-34)', () => {
     await userEvent.click(target);
     await frames(1);
     expect(board.app.pinned).toBeNull();
+  });
+
+  it('a keyboard focus move takes the inspector and the slice back from a resting pointer (05 §5)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    const hovered = board.grid.querySelector<HTMLElement>('[data-tier="token"][data-index="0"]');
+    if (hovered === null) throw new Error('no token cell');
+    await userEvent.hover(hovered);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await frames(1);
+    expect(document.getElementById('inspector-heading')?.textContent).toBe('Inspector — token 1 of 5');
+    board.grid.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
+    await press('{ArrowRight}{ArrowRight}');
+    expect(focused()).toBe('char:2');
+    expect(document.getElementById('inspector-heading')?.textContent).toBe('Inspector — character 3 of 4');
+    const slice = [...board.grid.querySelectorAll<HTMLElement>('[data-slice]')].map(
+      (cell) => `${cell.dataset['tier'] ?? ''}:${cell.dataset['index'] ?? ''}`,
+    );
+    expect(slice).toEqual(['char:2', 'hex:6', 'hex:7', 'hex:8', 'token:3']);
+    await new Promise((resolve) => setTimeout(resolve, 200)); // the pointer has not moved: no hover comes back
+    await frames(1);
+    expect(document.getElementById('inspector-heading')?.textContent).toBe('Inspector — character 3 of 4');
   });
 
   it('is an anchored panel beside the active cell at 768–1023 px', async () => {

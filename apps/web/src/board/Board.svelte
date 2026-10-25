@@ -37,7 +37,7 @@
   import { nfkcSource, type BoardContext } from './cells.ts';
   import { appTier, columnsFor, GUTTER, tiersFor, tokenMode, type BoardTier } from './geometry.ts';
   import { spokenGlyph } from './labels.ts';
-  import { navigate, navKeyOf } from './navigation.ts';
+  import { navigate, navKeyOf, resolveAnchor as resolveAnchorIn } from './navigation.ts';
   import Row from './Row.svelte';
   import { byteRangeOfSelection, highlightSelection } from './selection.ts';
   import { textOnlyResult } from './text-only.ts';
@@ -52,7 +52,6 @@
   const HOVER_MS = 120;
   /** localStorage: the keyboard hint under the board is shown until the board keys have been used (05 §8). */
   const HINT_KEY = 'tsbs:boardKeysUsed';
-  const TIER_ORDER: readonly BoardTier[] = ['char', 'hex', 'dec', 'chunk', 'token'];
 
   const app = appState();
   const viewport = new BoardViewport();
@@ -118,6 +117,7 @@
   let selected: Span | null = $state(null);
   let anchor: { top: number; left: number } | null = $state(null);
   let keysUsed = $state(readStored(HINT_KEY) === 'true');
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
   const focusRef = $derived(resolveAnchor(focusAnchor));
   const pinRef = $derived(pinAnchor === null ? null : resolveAnchor(pinAnchor));
@@ -166,20 +166,9 @@
     return r.utf8.length > 0;
   }
 
-  /** The unit holding `anchor` among the shown tiers (an absent tier maps to the nearest shown one). */
+  /** The navigable unit holding `a` among the shown tiers (navigation.ts `resolveAnchor`). */
   function resolveAnchor(a: Anchor): CellRef | null {
-    const shown = tiers.includes(a.tier)
-      ? a.tier
-      : [...tiers].sort(
-          (x, y) =>
-            Math.abs(TIER_ORDER.indexOf(x) - TIER_ORDER.indexOf(a.tier)) -
-            Math.abs(TIER_ORDER.indexOf(y) - TIER_ORDER.indexOf(a.tier)),
-        )[0];
-    if (shown === undefined) return null;
-    const ref = units.resolve({ tier: shown, byte: a.byte, slot: shown === a.tier ? a.slot : -1 });
-    if (ref !== null && units.navigable(ref)) return ref;
-    if (ref === null) return null;
-    return navigate(units, tiers, ref, 'right') ?? navigate(units, tiers, ref, 'left');
+    return resolveAnchorIn(units, tiers, a);
   }
 
   function sameRef(a: CellRef | null, b: CellRef | null): boolean {
@@ -206,8 +195,18 @@
     return viewport.reducedMotion ? 'auto' : 'smooth';
   }
 
+  /**
+   * Keyboard input takes the inspector and the slice back from a resting pointer (the most recent input wins, 05 §5):
+   * hover returns on the next `pointerover`.
+   */
+  function dropHover(): void {
+    clearTimeout(hoverTimer);
+    hoverRef = null;
+  }
+
   /** Moves the roving tab stop to `ref`, mounts its row, focuses it and keeps it clear of the sheet (05 §5, §8). */
   async function moveFocus(ref: CellRef): Promise<void> {
+    dropHover();
     focusAnchor = units.anchorOf(ref);
     app.focus = { tier: appTier(ref.tier), byte: focusAnchor.byte };
     await tick();
@@ -331,6 +330,8 @@
     const ref = refOf(event.target);
     if (ref === null) return;
     const element = event.target as HTMLElement;
+    // Tab into the grid (or a script focus after keyboard use) is keyboard input; a click is pointer input.
+    if (element.matches(':focus-visible')) dropHover();
     if (!('first' in element.dataset)) {
       // A non-first fragment got focus (click): the logical cell's focus lives on its first fragment (05 §8).
       void moveFocus(ref);
@@ -348,7 +349,6 @@
   }
 
   // ---- pointer (05 §9) ----
-  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
   function onPointerOver(event: PointerEvent): void {
     if (event.pointerType !== 'mouse') return;

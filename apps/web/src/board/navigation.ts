@@ -6,9 +6,14 @@
  * - ↑/↓: change tier keeping the byte anchor (char ↔ byte ↔ chunk ↔ token, absent tiers skipped); no-op at the top/bottom;
  * - Home/End: row start/end; Ctrl+Home/End: board start/end; PageUp/PageDown: previous/next packed row, same tier,
  *   nearest column (rows entirely covered by the focused span are skipped so the key always makes progress).
+ *
+ * `resolveAnchor` maps the byte-offset focus anchor (AD-17) to the navigable cell that holds it now.
  */
 import type { BoardTier } from './geometry.ts';
-import type { BoardUnits, CellRef } from './units.ts';
+import type { Anchor, BoardUnits, CellRef } from './units.ts';
+
+/** The board tiers top to bottom: the distance an absent tier's anchor travels to a shown one. */
+const TIER_ORDER: readonly BoardTier[] = ['char', 'hex', 'dec', 'chunk', 'token'];
 
 export type NavKey =
   'left' | 'right' | 'up' | 'down' | 'home' | 'end' | 'boardStart' | 'boardEnd' | 'pageUp' | 'pageDown';
@@ -115,4 +120,22 @@ export function navigate(units: BoardUnits, tiers: readonly BoardTier[], from: C
     case 'pageDown':
       return pageRow(units, from, 1);
   }
+}
+
+/**
+ * The navigable unit holding `anchor` among the shown `tiers`, or null when no shown tier has one. The anchor's tier is
+ * tried first, then the other shown tiers by distance from it (ties in ARIA row order); within a tier, the unit covering
+ * the byte, else its nearest navigable neighbour. A tier with no navigable unit (the empty char tier of an empty text
+ * whose only token is a trailing BOS marker, AD-25) passes the anchor on, so the board always keeps its tab stop.
+ */
+export function resolveAnchor(units: BoardUnits, tiers: readonly BoardTier[], anchor: Anchor): CellRef | null {
+  const distance = (tier: BoardTier): number => Math.abs(TIER_ORDER.indexOf(tier) - TIER_ORDER.indexOf(anchor.tier));
+  for (const tier of [...tiers].sort((x, y) => distance(x) - distance(y))) {
+    const ref = units.resolve({ tier, byte: anchor.byte, slot: tier === anchor.tier ? anchor.slot : -1 });
+    if (ref === null) continue;
+    if (units.navigable(ref)) return ref;
+    const near = step(units, ref, 1) ?? step(units, ref, -1);
+    if (near !== null) return near;
+  }
+  return null;
 }

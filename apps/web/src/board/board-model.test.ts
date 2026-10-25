@@ -15,7 +15,7 @@ import {
   tiersFor,
   tokenMode,
 } from './geometry.ts';
-import { navigate, navKeyOf, type NavKey } from './navigation.ts';
+import { navigate, navKeyOf, resolveAnchor, type NavKey } from './navigation.ts';
 import type { CellRef } from './units.ts';
 import { mountedRows, spacers, VIRTUALIZE_ABOVE, visibleRows } from './window.ts';
 
@@ -120,6 +120,25 @@ describe('logical cells and anchors', () => {
     const o200k = boardContext(caseResult('openai-o200k_base', 'zh-tw-tainan'), { K: 9 });
     expect(o200k.units.resolve(anchor)).toEqual({ tier: 'token', index: 1 }); // 133072 = 灣
     expect(o200k.units.resolve({ tier: 'hex', byte: 99, slot: -1 })).toEqual({ tier: 'hex', index: 11 });
+  });
+
+  it('resolves the focus anchor to a navigable cell of the nearest shown tier (05 §8)', () => {
+    const ctx = boardContext(caseResult('openai-cl100k_base', 'zh-tw-tainan'), { K: 34, stage: 3 });
+    const token = { tier: 'token' as const, byte: 5, slot: -1 };
+    expect(resolveAnchor(ctx.units, ctx.tiers, token)).toEqual({ tier: 'hex', index: 5 }); // no token tier at stop 3
+    expect(resolveAnchor(ctx.units, ctx.tiers, { tier: 'char', byte: 4, slot: -1 })).toEqual({
+      tier: 'char',
+      index: 1,
+    });
+  });
+
+  it('keeps a tab stop on empty text whose only cell is a trailing BOS marker (Llama 3 + addBos, AD-25)', () => {
+    const ctx = boardContext(caseResult('meta-llama3', 'empty', { addBos: true }), { K: 9 });
+    expect(ctx.tiers).toEqual(['char', 'hex', 'token']);
+    expect(ctx.units.count('char')).toBe(0);
+    const start = { tier: 'char' as const, byte: 0, slot: -1 }; // the Board's initial focus anchor
+    expect(resolveAnchor(ctx.units, ctx.tiers, start)).toEqual({ tier: 'token', index: 0 });
+    expect(ctx.units.navigable({ tier: 'token', index: 0 })).toBe(true);
   });
 });
 
