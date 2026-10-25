@@ -67,15 +67,15 @@ describe.skipIf(o200kPath === null)('o200k_base specifics', () => {
 
   it('keys the 9 BOM-prefixed ranks by bytes, and pieceOf keeps the BOM', () => {
     const vocab = byteVocabFromBuffer(payload);
+    const encoder = new TextEncoder();
     const bom = pieces.flatMap((p, i) => (p[0] === 0xef && p[1] === 0xbb && p[2] === 0xbf ? [i] : []));
     expect(bom).toHaveLength(9);
     for (const rank of bom) {
       expect(vocab.indexOf(pieces[rank]!, 0, pieces[rank]!.length)).toBe(rank);
       const piece = vocab.pieceOf(rank);
       expect(piece?.startsWith('\ufeff')).toBe(true);
-      // A BOM-stripping decoder would make the key collide with the rank of the remaining bytes, if any.
-      const stripped = pieces[rank]!.subarray(3);
-      if (stripped.length > 0) expect(vocab.indexOf(stripped, 0, stripped.length)).not.toBe(rank);
+      // A BOM-stripping (or otherwise lossy) decoder would not re-encode to the entry's bytes.
+      expect(encoder.encode(piece ?? '')).toEqual(pieces[rank]);
     }
     expect(vocab.maxEntryBytes).toBe(128);
   });
