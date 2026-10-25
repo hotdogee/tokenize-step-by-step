@@ -1,6 +1,8 @@
 /**
  * `tsbs-vocab guard` (03 §C.8, 06 §3): deploy-safety checks on the built site directory. Same thresholds as
- * `scripts/check-dist.ts` (which `pnpm check:dist` runs alongside this guard), plus the C.8 extras:
+ * `scripts/check-dist.ts` (which `pnpm check:dist` runs alongside this guard), plus the C.8 extras. Its file count is
+ * every file on disk under `--dist`; `check:dist` counts only the files wrangler uploads (after `.assetsignore`), so the
+ * two numbers differ by the ignored files (`.assetsignore`, `*.map`, `.vite/`):
  *
  * - any file ≥ 20 MiB fails (platform limit 25 MiB), > 8 MiB warns; ≤ 2,000 files; `/tok` total > 12 MiB warns
  * - no dotfiles except `.assetsignore` (dotfiles are served); `*.map` files must be excluded by `.assetsignore`

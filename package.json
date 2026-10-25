@@ -30,7 +30,7 @@
     "test": "pnpm generate && vitest run",
     "test:fuzz": "node scripts/pending.ts test:fuzz WP12",
     "e2e": "pnpm --filter @tsbs/e2e e2e",
-    "e2e:shell": "pnpm --filter @tsbs/web build && pnpm --filter @tsbs/e2e exec playwright test shell",
+    "e2e:shell": "pnpm e2e shell",
     "e2e:headers": "pnpm --filter @tsbs/e2e e2e:headers",
     "lint": "pnpm generate && eslint --max-warnings 0 .",
     "typecheck": "pnpm generate && tsc -b && pnpm --filter @tsbs/web svelte-check",

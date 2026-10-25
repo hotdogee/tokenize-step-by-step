@@ -68,7 +68,7 @@ async function main(argv: readonly string[]): Promise<number> {
       for (const message of report.errors) console.error(`tsbs-vocab guard ERROR: ${message}`);
       if (report.errors.length === 0)
         console.log(
-          `tsbs-vocab guard: ${String(report.files)} files OK (/tok ${(report.tokBytes / 1024 / 1024).toFixed(2)} MiB).`,
+          `tsbs-vocab guard: ${String(report.files)} files on disk (before .assetsignore) OK (/tok ${(report.tokBytes / 1024 / 1024).toFixed(2)} MiB).`,
         );
       return report.errors.length === 0 ? 0 : 1;
     }
