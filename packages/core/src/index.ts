@@ -35,3 +35,4 @@ export * from './layout/pack-rows.ts';
 export * from './fixture/examples-wire.ts';
 export * from './fixture/from-fixture-case.ts';
 export * from './fixture/mock-client.ts';
+export { createSpmTokenizer } from './engines/spm/index.ts';

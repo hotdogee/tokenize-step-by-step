@@ -9,5 +9,5 @@
     "tsBuildInfoFile": "../../../node_modules/.cache/tsbuild/core-test.tsbuildinfo"
   },
   "include": ["**/*.ts"],
-  "references": [{ "path": ".." }]
+  "references": [{ "path": ".." }, { "path": "../../conformance" }]
 }
