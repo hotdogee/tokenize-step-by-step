@@ -125,6 +125,19 @@ export const ja = {
   'a11y.stop': '6 段階中 {n}：{name}',
   'status.stage': '{name}：{detail}',
 
+  // ---- パイプライン、ステップのスライダーと再生（WP09） ----
+  'step.none': 'ステップ 0 / {stepCount}・まだマージなし',
+  'step.split': 'ステップ {step} / {stepCount}・{left} をバイトに分割（{chars}）',
+  'step.part': '{glyph} の一部',
+  'step.crosses': '{glyph} にまたがる',
+  'step.counter': 'ステップ {step} / {stepCount}',
+  'scrubber.label': 'マージのステップ',
+  'play.label': 'マージを再生',
+  'speed.label': '再生速度',
+  'motion.reduce': '動きを減らす',
+  'status.replayWindow': 'バイト {start}–{end} を再生中',
+  'merges.toggle': { other: 'マージ一覧：{n} ステップ' },
+
   // ---- Board ----
   'board.label': '対応表',
   'board.tier.char': '文字',

@@ -121,6 +121,19 @@ export const zhTW = {
   'a11y.stop': '第 {n} 步，共 6 步：{name}',
   'status.stage': '{name}：{detail}',
 
+  // ---- 管線列、步驟拉桿與播放（WP09） ----
+  'step.none': '第 0 / {stepCount} 步・尚未合併',
+  'step.split': '第 {step} / {stepCount} 步・{left} 拆成位元組（{chars}）',
+  'step.part': '{glyph} 的一部分',
+  'step.crosses': '跨越 {glyph}',
+  'step.counter': '第 {step} / {stepCount} 步',
+  'scrubber.label': '合併步驟',
+  'play.label': '播放合併過程',
+  'speed.label': '播放速度',
+  'motion.reduce': '減少動態效果',
+  'status.replayWindow': '正在重播位元組 {start}–{end}',
+  'merges.toggle': { other: '合併清單：{n} 步' },
+
   // ---- Board ----
   'board.label': '對照圖',
   'board.tier.char': '字元',
