@@ -28,7 +28,7 @@ import type { Locale } from '../i18n/types.ts';
 import { preferences } from '../shell/preferences.svelte.ts';
 import { theme, type ThemeChoice } from '../theme/theme.svelte.ts';
 import { DEFAULT_EXAMPLE } from './constants.ts';
-import { isNoPrecomputedResult } from './examples-client.ts';
+import { isNoPrecomputedResult } from './no-precomputed.ts';
 import { DEFAULT_TOKENIZER, tokenizerEntry } from './registry.ts';
 import { readStored, STORAGE_KEYS, writeStored } from './storage.ts';
 

@@ -1,29 +1,18 @@
 /**
  * The shell's view of the registry: WP04's `@tsbs/registry` data (plain JSON validated by `pnpm registry:check`, AD-14)
  * plus, per tokenizer, the chips whose precomputed result splits a character (`examples-index.json`, written by WP03's
- * `examples()` plugin and `pnpm generate`, 03 §C.7).
+ * `examples()` plugin and `pnpm generate`, 03 §C.7). This is what `/` needs up front; the model rows and licence tags,
+ * which `/` shows only inside the picker dialog, live in `registry-details.ts` so they stay out of the initial bundle.
  */
 import type { TokenizerId } from '@tsbs/core';
-import {
-  defaultTokenizerId,
-  examples,
-  licences,
-  models,
-  tokenizers,
-  type ExampleChip,
-  type Locale,
-  type ModelRow,
-  type NoticeEntry,
-  type NoticeKey,
-  type TokenizerEntry,
-} from '@tsbs/registry';
+import type { ExampleChip, Locale, NoticeEntry, NoticeKey, TokenizerEntry } from '@tsbs/registry';
+import { examples } from '@tsbs/registry/examples';
+import { licences } from '@tsbs/registry/licences';
+import { defaultTokenizerId, tokenizers } from '@tsbs/registry/tokenizers';
 import examplesIndex from '../generated/examples-index.json';
 
 /** The nine tokenizers in the brief's lab order (the picker hides `withdrawn` ones itself). */
 export const TOKENIZERS: readonly TokenizerEntry[] = tokenizers;
-
-/** Model → tokenizer rows with fidelity and dated evidence (PD-6). */
-export const MODELS: readonly ModelRow[] = models;
 
 /** The 19 example chips (05 §6); the first one is the default example. */
 export const EXAMPLES: readonly ExampleChip[] = examples;
@@ -50,11 +39,6 @@ export const CHIP_SPLITS: Readonly<Record<TokenizerId, readonly string[]>> = (()
     splits[entry.id] = (EXAMPLES_INDEX.partial[entry.id] ?? []).flatMap((name) => chipKeyByCase.get(name) ?? []);
   return splits as Record<TokenizerId, readonly string[]>;
 })();
-
-/** Short licence tag per `licence` key, for the picker (licences.json display strings). */
-export const LICENCE_TAGS: Readonly<Record<string, string>> = Object.fromEntries(
-  Object.entries(licences.licences).map(([key, display]) => [key, display.tag]),
-);
 
 /** The entry of `id` (every TokenizerId has one; registry:check). */
 export function tokenizerEntry(id: TokenizerId): TokenizerEntry {

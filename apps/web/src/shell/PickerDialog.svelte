@@ -10,7 +10,8 @@
   import type { AssetSummary, TokenizerId } from '@tsbs/core';
   import type { Lab, TokenizerEntry } from '@tsbs/registry';
   import { appState } from '../app/context.ts';
-  import { LICENCE_TAGS, MODELS, TOKENIZERS } from '../app/registry.ts';
+  import { LICENCE_TAGS, MODELS } from '../app/registry-details.ts';
+  import { TOKENIZERS } from '../app/registry.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { formatSize } from '../i18n/t.ts';
   import { cachedTokenizers, cachedVocabUrls } from './cache-probe.ts';

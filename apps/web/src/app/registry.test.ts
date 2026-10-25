@@ -1,20 +1,12 @@
 /**
- * The shell's registry view (registry.ts) over WP04's data and WP03's examples index: the facts the shell depends on,
+ * The shell's registry view (registry.ts, registry-details.ts) over WP04's data and WP03's examples index: the facts the shell depends on,
  * asserted against the committed fixtures and the oracle manifest (`registry:check` enforces the full 03 §B.7 rules).
  */
 import type { TokenizerId } from '@tsbs/core';
 import { describe, expect, it } from 'vitest';
 import { MANIFEST_ASSETS, SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
-import {
-  CHIP_SPLITS,
-  DEFAULT_TOKENIZER,
-  EXAMPLES,
-  LICENCE_TAGS,
-  MODELS,
-  notice,
-  noticeText,
-  TOKENIZERS,
-} from './registry.ts';
+import { LICENCE_TAGS, MODELS } from './registry-details.ts';
+import { CHIP_SPLITS, DEFAULT_TOKENIZER, EXAMPLES, notice, noticeText, TOKENIZERS } from './registry.ts';
 
 describe('registry view (03 §B.7 rules)', () => {
   it('lists the nine shipped tokenizers with exactly one default (o200k_base)', () => {

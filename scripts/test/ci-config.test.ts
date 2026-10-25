@@ -101,10 +101,7 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
     const limits = Object.fromEntries(entries.map((entry) => [entry.name.split(/[:(]/)[0]?.trim() ?? '', entry.limit]));
     expect(limits).toEqual({
       'dist/index.html': '14 KiB',
-      // INTERIM (wave-1 integration): 06 §3 budgets Main JS at 55 KiB. With WP04's registry data and WP01's fixture
-      // bridge wired in (replacing WP06's stubs) the shell measures 62.3 KiB brotli; the ceiling is raised to 64 KiB
-      // until the planner decides between trimming/lazy-loading and a new budget. Restore 55 KiB with that decision.
-      'Main JS': '64 KiB',
+      'Main JS': '55 KiB',
       'i18n chunk': '8 KiB',
       'Worker core': '12 KiB',
       'Engine chunk': '10 KiB',

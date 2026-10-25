@@ -195,7 +195,15 @@ describe('browser entry', () => {
 
   it('never imports zod or the schemas at runtime (AD-28)', () => {
     const graph = [...valueImports('index.ts')];
-    expect(graph).toEqual(expect.arrayContaining(['index.ts', 'data.ts', '../data/tokenizers.json']));
+    expect(graph).toEqual(
+      expect.arrayContaining([
+        'index.ts',
+        'data.ts',
+        'data/tokenizers.ts',
+        'data/models.ts',
+        '../../data/tokenizers.json',
+      ]),
+    );
     expect(graph.filter((m) => m === 'zod' || m.includes('schema') || m.includes('check'))).toEqual([]);
   });
 });

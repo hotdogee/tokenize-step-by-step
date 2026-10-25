@@ -6,8 +6,8 @@ import { cachedTokenizers } from '../shell/cache-probe.ts';
 import { progressPercent } from '../shell/progress.ts';
 import { AppState, optionsFor } from './app-state.svelte.ts';
 import { createClient, defaultResult } from './bootstrap.ts';
-import { isNoPrecomputedResult } from './examples-client.ts';
 import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
+import { isNoPrecomputedResult } from './no-precomputed.ts';
 import { EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
 import { STORAGE_KEYS } from './storage.ts';
 

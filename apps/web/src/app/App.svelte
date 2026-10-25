@@ -2,7 +2,9 @@
   /**
    * The `/` page frame (05 §1): regions in DOM order = tab order — header (wordmark, picker, language, theme, help) →
    * input panel → pipeline rail → board → notices strip + footer → live-check drawer. The rail, board and drawer are
-   * placeholders until WP09 / WP08 / WP10 land. Also owns the global single-key shortcuts (AD-22) and the two dialogs.
+   * placeholders until WP09 / WP08 / WP10 land. Also owns the global single-key shortcuts (AD-22) and the two dialogs,
+   * which load on first open: neither is needed for first paint, and the picker brings the model rows and licence tags
+   * with it (registry-details.ts), so both stay out of the initial Main JS of `/` (06 §3).
    */
   import { onMount } from 'svelte';
   import { i18n } from '../i18n/locale.svelte.ts';
@@ -11,13 +13,13 @@
   import ExampleChips from '../shell/ExampleChips.svelte';
   import Footer from '../shell/Footer.svelte';
   import Header from '../shell/Header.svelte';
-  import HelpDialog from '../shell/HelpDialog.svelte';
+  import type HelpDialogComponent from '../shell/HelpDialog.svelte';
   import LiveCheckPlaceholder from '../shell/LiveCheckPlaceholder.svelte';
   import LiveRegions from '../shell/LiveRegions.svelte';
   import NoticesStrip from '../shell/NoticesStrip.svelte';
   import OptionsRow from '../shell/OptionsRow.svelte';
   import PickerButton from '../shell/PickerButton.svelte';
-  import PickerDialog from '../shell/PickerDialog.svelte';
+  import type PickerDialogComponent from '../shell/PickerDialog.svelte';
   import { isEditableTarget, matchShortcut } from '../shell/shortcuts.ts';
   import StagePlaceholder from '../shell/StagePlaceholder.svelte';
   import TextInput from '../shell/TextInput.svelte';
@@ -36,6 +38,8 @@
 
   let pickerOpen = $state(false);
   let helpOpen = $state(false);
+  let PickerDialog: typeof PickerDialogComponent | null = $state.raw(null);
+  let HelpDialog: typeof HelpDialogComponent | null = $state.raw(null);
   let textarea: HTMLTextAreaElement | undefined = $state();
   let liveCheckHeading: HTMLHeadingElement | undefined = $state();
 
@@ -59,6 +63,39 @@
     else if (result !== null) detail = i18n.t('counts.tokens', { n: result.stats.tokens });
     else detail = i18n.t('counts.tokensPending');
     app.announce(i18n.t('status.stage', { name, detail }));
+  }
+
+  /** A dialog chunk that fails to load means a page older than the deploy: the `fetch` alert offers the reload (AD-11). */
+  function staleChunk(error: unknown): void {
+    app.error = { code: 'fetch', message: String(error), retryable: false, tokenizer: app.tokenizer, previous: null };
+  }
+
+  function openPicker(): void {
+    pickerOpen = true;
+    if (PickerDialog !== null) return;
+    import('../shell/PickerDialog.svelte').then(
+      (module) => {
+        PickerDialog = module.default;
+      },
+      (error: unknown) => {
+        pickerOpen = false;
+        staleChunk(error);
+      },
+    );
+  }
+
+  function openHelp(): void {
+    helpOpen = true;
+    if (HelpDialog !== null) return;
+    import('../shell/HelpDialog.svelte').then(
+      (module) => {
+        HelpDialog = module.default;
+      },
+      (error: unknown) => {
+        helpOpen = false;
+        staleChunk(error);
+      },
+    );
   }
 
   function onKeydown(event: KeyboardEvent): void {
@@ -89,13 +126,13 @@
         app.setGraphemes(!app.graphemes);
         break;
       case 'picker':
-        pickerOpen = true;
+        openPicker();
         break;
       case 'focusText':
         textarea?.focus();
         break;
       case 'help':
-        helpOpen = true;
+        openHelp();
         break;
     }
   }
@@ -108,20 +145,9 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<Header
-  home
-  skipTarget="#board"
-  skipLabel={i18n.t('nav.skip')}
-  onhelp={() => {
-    helpOpen = true;
-  }}
->
+<Header home skipTarget="#board" skipLabel={i18n.t('nav.skip')} onhelp={openHelp}>
   {#snippet picker()}
-    <PickerButton
-      onopen={() => {
-        pickerOpen = true;
-      }}
-    />
+    <PickerButton onopen={openPicker} />
   {/snippet}
 </Header>
 
@@ -136,22 +162,26 @@
   <StagePlaceholder />
   <BoardPlaceholder />
 
-  <PickerDialog
-    open={pickerOpen}
-    assets={app.assets}
-    onclose={() => {
-      pickerOpen = false;
-    }}
-    onlivecheck={() => {
-      liveCheckHeading?.focus();
-    }}
-  />
-  <HelpDialog
-    open={helpOpen}
-    onclose={() => {
-      helpOpen = false;
-    }}
-  />
+  {#if PickerDialog !== null}
+    <PickerDialog
+      open={pickerOpen}
+      assets={app.assets}
+      onclose={() => {
+        pickerOpen = false;
+      }}
+      onlivecheck={() => {
+        liveCheckHeading?.focus();
+      }}
+    />
+  {/if}
+  {#if HelpDialog !== null}
+    <HelpDialog
+      open={helpOpen}
+      onclose={() => {
+        helpOpen = false;
+      }}
+    />
+  {/if}
 </main>
 
 <Footer entry={app.entry}>

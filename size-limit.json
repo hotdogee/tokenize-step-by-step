@@ -5,16 +5,18 @@
     "limit": "14 KiB"
   },
   {
-    "name": "Main JS: initial shell (Svelte runtime + app + i18n + inlined example + manifest summary) [INTERIM wave-1 ceiling 64 KiB; design budget 55 KiB, 06 §3 — pending a planner decision]",
+    "name": "Main JS: initial shell of / (Svelte runtime + app + i18n + inlined example + manifest summary; chunks / loads only later are named lazy-*.js by apps/web/plugins/lazy-chunks.ts)",
     "path": [
       "apps/web/dist/assets/*.js",
       "!apps/web/dist/assets/about-*.js",
+      "!apps/web/dist/assets/notFound-*.js",
+      "!apps/web/dist/assets/lazy-*.js",
       "!apps/web/dist/assets/boot-*.js",
       "!apps/web/dist/assets/entry-*.js",
       "!apps/web/dist/assets/bytelevel-*.js",
       "!apps/web/dist/assets/spm-*.js"
     ],
-    "limit": "64 KiB"
+    "limit": "55 KiB"
   },
   {
     "name": "i18n chunk (three catalogs, part of the main JS)",

@@ -19,16 +19,7 @@ import type {
 import type { ExamplesWire } from '@tsbs/core/fixture/examples-wire';
 import type { FixtureTokenizerRef } from '@tsbs/core/fixture/from-fixture-case';
 import { CancelledError, isCancelled, MockClientError, MockTokenizerClient } from '@tsbs/core/fixture/mock-client';
-
-/** Rejection of an encode whose text is not one of the precomputed examples (no engine exists yet). */
-export class NoPrecomputedResultError extends Error {
-  override readonly name = 'NoPrecomputedResultError';
-}
-
-/** True for `NoPrecomputedResultError` (by name, so it survives any re-wrapping). */
-export function isNoPrecomputedResult(error: unknown): boolean {
-  return error instanceof Error && error.name === 'NoPrecomputedResultError';
-}
+import { NoPrecomputedResultError } from './no-precomputed.ts';
 
 type Fetch = (url: string) => Promise<Response>;
 

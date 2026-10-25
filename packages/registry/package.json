@@ -8,6 +8,12 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./tokenizers": "./src/data/tokenizers.ts",
+    "./models": "./src/data/models.ts",
+    "./licences": "./src/data/licences.ts",
+    "./examples": "./src/data/examples.ts",
+    "./byok": "./src/data/byok.ts",
+    "./strings": "./src/data/strings.ts",
     "./schema": "./src/schema.ts",
     "./check": "./src/check.ts",
     "./data/*.json": "./data/*.json"
