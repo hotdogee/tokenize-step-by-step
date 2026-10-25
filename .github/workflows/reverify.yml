@@ -1,0 +1,39 @@
+# Monthly "Re-verify inferred mappings" issue (AD-14; docs/design/06-quality-ci-deploy.md §4, §7): models.json rows (and
+# byok.json) whose checkedOn is more than 90 days old, plus the research §9 watch list. One open issue at a time: a later
+# month comments on it instead of opening another. Nothing is opened while every row is current.
+name: reverify
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  reverify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # scripts/reverify.ts uses Node built-ins only: no install.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+      - id: list
+        run: node scripts/reverify.ts --out "$RUNNER_TEMP/reverify.md"
+      - name: Open or update the issue
+        if: steps.list.outputs.stale != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: Re-verify inferred mappings
+        run: |
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$TITLE\" in:title" --json number,title \
+            --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty")"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/reverify.md"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file "$RUNNER_TEMP/reverify.md"
+          fi
