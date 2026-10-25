@@ -8,6 +8,6 @@
     "rootDir": ".",
     "outDir": "../../node_modules/.cache/tsbuild/registry"
   },
-  "include": ["src"],
+  "include": ["src", "data/*.json"],
   "references": [{ "path": "../core" }]
 }

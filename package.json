@@ -22,7 +22,7 @@
     "vocab:verify": "tsbs-vocab verify",
     "unicode:export": "uv run --project tools/oracle tools/oracle/export_unicode_tables.py",
     "unicode:check": "node scripts/pending.ts unicode:check WP02 --skip",
-    "registry:check": "node scripts/pending.ts registry:check WP04 --skip",
+    "registry:check": "node packages/registry/scripts/registry-check.ts && vitest run --project registry",
     "test": "vitest run",
     "test:fuzz": "node scripts/pending.ts test:fuzz WP12",
     "e2e": "node scripts/pending.ts e2e WP11 --skip",

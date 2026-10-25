@@ -1,0 +1,28 @@
+{
+  "checkedOn": "2026-10-25",
+  "anthropic": {
+    "endpoint": "https://api.anthropic.com/v1/messages/count_tokens",
+    "version": "2026-10-21",
+    "authSchemes": ["bearer", "x-api-key"],
+    "defaultAuth": "bearer",
+    "browserAccessHeader": "anthropic-dangerous-direct-browser-access",
+    "workspaceHeader": "anthropic-workspace-id",
+    "models": [
+      { "id": "claude-opus-5-5", "label": "Claude Opus 5.5", "frameTokens": 8, "generation": "v5.5" },
+      { "id": "claude-sonnet-5-5", "label": "Claude Sonnet 5.5", "frameTokens": 8, "generation": "v5.5" },
+      { "id": "claude-haiku-5-5", "label": "Claude Haiku 5.5", "frameTokens": 8, "generation": "v5.5" },
+      { "id": "claude-opus-4-6", "label": "Claude Opus 4.6", "frameTokens": 7, "generation": "v3" },
+      { "id": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6", "frameTokens": 7, "generation": "v3" }
+    ]
+  },
+  "xai": {
+    "endpoint": "https://api.x.ai/v1/tokenize-text",
+    "defaultModel": "grok-4.7",
+    "models": [
+      { "id": "grok-4.7", "label": "Grok 4.7" },
+      { "id": "grok-4.6", "label": "Grok 4.6" },
+      { "id": "grok-4.5", "label": "Grok 4.5" },
+      { "id": "grok-4.3", "label": "Grok 4.3" }
+    ]
+  }
+}

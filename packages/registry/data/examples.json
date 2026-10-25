@@ -1,0 +1,226 @@
+[
+  {
+    "key": "zh-tw-tainan",
+    "fixtureCase": "zh-tw-tainan",
+    "text": "台灣台南",
+    "lang": "zh-Hant",
+    "why": {
+      "en": "The default example. 灣 splits mid-character on cl100k, Claude 1/2, Grok-2 and Grok-1 (E7 81 | A3); o200k, Llama and Gemma keep it whole.",
+      "zh-TW": "預設範例。在 cl100k、Claude 1/2、Grok-2 與 Grok-1 上，「灣」會在字元中間被切開（E7 81 | A3）；o200k、Llama 與 Gemma 則保持完整。",
+      "ja": "既定の例です。cl100k、Claude 1/2、Grok-2、Grok-1 では「灣」が文字の途中で分割されます（E7 81 | A3）。o200k、Llama、Gemma では分割されません。"
+    }
+  },
+  {
+    "key": "zh-tw-taiwan-formal",
+    "fixtureCase": "zh-tw-taiwan-formal",
+    "text": "臺灣",
+    "lang": "zh-Hant",
+    "why": {
+      "en": "臺 is the formal form of 台. cl100k, Claude 1/2, Grok-2 and Grok-1 cut both characters into partial-character tokens.",
+      "zh-TW": "「臺」是「台」的正式寫法。cl100k、Claude 1/2、Grok-2 與 Grok-1 會把兩個字都切成部分字元詞元。",
+      "ja": "「臺」は「台」の正式な字体です。cl100k、Claude 1/2、Grok-2、Grok-1 では両方の文字が部分文字トークンに分割されます。"
+    }
+  },
+  {
+    "key": "zh-tw-renao",
+    "fixtureCase": "zh-tw-renao",
+    "text": "熱鬧",
+    "lang": "zh-Hant",
+    "why": {
+      "en": "熱鬧 (“lively”) splits mid-character on every tokenizer except Gemma.",
+      "zh-TW": "「熱鬧」在 Gemma 以外的所有分詞器上都會在字元中間被切開。",
+      "ja": "「熱鬧」（にぎやか）は Gemma 以外のすべてのトークナイザーで文字の途中で分割されます。"
+    }
+  },
+  {
+    "key": "cjk-saba",
+    "fixtureCase": "cjk-saba",
+    "text": "鯖",
+    "lang": "ja",
+    "why": {
+      "en": "鯖 (mackerel) is one character but becomes two to three partial-character tokens on every tokenizer except Gemma.",
+      "zh-TW": "「鯖」只是一個字，但在 Gemma 以外的所有分詞器上都會變成兩到三個部分字元詞元。",
+      "ja": "「鯖」は 1 文字ですが、Gemma 以外のすべてのトークナイザーで 2〜3 個の部分文字トークンになります。"
+    }
+  },
+  {
+    "key": "cjk-turtle",
+    "fixtureCase": "cjk-turtle",
+    "text": "龜",
+    "lang": "zh-Hant",
+    "why": {
+      "en": "龜 (turtle) splits into partial-character tokens on most tokenizers; Gemma and Llama 4 / Muse keep it whole.",
+      "zh-TW": "「龜」在多數分詞器上會被切成部分字元詞元；Gemma 與 Llama 4 / Muse 則保持完整。",
+      "ja": "「龜」（亀）は多くのトークナイザーで部分文字トークンに分割されます。Gemma と Llama 4 / Muse では分割されません。"
+    }
+  },
+  {
+    "key": "cjk-ext-g-biang",
+    "fixtureCase": "cjk-ext-g-biang",
+    "text": "𰻝",
+    "lang": "zh-Hant",
+    "why": {
+      "en": "𰻝 (biáng, U+30EDD, CJK Extension G) is four bytes long and becomes four partial-character tokens on every tokenizer.",
+      "zh-TW": "「𰻝」（biáng，U+30EDD，CJK 擴充 G 區）長 4 個位元組，在所有分詞器上都會變成四個部分字元詞元。",
+      "ja": "「𰻝」（ビャン、U+30EDD、CJK 統合漢字拡張 G）は 4 バイトで、すべてのトークナイザーで 4 個の部分文字トークンになります。"
+    }
+  },
+  {
+    "key": "emoji-family-zwj",
+    "fixtureCase": "emoji-family-zwj",
+    "text": "👩‍👩‍👧",
+    "lang": "auto",
+    "why": {
+      "en": "One grapheme cluster of five code points joined by zero-width joiners (18 bytes); only Gemma avoids partial-character tokens.",
+      "zh-TW": "由零寬連接符連起五個碼位的一個字位簇（18 個位元組）；只有 Gemma 不產生部分字元詞元。",
+      "ja": "ゼロ幅接合子でつながった 5 つのコードポイントからなる 1 つの書記素クラスタ（18 バイト）です。部分文字トークンが出ないのは Gemma だけです。"
+    }
+  },
+  {
+    "key": "emoji-flag-tw",
+    "fixtureCase": "emoji-flag-tw",
+    "text": "🇹🇼",
+    "lang": "auto",
+    "why": {
+      "en": "A flag is two regional-indicator code points (8 bytes) in one grapheme cluster; byte-level tokenizers cut it into partial-character tokens.",
+      "zh-TW": "旗幟由兩個區域指示符碼位（8 個位元組）組成一個字位簇；位元組層級的分詞器會把它切成部分字元詞元。",
+      "ja": "旗は 2 つの地域指示子コードポイント（8 バイト）からなる 1 つの書記素クラスタです。バイトレベルのトークナイザーでは部分文字トークンに分割されます。"
+    }
+  },
+  {
+    "key": "emoji-heart-vs16",
+    "fixtureCase": "emoji-heart-vs16",
+    "text": "❤️",
+    "lang": "auto",
+    "why": {
+      "en": "U+2764 plus variation selector-16: two code points, one grapheme cluster. o200k encodes both as a single token.",
+      "zh-TW": "U+2764 加上異體字選擇器 16：兩個碼位、一個字位簇。o200k 將兩者編成單一詞元。",
+      "ja": "U+2764 と異体字セレクタ 16 で、2 つのコードポイントが 1 つの書記素クラスタになります。o200k では両方で 1 トークンです。"
+    }
+  },
+  {
+    "key": "ja-text",
+    "fixtureCase": "ja-text",
+    "text": "日本語のテキスト",
+    "lang": "ja",
+    "why": {
+      "en": "Kanji, hiragana and katakana in one run: o200k keeps every character whole, while cl100k and Claude 1/2 split one.",
+      "zh-TW": "漢字、平假名與片假名連在一起：o200k 的每個字都保持完整，cl100k 與 Claude 1/2 則會切開其中一個字。",
+      "ja": "漢字・ひらがな・カタカナが続く文字列です。o200k ではすべての文字がそのまま残り、cl100k と Claude 1/2 では 1 文字が分割されます。"
+    }
+  },
+  {
+    "key": "ja-shibuya-ramen",
+    "fixtureCase": "ja-shibuya-ramen",
+    "text": "東京都渋谷区のラーメン屋さん",
+    "lang": "ja",
+    "why": {
+      "en": "On Grok-2, token 4242 holds ー plus the first two bytes of メ: a partial-character token that also crosses a character boundary.",
+      "zh-TW": "在 Grok-2 上，詞元 4242 包含「ー」加上「メ」的前兩個位元組：一個跨越字元邊界的部分字元詞元。",
+      "ja": "Grok-2 ではトークン 4242 が「ー」と「メ」の先頭 2 バイトを含みます。文字の境界もまたぐ部分文字トークンです。"
+    }
+  },
+  {
+    "key": "mixed-hello-taiwan-tokyo",
+    "fixtureCase": "mixed-hello-taiwan-tokyo",
+    "text": "Hello 台灣! 東京タワー",
+    "lang": "auto",
+    "why": {
+      "en": "Latin, Han and katakana in one line: the pre-tokenizer starts a new chunk where the script changes.",
+      "zh-TW": "拉丁字母、漢字與片假名在同一行：預分詞器在文字系統改變處開始新的切塊。",
+      "ja": "ラテン文字・漢字・カタカナが 1 行に並びます。事前分割では文字体系が変わるところで新しいチャンクが始まります。"
+    }
+  },
+  {
+    "key": "zh-date",
+    "fixtureCase": "zh-date",
+    "text": "2024年10月",
+    "lang": "zh-Hant",
+    "why": {
+      "en": "Digits group differently: up to three per chunk on o200k, cl100k and Llama, one per token on Grok-2, Gemma and Grok-1, and a whole run per chunk on Claude 1/2.",
+      "zh-TW": "數字的分組方式各不相同：o200k、cl100k 與 Llama 每個切塊最多三位，Grok-2、Gemma 與 Grok-1 每位數字一個詞元，Claude 1/2 則整串數字為一個切塊。",
+      "ja": "数字のまとめ方はさまざまです。o200k、cl100k、Llama はチャンクごとに最大 3 桁、Grok-2、Gemma、Grok-1 は 1 桁ずつ 1 トークン、Claude 1/2 は連続する数字全体が 1 チャンクです。"
+    }
+  },
+  {
+    "key": "en-contraction-code",
+    "fixtureCase": "en-contraction-code",
+    "text": "I'm here\n\n code();",
+    "lang": "en",
+    "why": {
+      "en": "A contraction, a blank line and code: each pre-tokenizer treats 'm, newlines and leading spaces differently.",
+      "zh-TW": "縮寫、空行與程式碼：每個預分詞器處理 'm、換行與開頭空格的方式都不同。",
+      "ja": "短縮形、空行、コードの組み合わせです。'm、改行、先頭の空白の扱いは事前分割ごとに異なります。"
+    }
+  },
+  {
+    "key": "bopomofo",
+    "fixtureCase": "bopomofo",
+    "text": "ㄅㄆㄇㄈ ㄊㄞˊㄨㄢˇ˙ㄉㄜ",
+    "lang": "zh-Hant",
+    "why": {
+      "en": "Zhuyin (Bopomofo) with tone marks: o200k splits every symbol into partial-character tokens.",
+      "zh-TW": "帶聲調符號的注音符號：o200k 會把每個符號都切成部分字元詞元。",
+      "ja": "声調記号付きの注音符号（ボポモフォ）です。o200k ではすべての記号が部分文字トークンに分割されます。"
+    }
+  },
+  {
+    "key": "fullwidth-latin",
+    "fixtureCase": "fullwidth-latin",
+    "text": "ｆｕｌｌｗｉｄｔｈ ＡＢＣ１２３",
+    "lang": "en",
+    "why": {
+      "en": "Fullwidth Latin letters take three bytes each; Claude 1/2's NFKC option folds them to ASCII before tokenizing.",
+      "zh-TW": "全形拉丁字母每個佔 3 個位元組；Claude 1/2 的 NFKC 選項會先把它們轉成 ASCII 再分詞。",
+      "ja": "全角ラテン文字は 1 文字 3 バイトです。Claude 1/2 の NFKC オプションはトークン化の前に ASCII へ変換します。"
+    }
+  },
+  {
+    "key": "zh-tw-paragraph",
+    "fixtureCase": "zh-tw-paragraph",
+    "text": "「如果你只有一天可以待在台南，該怎麼安排？」朋友在捷運上這樣問我。我想了想，建議他一早先去國華街喝碗熱騰騰的牛肉湯，配一碗肉燥飯，再到附近的老店買一杯冬瓜茶。中午可以走到赤崁樓一帶，順路嘗嘗碗粿、蝦捲和鱔魚意麵。台南的小吃偏甜，第一次來的人常常嚇一跳，但吃久了反而會懷念那種味道。許多老店只做早上的生意，有的一天只賣兩百份，賣完就收攤，週末去還得排隊。下午天氣熱，不妨躲進巷弄裡的咖啡店，看看老房子改建的空間怎麼保留原本的木窗與磨石子地板。傍晚再去安平老街散步，買些蜜餞當伴手禮，看夕陽慢慢落進台灣海峽。如果時間還夠，晚上可以去花園夜市逛逛，不過要注意它只在週四、週六和週日營業。可惜台南目前還沒有捷運，移動大多得靠機車或公車；從台北搭高鐵南下大約一個半小時，再轉接駁車進市區。朋友聽完笑著說：「這樣聽起來，一天根本不夠，至少要住三晚吧！」我點點頭，順手把收藏的美食清單傳給他，提醒他記得帶悠遊卡，回台北轉乘捷運時才不會手忙腳亂。",
+    "label": {
+      "en": "zh-TW paragraph",
+      "zh-TW": "繁體中文段落",
+      "ja": "繁体字中国語の段落"
+    },
+    "lang": "zh-Hant",
+    "why": {
+      "en": "A paragraph about a day in Tainan: long runs of Han characters form a few large chunks with hundreds of merges.",
+      "zh-TW": "描寫台南一日遊的段落：一長串漢字形成少數幾個大切塊，需要數百次合併。",
+      "ja": "台南での一日を描いた段落です。長い漢字の連続が少数の大きなチャンクになり、数百回のマージが行われます。"
+    }
+  },
+  {
+    "key": "ja-paragraph",
+    "fixtureCase": "ja-paragraph",
+    "text": "週末、久しぶりに京都へ出かけました。朝早く新幹線に乗り、駅に着いたらまずコンビニでおにぎりとお茶を買いました。午前中は清水寺を参拝し、坂道の途中にある小さなお店で抹茶ソフトクリームを食べました。昼ごろから雨が降り始めたので、予定を変更して錦市場をぶらぶら歩くことにしました。漬物や湯葉、だし巻き卵など、どれも美味しそうで迷ってしまいます。結局、母へのお土産に京漬物を少しだけ買いました。夕方には鴨川沿いのカフェでコーヒーを飲みながら、スマートフォンで撮った写真を整理しました。帰りの電車ではすっかり疲れて眠ってしまいましたが、とても充実した一日でした。次は紅葉の季節に、友達と一緒にゆっくり旅行したいです。",
+    "label": {
+      "en": "Japanese paragraph",
+      "zh-TW": "日文段落",
+      "ja": "日本語の段落"
+    },
+    "lang": "ja",
+    "why": {
+      "en": "A paragraph about a weekend in Kyoto: kanji, hiragana and katakana in long runs.",
+      "zh-TW": "描寫京都週末的段落：漢字、平假名與片假名長串交錯。",
+      "ja": "京都での週末を描いた段落です。漢字・ひらがな・カタカナが長く続きます。"
+    }
+  },
+  {
+    "key": "en-paragraph",
+    "fixtureCase": "en-paragraph",
+    "text": "When Maria opened the bakery on 14th Street in 2019, she didn't expect the line to stretch around the block by 7:30 a.m. \"People told me sourdough was a fad,\" she says, laughing, \"but we've sold more than 250,000 loaves since then.\" Her secret isn't complicated: a 36-hour fermentation, flour milled within 120 miles, and a starter she's kept alive for over a decade. Last spring she began posting recipes at https://example.com/recipes?lang=en&page=2, and the site now gets roughly 3,400 visitors a day. It's a small business, but it's hers, and she wouldn't trade it for anything.",
+    "label": {
+      "en": "English paragraph",
+      "zh-TW": "英文段落",
+      "ja": "英語の段落"
+    },
+    "lang": "en",
+    "why": {
+      "en": "An English paragraph with contractions, numbers, quotes and a URL: mostly whole-word tokens.",
+      "zh-TW": "含有縮寫、數字、引號與網址的英文段落：大多是整個單字的詞元。",
+      "ja": "短縮形・数字・引用符・URL を含む英語の段落です。ほとんどが単語単位のトークンになります。"
+    }
+  }
+]

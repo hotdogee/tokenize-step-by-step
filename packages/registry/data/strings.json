@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "marker": {
+    "continued": {
+      "en": "continued from the previous row",
+      "zh-TW": "接續上一列",
+      "ja": "前の行から続く"
+    },
+    "continues": {
+      "en": "continues on the next row",
+      "zh-TW": "延續到下一列",
+      "ja": "次の行に続く"
+    },
+    "zeroWidthDummy": {
+      "en": "dummy prefix, 0 bytes",
+      "zh-TW": "虛擬前綴，0 位元組",
+      "ja": "ダミー接頭辞、0 バイト"
+    },
+    "zeroWidthBos": {
+      "en": "beginning-of-sequence token, 0 bytes",
+      "zh-TW": "序列起始詞元，0 位元組",
+      "ja": "系列開始トークン、0 バイト"
+    },
+    "splits": {
+      "en": "splits a character on this tokenizer",
+      "zh-TW": "此分詞器會切開這個字元",
+      "ja": "このトークナイザーでは文字が分割される"
+    },
+    "partialCut": {
+      "en": "token boundary inside this character",
+      "zh-TW": "詞元邊界落在這個字元內",
+      "ja": "この文字の内部にトークン境界がある"
+    },
+    "byteFallback": {
+      "en": "byte-fallback piece {hex}",
+      "zh-TW": "位元組回退詞片 {hex}",
+      "ja": "バイトフォールバックのピース {hex}"
+    },
+    "userDefined": {
+      "en": "pre-matched symbol, never merges",
+      "zh-TW": "預先比對的符號，不會合併",
+      "ja": "事前照合された記号、マージされない"
+    },
+    "special": {
+      "en": "special token",
+      "zh-TW": "特殊詞元",
+      "ja": "特殊トークン"
+    },
+    "justMerged": {
+      "en": "merged at this step",
+      "zh-TW": "在這一步合併",
+      "ja": "このステップでマージ"
+    },
+    "combining": {
+      "en": "combining mark {cp} attached to {base}",
+      "zh-TW": "組合記號 {cp} 附加於 {base}",
+      "ja": "{base} に付く結合文字 {cp}"
+    }
+  },
+  "byok": {
+    "zdrCors": {
+      "en": "Zero-data-retention organisations cannot call this endpoint from a browser.",
+      "zh-TW": "零資料保留（ZDR）組織無法從瀏覽器呼叫此端點。",
+      "ja": "ゼロデータ保持（ZDR）の組織は、ブラウザからこのエンドポイントを呼び出せません。"
+    },
+    "workspaceRequired": {
+      "en": "This key is not scoped to a workspace: enter a workspace ID (sent as anthropic-workspace-id).",
+      "zh-TW": "此金鑰未綁定工作區：請輸入工作區 ID（以 anthropic-workspace-id 送出）。",
+      "ja": "このキーはワークスペースに紐付いていません。ワークスペース ID を入力してください（anthropic-workspace-id として送信されます）。"
+    },
+    "frameNote": {
+      "en": "Includes about {frame} frame tokens that the API adds to every message.",
+      "zh-TW": "包含 API 為每則訊息加上的約 {frame} 個框架詞元。",
+      "ja": "API が各メッセージに追加する約 {frame} 個のフレームトークンを含みます。"
+    }
+  }
+}
