@@ -34,13 +34,13 @@
 | Metric | Budget | Enforced by |
 |---|---|---|
 | `dist/index.html` | ≤ 14 KB brotli | `size-limit`; LHCI `document ≤ 14` |
-| Main JS (Svelte runtime + app ≤ 42; i18n chunk ≤ 8; inlined default example ≤ 4; manifest summary ≤ 1) | ≤ 55 KB brotli | `size-limit` |
+| Main JS (Svelte runtime + app shell + board + inspector + rail + motion ≤ 67; i18n chunk ≤ 8; inlined default example ≤ 4; manifest summary ≤ 1 — PA-7; the wave 1 shell alone measured 55.92 KB) | ≤ 80 KB brotli | `size-limit` |
 | Worker core (loader + protocol + host) | ≤ 12 KB brotli | `size-limit` |
 | Engine chunks (lazy inside the Worker; the bytelevel chunk **is** fetched during the Lighthouse trace because o200k starts loading after LCP) | bytelevel ≤ 16 KB br (incl. 5.7 KB Unicode tables); spm ≤ 10 KB br | `size-limit` |
 | CSS (incl. the ≤ 4 KB stand-in WOFF2 as a separate `font` budget) | ≤ 20 KB brotli; font ≤ 4 KB | `size-limit`; LHCI `stylesheet ≤ 20`, `font ≤ 4` |
 | `boot-[hash].js` | ≤ 0.5 KB | `size-limit` |
-| **Script total in the trace** (main 55 + worker 12 + bytelevel engine 16 + boot 0.5 + slack) | ≤ 85 KB | LHCI `budgets.json` `script ≤ 85` |
-| **Total excluding the vocabulary** (document 14 + script 85 + stylesheet 20 + font 4) | ≤ 123 KB | LHCI `total ≤ 1,225` with `other ≤ 1,100` (the o200k `.bin` lands in `other`; Lighthouse cannot exclude paths) and a Playwright network assertion that non-`/tok/*` initial transfer ≤ 123 KB |
+| **Script total in the trace** (main 80 + worker 12 + bytelevel engine 16 + boot 0.5 + slack; PA-7) | ≤ 110 KB | LHCI `budgets.json` `script ≤ 110` |
+| **Total excluding the vocabulary** (document 14 + script 110 + stylesheet 20 + font 4; PA-7) | ≤ 148 KB | LHCI `total ≤ 1,250` with `other ≤ 1,100` (the o200k `.bin` lands in `other`; Lighthouse cannot exclude paths) and a Playwright network assertion that non-`/tok/*` initial transfer ≤ 148 KB |
 | Lazy `examples/<tok>.json` | ≤ 16 KB gzip each (ceiling). Measured 2026-10-25 (zlib gzip-9, as `check:dist` computes it): o200k 6.4, cl100k 7.8, claude-legacy 7.9, gemma4 5.7, gemma2 5.6, llama4-muse 6.1, llama3 6.5, grok2 6.3, grok1 9.7 KB (largest) | `check:dist` |
 | Default vocab (o200k) | 1,025 KB gzip (`other` bucket); **load trigger**: the client posts `load` after `document.fonts.ready` and two `requestAnimationFrame`s following `DOMContentLoaded`, so the Worker script, engine chunk and `.bin` never compete with the main bundle before LCP | `check:dist` (per-asset gzip ≤ 1.7 MB unless whitelisted); E2E asserts the `/tok/*` request starts after the LCP entry |
 | FCP / LCP (LHCI mobile preset: Moto G Power class, 4× CPU, **Lighthouse "Slow 4G"** 1.6 Mbps / 150 ms RTT) | ≤ 1.5 s / ≤ 2.0 s | LHCI assertions against the deployed preview |
