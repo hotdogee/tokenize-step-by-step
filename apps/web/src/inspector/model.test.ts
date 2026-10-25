@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { boardContext, caseResult, translator } from '../board/fixture-results.test-helper.ts';
 import type { CellRef } from '../board/units.ts';
 import { LOCALES, type Locale } from '../i18n/types.ts';
-import { inspectorModel, type InspectorModel } from './model.ts';
+import { translateInspector } from './i18n/catalogs.ts';
+import { copyValueOf, inspectorModel, type InspectorModel } from './model.ts';
 import type { TokenizationResult } from '@tsbs/core';
 
 function modelOf(
@@ -14,12 +15,17 @@ function modelOf(
   ref: CellRef,
   options: { stage?: 4 | 5 | 6; step?: number; fusedDummy?: boolean; locale?: Locale } = {},
 ): InspectorModel {
-  const ctx = boardContext(result, { K: 34, stage: options.stage ?? 6, step: options.step });
+  const ctx = boardContext(result, {
+    K: 34,
+    stage: options.stage ?? 6,
+    ...(options.step === undefined ? {} : { step: options.step }),
+  });
   return inspectorModel({
     result,
     units: ctx.units,
     ref,
     t: translator(options.locale),
+    ti: (key, params) => translateInspector(options.locale ?? 'en', key, params),
     fusedDummy: options.fusedDummy ?? false,
     lang: 'und',
     step: options.step ?? result.timeline?.stepCount ?? 0,
@@ -42,6 +48,8 @@ describe('partial characters (cl100k 灣)', () => {
     expect(value(model, 'token', 'text')).toBe('⟨E7 81⟩');
     expect(value(model, 'token', 'flags')).toBe('partial, ends mid-character');
     expect(model.copyValue).toBe('66285');
+    expect(model.actions).toEqual({ showStep: 'Show this step', selectInText: 'Select in text' });
+    expect(model.sections[0]?.fields.find((field) => field.key === 'id')?.copyLabel).toBe('Copy id');
     expect(model.select).toEqual([1, 2]);
     expect(model.summary).toBe('66285, E7 81, [3, 5), first 2 of 3 bytes of 灣');
   });
@@ -150,4 +158,14 @@ describe('every inspector string renders in all three locales', () => {
       }
     });
   }
+});
+
+describe('copyValueOf (the c key, no catalog needed)', () => {
+  it('copies ids, hex and text per tier', () => {
+    const result = caseResult('openai-cl100k_base', 'zh-tw-tainan');
+    const ctx = boardContext(result, { K: 34 });
+    expect(copyValueOf(result, ctx.units, { tier: 'token', index: 1 })).toBe('66285');
+    expect(copyValueOf(result, ctx.units, { tier: 'dec', index: 3 })).toBe('E7');
+    expect(copyValueOf(result, ctx.units, { tier: 'char', index: 3 })).toBe('南');
+  });
 });

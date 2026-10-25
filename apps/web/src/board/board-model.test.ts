@@ -4,7 +4,6 @@
  * machine on a 3-row fixture (o200k `ja-text` at K = 9, the 360 px phone layout).
  */
 import { describe, expect, it } from 'vitest';
-import { MAX_COLUMNS as GENERATED_COLUMNS } from '../../plugins/grid-classes.ts';
 import { boardContext, caseResult } from './fixture-results.test-helper.ts';
 import {
   appTier,
@@ -32,7 +31,7 @@ describe('K = clamp(8, floor((boardWidth − 2·gutter) / cell), 64) (05 §3.3)'
 
   it('clamps to the generated placement classes and keeps a column for sub-pixel widths', () => {
     expect(MIN_COLUMNS).toBe(8);
-    expect(MAX_COLUMNS).toBe(GENERATED_COLUMNS);
+    expect(MAX_COLUMNS).toBe(64); // = the generated .c64/.s64 classes (plugins/grid-classes.test.ts)
     expect(GUTTER).toBe(16);
     expect(columnsFor(100, 36)).toBe(8);
     expect(columnsFor(100_000, 30)).toBe(64);

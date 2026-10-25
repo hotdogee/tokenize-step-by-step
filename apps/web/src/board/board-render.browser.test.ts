@@ -47,7 +47,7 @@ describe('05 §4.1 hard cases', () => {
     const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
     const wan = cell(board, '[data-tier="char"][data-index="1"]');
     const slices = [...wan.querySelectorAll<HTMLElement>('.bd-slice')];
-    expect(slices.map((slice) => slice.className.match(/bd-t\d/)?.[0])).toEqual(['bd-t1', 'bd-t1', 'bd-t2']);
+    expect(slices.map((slice) => /bd-t\d/.exec(slice.className)?.[0])).toEqual(['bd-t1', 'bd-t1', 'bd-t2']);
     expect(slices[2]?.classList.contains('bd-cut')).toBe(true);
     const cutRule = getComputedStyle(slices[2] ?? wan, '::before');
     expect(cutRule.backgroundImage).toContain('repeating-linear-gradient');

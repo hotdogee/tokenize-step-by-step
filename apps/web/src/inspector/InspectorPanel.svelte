@@ -93,7 +93,7 @@
                     <button
                       type="button"
                       class="copy"
-                      aria-label={i18n.t('inspector.copy', { label: entry.label })}
+                      aria-label={entry.copyLabel}
                       onclick={() => {
                         oncopy(entry.value);
                       }}><BoardIcon name="copy" size={14} /></button
@@ -113,7 +113,7 @@
               class="btn action"
               onclick={() => {
                 onshowstep(step);
-              }}>{i18n.t('inspector.showStep')}</button
+              }}>{model.actions.showStep}</button
             >
           {/if}
         </div>
@@ -125,7 +125,7 @@
           class="btn action"
           onclick={() => {
             onselect(range);
-          }}>{i18n.t('inspector.selectInText')}</button
+          }}>{model.actions.selectInText}</button
         >
       {/if}
     </div>

@@ -81,6 +81,8 @@ export async function mountBoard(app: AppState, width?: number): Promise<Mounted
   const component = mount(BoardHarness, { target, props: { app, width } });
   flushSync();
   await frames(3);
+  // The inspector's catalog is a lazy chunk: wait for it so tests see the panel's content.
+  for (let i = 0; i < 200 && target.querySelector('[data-inspector="ready"]') === null; i++) await frames(1);
   const grid = target.querySelector<HTMLElement>('[role="grid"]');
   if (grid === null) throw new Error('board grid not rendered');
   return {

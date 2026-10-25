@@ -28,7 +28,9 @@
   import { formatPercent } from '../i18n/t.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
   import InspectorHost from '../inspector/InspectorHost.svelte';
-  import { inspectorModel } from '../inspector/model.ts';
+  import type * as InspectorCatalogModule from '../inspector/i18n/catalogs.ts';
+  import type { InspectorTranslate } from '../inspector/i18n/catalogs.ts';
+  import { copyValueOf, inspectorModel } from '../inspector/model.ts';
   import { progressPercent } from '../shell/progress.ts';
   import { isComposing } from '../shell/shortcuts.ts';
   import type { InteractionState } from './cell-state.ts';
@@ -108,6 +110,8 @@
   let pinAnchor: Anchor | null = $state(null);
   let hoverRef: CellRef | null = $state(null);
   let gridFocused = $state(false);
+  /** The inspector shows content once the board has been focused, hovered or tapped (until then: its hint). */
+  let engaged = $state(false);
   let panelFocused = $state(false);
   let panelHovered = false;
   let sheetExpanded = $state(false);
@@ -117,7 +121,7 @@
 
   const focusRef = $derived(resolveAnchor(focusAnchor));
   const pinRef = $derived(pinAnchor === null ? null : resolveAnchor(pinAnchor));
-  const inspected = $derived(pinRef ?? hoverRef ?? focusRef);
+  const inspected = $derived(pinRef ?? hoverRef ?? (engaged ? focusRef : null));
   const sliceRef = $derived(pinRef ?? hoverRef ?? (gridFocused ? focusRef : null));
   const interaction: InteractionState = $derived({
     focus: focusRef,
@@ -125,8 +129,17 @@
     slice: sliceRef === null ? null : units.span(sliceRef.tier, sliceRef.index),
     selected,
   });
+  /** The inspector catalog loads after first paint (a lazy chunk, PA-7); until then the panel shows its hint. */
+  let inspectorCatalog: typeof InspectorCatalogModule | null = $state.raw(null);
+  const ti: InspectorTranslate | null = $derived.by(() => {
+    const catalog = inspectorCatalog;
+    const locale = i18n.current;
+    return catalog === null ? null : (key, params) => catalog.translateInspector(locale, key, params);
+  });
   const model = $derived(
-    inspected === null ? null : inspectorModel({ result, units, ref: inspected, t: i18n.t, fusedDummy, lang, step }),
+    inspected === null || ti === null
+      ? null
+      : inspectorModel({ result, units, ref: inspected, t: i18n.t, ti, fusedDummy, lang, step }),
   );
 
   // ---- virtual window ----
@@ -308,12 +321,13 @@
       void focusPanel();
     } else if (letter === 'c') {
       event.preventDefault();
-      void copyValue(inspectorModel({ result, units, ref, t: i18n.t, fusedDummy, lang, step }).copyValue);
+      void copyValue(copyValueOf(result, units, ref));
     }
   }
 
   function onFocusIn(event: FocusEvent): void {
     gridFocused = true;
+    engaged = true;
     const ref = refOf(event.target);
     if (ref === null) return;
     const element = event.target as HTMLElement;
@@ -425,6 +439,14 @@
 
   onMount(() => {
     measure();
+    void import('../inspector/i18n/catalogs.ts').then(
+      (catalog) => {
+        inspectorCatalog = catalog;
+      },
+      () => {
+        // A stale deploy (chunk gone): the panel keeps its hint; the shell's reload alert covers the rest.
+      },
+    );
     let frame = 0;
     const schedule = (): void => {
       cancelAnimationFrame(frame);
@@ -538,7 +560,12 @@
 
 <section class="board-region" id="board" aria-labelledby="board-label" data-reflow-exempt data-testid="board">
   <h2 id="board-label" class="visually-hidden">{i18n.t('board.label')}</h2>
-  <div class="layout" bind:this={layout} data-surface={viewport.surface}>
+  <div
+    class="layout"
+    bind:this={layout}
+    data-surface={viewport.surface}
+    data-inspector={ti === null ? 'loading' : 'ready'}
+  >
     <div class="main" class:nfkc={nfkc !== null} bind:this={main} data-k={K}>
       <div class="probe" aria-hidden="true" bind:this={probe}></div>
       <!-- svelte-ignore a11y_interactive_supports_focus (the grid's single tab stop is its active gridcell, APG layout grid) -->
@@ -577,7 +604,7 @@
         {/if}
       </div>
       {#if pending}<p class="pending prose" data-testid="board-pending">{pendingText}</p>{/if}
-      {#if !keysUsed}<p class="hint prose">{i18n.t('board.hint')}</p>{/if}
+      {#if !keysUsed}<p class="hint prose">{ti?.('board.hint') ?? ''}</p>{/if}
     </div>
     <InspectorHost
       surface={viewport.surface}
@@ -640,7 +667,19 @@
   .hint {
     margin: 0.5rem 0 0;
     font-size: 0.875rem;
+    line-height: 1.3;
     color: var(--fg-muted);
+  }
+
+  /* The hint's text arrives with the inspector catalog (lazy): its lines are reserved so nothing shifts (CLS). */
+  .hint {
+    min-height: 2.6em;
+  }
+
+  @media (min-width: 768px) {
+    .hint {
+      min-height: 1.3em;
+    }
   }
 
   :global(html) {
