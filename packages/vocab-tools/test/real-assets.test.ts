@@ -2,9 +2,9 @@
  * The nine real vocabularies (skipped when `data/vocab/raw` is absent, e.g. in a CI job without the oracle cache):
  * known counts, META facts asserted by WP03's acceptance (maxPieceBytes, unusedCount, Gemma 4 TYPS), sizes against
  * 03 §C.3, the writer → independent reader round trip, and the joint WP02/WP03 gate through `readTsbv1` from
- * `@tsbs/core/format/tsbv1` (a todo until WP02 merges; a reader that exists but is broken fails, it is never skipped):
- * once on the in-memory containers and once on every `.bin` that `pnpm vocab:build` wrote to `data/vocab/dist` (that
- * half is skipped while the directory has no vocab manifest, e.g. before the first build).
+ * `@tsbs/core/format/tsbv1` (WP02 has merged, so a reader that no longer resolves or is broken fails the gate; it is
+ * never skipped): once on the in-memory containers and once on every `.bin` that `pnpm vocab:build` wrote to
+ * `data/vocab/dist` (that half is skipped while the directory has no vocab manifest, e.g. before the first build).
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -13,7 +13,7 @@ import * as core from '@tsbs/core';
 import type { Tsbv1, VocabManifest } from '@tsbs/core';
 import { MANIFEST_FILE } from '../src/build.ts';
 import { gunzip, gzipDeterministic, sha256Hex } from '../src/compress.ts';
-import { loadReadTsbv1 } from '../src/core-reader.ts';
+import { loadReadTsbv1, type ReadTsbv1 } from '../src/core-reader.ts';
 import { readOracleManifest, type OracleManifest } from '../src/oracle-manifest.ts';
 import { loadSourceInputs } from '../src/raw.ts';
 import { ASSET_SOURCES, type AssetSource } from '../src/sources/index.ts';
@@ -23,7 +23,7 @@ import { upstreamOf } from '../src/licences.ts';
 import { DIST, HAS_DIST, HAS_RAW, ORACLE_MANIFEST, RAW } from './support/repo.ts';
 import { readTestContainer } from './support/tsbv-test-reader.ts';
 
-/** Known facts per tokenizer: counts, maxPieceBytes and the 03 §C.3 sizes in KB (raw, gzip). Gemma 2 is the measured value. */
+/** Known facts per tokenizer: counts, maxPieceBytes and the 03 §C.3 sizes in KB (raw, gzip); Gemma 2 is measured. */
 const EXPECTED: Record<
   string,
   { pieces: number; specials: number; maxPieceBytes: number; rawKb: number; gzKb: number }
@@ -203,37 +203,40 @@ describe.skipIf(!HAS_RAW)('real vocabularies (data/vocab/raw)', () => {
   };
 
   const jointGate = 'joint WP02/WP03 gate: every container reads back deep-equal through readTsbv1';
-  // TODO(WP02): a todo only while wp/02-unicode-format (readTsbv1 in @tsbs/core/format/tsbv1) has not merged.
-  if (reader.kind === 'absent') it.todo(`${jointGate} — TODO(WP02): ${reader.reason}`);
-  else {
-    const read = reader.read;
-    it(`${jointGate} (${reader.from})`, () => {
-      for (const { source, tables, container } of built.values()) {
-        const tsbv = read(container.bytes.slice().buffer);
-        expect(tsbv.meta, source.tokenizerId).toEqual(container.meta);
-        expectSameTables(tsbv, tables, source.tokenizerId);
-      }
-    });
+  /** WP02's reader has merged: if `@tsbs/core/format/tsbv1` stops resolving, the gate fails instead of skipping. */
+  const readTsbv1 = (): ReadTsbv1 => {
+    expect(reader.kind, reader.kind === 'absent' ? reader.reason : reader.from).toBe('found');
+    if (reader.kind === 'absent') throw new Error(reader.reason);
+    return reader.read;
+  };
+  it(jointGate, () => {
+    const read = readTsbv1();
+    for (const { source, tables, container } of built.values()) {
+      const tsbv = read(container.bytes.slice().buffer);
+      expect(tsbv.meta, source.tokenizerId).toEqual(container.meta);
+      expectSameTables(tsbv, tables, source.tokenizerId);
+    }
+  });
 
-    it.skipIf(!HAS_DIST)(`${jointGate}, on every .bin in data/vocab/dist`, async () => {
-      const manifest = JSON.parse(await readFile(join(DIST, MANIFEST_FILE), 'utf8')) as VocabManifest;
-      expect(Object.keys(manifest.assets).sort(), 'stale data/vocab/dist: run pnpm vocab:build').toEqual(
-        [...built.keys()].sort(),
-      );
-      for (const [id, entry] of Object.entries(manifest.assets)) {
-        const { tables } = get(id);
-        const file = new Uint8Array(await readFile(join(DIST, ...entry.path.slice(1).split('/'))));
-        expect(sha256Hex(file), id).toBe(entry.sha256);
-        const container = gunzip(file);
-        expect(sha256Hex(container), id).toBe(entry.sha256Raw);
-        const tsbv = read(container.slice().buffer);
-        expect(tsbv.meta.tokenizerId, id).toBe(id);
-        expect(tsbv.meta.family, id).toBe(entry.family);
-        expect(tsbv.meta.counts, id).toEqual(entry.counts);
-        expect(tsbv.meta.upstream, id).toEqual(entry.upstream);
-        expect(tsbv.meta, id).toMatchObject({ ...tables.config, maxPieceBytes: EXPECTED[id]?.maxPieceBytes });
-        expectSameTables(tsbv, tables, id);
-      }
-    });
-  }
+  it.skipIf(!HAS_DIST)(`${jointGate}, on every .bin in data/vocab/dist`, async () => {
+    const read = readTsbv1();
+    const manifest = JSON.parse(await readFile(join(DIST, MANIFEST_FILE), 'utf8')) as VocabManifest;
+    expect(Object.keys(manifest.assets).sort(), 'stale data/vocab/dist: run pnpm vocab:build').toEqual(
+      [...built.keys()].sort(),
+    );
+    for (const [id, entry] of Object.entries(manifest.assets)) {
+      const { tables } = get(id);
+      const file = new Uint8Array(await readFile(join(DIST, ...entry.path.slice(1).split('/'))));
+      expect(sha256Hex(file), id).toBe(entry.sha256);
+      const container = gunzip(file);
+      expect(sha256Hex(container), id).toBe(entry.sha256Raw);
+      const tsbv = read(container.slice().buffer);
+      expect(tsbv.meta.tokenizerId, id).toBe(id);
+      expect(tsbv.meta.family, id).toBe(entry.family);
+      expect(tsbv.meta.counts, id).toEqual(entry.counts);
+      expect(tsbv.meta.upstream, id).toEqual(entry.upstream);
+      expect(tsbv.meta, id).toMatchObject({ ...tables.config, maxPieceBytes: EXPECTED[id]?.maxPieceBytes });
+      expectSameTables(tsbv, tables, id);
+    }
+  });
 });
