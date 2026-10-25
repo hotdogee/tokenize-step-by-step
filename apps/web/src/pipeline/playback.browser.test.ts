@@ -2,11 +2,11 @@
  * The playback controller and the rail in chromium (05 §2, §3.5, §8): the step-duration clamp and the three speeds,
  * replay scoped to the focused chunk (byte-level) or a 2,000-byte window (spm) above 2,000 steps with the scope stated
  * in the rail's status line, playback over a manual clock (start, one step per tick, stop at the scope's end, restart),
- * and the rail's controls: six named radios, Space on the scrubber, Home/End, the stop-6 step rule.
+ * and the rail's controls: six named radios, Space on the scrubber, Home/End, the stop-6 step rule, follow mode.
  */
 import '../theme/base.css';
 import { flushSync } from 'svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { appWith, fixtureResult, frames } from '../board/board.test-helper.ts';
 import { Playback } from './playback.svelte.ts';
@@ -18,6 +18,7 @@ let mounted: MountedRail | null = null;
 afterEach(() => {
   mounted?.destroy();
   mounted = null;
+  vi.restoreAllMocks();
 });
 
 describe('step duration: clamp(60 ms, 12 s / steps, 450 ms) ÷ speed', () => {
@@ -172,6 +173,29 @@ describe('the rail (05 §3.5 ARIA table, §8 keys)', () => {
     await userEvent.keyboard('{End}');
     await frames(1);
     expect(app).toMatchObject({ stage: 5, step: app.stepCount });
+  });
+
+  it('keeps the merged part in view until a manual scroll, and again after "jump to end"', async () => {
+    const app = appWith(fixtureResult('openai-o200k_base', 'zh-tw-tainan'), { stage: 5, step: 2 });
+    mounted = await mountRail(app, { motion: false });
+    const scrolls: unknown[] = [];
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation((options) => {
+      scrolls.push(options);
+    });
+    app.step = 3;
+    flushSync();
+    expect(scrolls).toHaveLength(1); // follow mode
+    document.body.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 40 }));
+    app.step = 4;
+    flushSync();
+    expect(scrolls).toHaveLength(1); // off after a manual scroll
+    const scrubber = mounted.rail.querySelector<HTMLInputElement>('[data-testid="scrubber"]');
+    scrubber?.dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 40 })); // over the rail: not a board scroll
+    scrubber?.focus();
+    await userEvent.keyboard('{End}'); // jump to end: on again
+    await frames(1);
+    expect(app.step).toBe(app.stepCount);
+    expect(scrolls).toHaveLength(2);
   });
 
   it('states a scoped replay in its status line', async () => {

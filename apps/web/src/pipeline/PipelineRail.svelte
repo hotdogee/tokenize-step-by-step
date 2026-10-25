@@ -150,7 +150,9 @@
           keyStep = false;
         }, 0);
     };
-    const manualScroll = (): void => {
+    const manualScroll = (event: Event): void => {
+      // A drag on the scrubber (touchmove) or a wheel over the rail is not a manual scroll of the board.
+      if (event.target instanceof Element && event.target.closest('[data-testid="pipeline"]') !== null) return;
       playback.follow = false;
     };
     window.addEventListener('keydown', onKeyCapture, true);
