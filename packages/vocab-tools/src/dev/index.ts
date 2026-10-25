@@ -128,6 +128,7 @@ export async function buildInMemory(
   const deps = {
     core: {},
     conformance: {},
+    readTsbv1: null,
     registryEntry: () => Promise.resolve(null),
     readFixture: () => Promise.resolve(null),
   };

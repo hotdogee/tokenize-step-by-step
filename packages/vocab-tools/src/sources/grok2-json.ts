@@ -60,7 +60,7 @@ export function parseGrok2Json(text: string): VocabTables {
   if (data['vocab_size'] !== GROK2_ID_OFFSET + pieces.length)
     throw new Error(`${label}: vocab_size ${JSON.stringify(data['vocab_size'])} != 128 + ${String(pieces.length)}`);
 
-  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }); // keeps a leading U+FEFF
   const specials: SpecialEntry[] = special.map((entry: unknown, i) => {
     const { id, bytes } = tokenId(entry, `${label} special_tokens[${String(i)}]`);
     if (id >= GROK2_ID_OFFSET)

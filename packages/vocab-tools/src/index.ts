@@ -30,6 +30,8 @@ export { generateExamples, generateLicences, readVocabManifest, runExamples, run
 export { gunzip, gzipDeterministic, gzipSize, sha256Hex } from './compress.ts';
 export { checkConformance, reportPassed } from './conformance-gate.ts';
 export type { ConformanceDeps, ConformanceOutcome, ConformanceTarget } from './conformance-gate.ts';
+export { READER_SUBPATH, loadReadTsbv1 } from './core-reader.ts';
+export type { ReadTsbv1, ReaderLoader, ReaderLookup } from './core-reader.ts';
 export {
   DEFAULT_CHIP_CASES,
   DEFAULT_EXAMPLE,

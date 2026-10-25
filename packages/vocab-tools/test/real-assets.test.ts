@@ -1,12 +1,13 @@
 /**
  * The nine real vocabularies (skipped when `data/vocab/raw` is absent, e.g. in a CI job without the oracle cache):
  * known counts, META facts asserted by WP03's acceptance (maxPieceBytes, unusedCount, Gemma 4 TYPS), sizes against
- * 03 §C.3, the writer → independent reader round trip, and — once WP02 lands — the joint gate through `readTsbv1`.
+ * 03 §C.3, the writer → independent reader round trip, and the joint WP02/WP03 gate through `readTsbv1` from
+ * `@tsbs/core/format/tsbv1` (a todo until WP02 merges; a reader that exists but is broken fails, it is never skipped).
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import * as core from '@tsbs/core';
-import type { Tsbv1 } from '@tsbs/core';
 import { gzipDeterministic } from '../src/compress.ts';
+import { loadReadTsbv1 } from '../src/core-reader.ts';
 import { readOracleManifest, type OracleManifest } from '../src/oracle-manifest.ts';
 import { loadSourceInputs } from '../src/raw.ts';
 import { ASSET_SOURCES, type AssetSource } from '../src/sources/index.ts';
@@ -31,6 +32,9 @@ const EXPECTED: Record<
   'xai-grok2': { pieces: 130_944, specials: 128, maxPieceBytes: 256, rawKb: 939, gzKb: 601 },
   'xai-grok1': { pieces: 131_072, specials: 4, maxPieceBytes: 48, rawKb: 1407, gzKb: 615 },
 };
+
+/** WP02's reader; loading throws (failing this file) when the module exists but is broken. */
+const reader = await loadReadTsbv1(core);
 
 interface Built {
   source: AssetSource;
@@ -157,11 +161,14 @@ describe.skipIf(!HAS_RAW)('real vocabularies (data/vocab/raw)', () => {
     }
   });
 
-  const readTsbv1 = (core as Readonly<Record<string, unknown>>)['readTsbv1'];
-  it.skipIf(typeof readTsbv1 !== 'function')(
-    'joint WP02/WP03 gate: every container reads back deep-equal through readTsbv1',
-    () => {
-      const read = readTsbv1 as (buf: ArrayBuffer) => Tsbv1;
+  const jointGate = 'joint WP02/WP03 gate: every container reads back deep-equal through readTsbv1';
+  // TODO(WP02): a todo only while wp/02-unicode-format (readTsbv1 in @tsbs/core/format/tsbv1) has not merged.
+  if (reader.kind === 'absent') it.todo(`${jointGate} — TODO(WP02): ${reader.reason}`);
+  else
+    it(`${jointGate} (${reader.from})`, () => {
+      const read = reader.read;
+      /** Strict, and keeping a leading U+FEFF: a default TextDecoder drops it and shifts the split (Gemma 4 rank 316134). */
+      const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
       for (const { source, tables, container } of built.values()) {
         const tsbv = read(container.bytes.slice().buffer);
         const id = source.tokenizerId;
@@ -190,13 +197,12 @@ describe.skipIf(!HAS_RAW)('real vocabularies (data/vocab/raw)', () => {
             for (let k = m.start[piece] ?? 0; k < (m.start[piece + 1] ?? 0); k++)
               byRank[m.rank[k] ?? -1] = [piece, m.splitByteOffset[k] ?? -1];
           tables.merges.resultId.forEach((resultId, rank) => {
-            const text = new TextDecoder().decode(tables.pieces[resultId]);
+            const text = utf8.decode(tables.pieces[resultId]);
             const splitBytes = Buffer.byteLength(text.slice(0, tables.merges?.splitUtf16[rank] ?? 0));
             const got = byRank[rank];
             if (got?.[0] !== resultId || got[1] !== splitBytes) throw new Error(`${id} merge rank ${String(rank)}`);
           });
         }
       }
-    },
-  );
+    });
 });

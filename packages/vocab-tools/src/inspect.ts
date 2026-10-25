@@ -1,7 +1,7 @@
 /**
  * A small, independent TSBV1 decoder used by `tsbs-vocab inspect` and `verify` (the production reader is WP02's
- * `readTsbv1` in `@tsbs/core`; this one only needs to list sections, decode META and pull the tables back out for the
- * round-trip check against the raw source).
+ * `readTsbv1` in `@tsbs/core/format/tsbv1`; this one only needs to list sections, decode META and pull the tables back
+ * out for the round-trip check against the raw source).
  */
 import { ByteReader } from './binary.ts';
 import { gunzip, sha256Hex } from './compress.ts';
@@ -27,7 +27,8 @@ export interface DecodedContainer {
   readonly specials: SpecialEntry[];
 }
 
-const utf8 = new TextDecoder('utf-8', { fatal: true });
+/** Strict, and `ignoreBOM` so a special or piece that starts with U+FEFF keeps it (the default decoder drops it). */
+const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 /** Decodes an uncompressed container; throws on structural errors. */
 export function decodeContainer(bytes: Uint8Array): DecodedContainer {

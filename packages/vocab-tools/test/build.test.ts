@@ -10,7 +10,7 @@ import { ASSET_SOURCES } from '../src/sources/index.ts';
 import { byteLevelPieces, grok2Json, tiktokenText } from './support/synthetic.ts';
 import { readTestContainer } from './support/tsbv-test-reader.ts';
 
-const NO_MODULES = { core: {}, conformance: {} };
+const NO_MODULES = { core: {}, conformance: {}, readTsbv1: null };
 
 interface Sandbox {
   root: string;

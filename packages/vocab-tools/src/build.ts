@@ -95,10 +95,14 @@ export async function generatorId(): Promise<string> {
   return `@tsbs/vocab-tools@${version}`;
 }
 
-/** Injected module objects (the CLI passes `import * as core` / `import * as conformance`; tests pass fakes). */
+/**
+ * Injected module objects (the CLI passes `import * as core` / `import * as conformance` and the reader found by
+ * `loadReadTsbv1`; tests pass fakes).
+ */
 export interface BuildDeps {
   readonly core: Readonly<Record<string, unknown>>;
   readonly conformance: Readonly<Record<string, unknown>>;
+  readonly readTsbv1: ConformanceDeps['readTsbv1'];
 }
 
 /** One converted asset, still in memory. */
@@ -244,6 +248,7 @@ export async function runBuild(
   const conformanceDeps: ConformanceDeps = {
     core: deps.core,
     conformance: deps.conformance,
+    readTsbv1: deps.readTsbv1,
     registryEntry,
     readFixture: readFixtureFile,
   };

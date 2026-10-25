@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as core from '@tsbs/core';
+import { ENGINE_FACTORIES, familiesMissingEngine } from '@tsbs/conformance';
 import {
   checkConformance,
   reportPassed,
@@ -18,6 +19,7 @@ function deps(over: Partial<ConformanceDeps> = {}): ConformanceDeps {
   return {
     core: {},
     conformance: {},
+    readTsbv1: null,
     registryEntry: () => Promise.resolve({ id: 'openai-o200k_base' }),
     readFixture: () => Promise.resolve({ tokenizer: 'openai-o200k_base' }),
     ...over,
@@ -46,11 +48,11 @@ describe('checkConformance (AD-13, AD-32)', () => {
     const calls: string[] = [];
     let disposed = false;
     const d = deps({
+      readTsbv1: (buf: ArrayBuffer) => {
+        calls.push(`read ${String(buf.byteLength)}`);
+        return { tables: true };
+      },
       core: {
-        readTsbv1: (buf: ArrayBuffer) => {
-          calls.push(`read ${String(buf.byteLength)}`);
-          return { tables: true };
-        },
         createByteLevelTokenizer: (tsbv: unknown, entry: unknown) => {
           calls.push(`factory ${JSON.stringify(tsbv)} ${JSON.stringify(entry)}`);
           return {
@@ -78,10 +80,23 @@ describe('checkConformance (AD-13, AD-32)', () => {
   });
 
   it('fails on a failing report, a throw, a missing reader/runner or a missing registry entry', async () => {
-    const engine = { createByteLevelTokenizer: () => ({}), readTsbv1: () => ({}) };
-    const failing = deps({ core: engine, conformance: { runFixture: () => ({ failures: [{ case: 'x' }] }) } });
+    let disposed = 0;
+    const engine = {
+      createByteLevelTokenizer: () => ({
+        dispose: () => {
+          disposed++;
+        },
+      }),
+    };
+    const read = { readTsbv1: () => ({}) };
+    const failing = deps({
+      ...read,
+      core: engine,
+      conformance: { runFixture: () => ({ failures: [{ case: 'x' }] }) },
+    });
     expect((await checkConformance('strict', target, failing)).kind).toBe('failed');
     const throwing = deps({
+      ...read,
       core: engine,
       conformance: {
         runFixture: () => {
@@ -90,11 +105,16 @@ describe('checkConformance (AD-13, AD-32)', () => {
       },
     });
     expect((await checkConformance('strict', target, throwing)).message).toMatch(/boom/);
-    expect(
-      (await checkConformance('skip-missing-engine', target, deps({ core: { createByteLevelTokenizer: () => ({}) } })))
-        .kind,
-    ).toBe('failed');
+    expect(disposed, 'the engine is disposed after a failing and after a throwing run').toBe(2);
+    const noReader = await checkConformance(
+      'skip-missing-engine',
+      target,
+      deps({ core: engine, conformance: { runFixture: () => ({ ok: true }) } }),
+    );
+    expect(noReader.kind).toBe('failed');
+    expect(noReader.message).toContain('readTsbv1 (@tsbs/core/format/tsbv1)');
     const noEntry = deps({
+      ...read,
       core: engine,
       conformance: { runFixture: () => ({ ok: true }) },
       registryEntry: () => Promise.resolve(null),
@@ -102,9 +122,20 @@ describe('checkConformance (AD-13, AD-32)', () => {
     expect((await checkConformance('strict', target, noEntry)).message).toMatch(/registry/);
   });
 
-  it('agrees with what @tsbs/core exports today', async () => {
-    const outcome = await checkConformance('skip-missing-engine', target, deps({ core }));
-    expect(['skipped', 'failed', 'passed']).toContain(outcome.kind);
+  it('skips a family under skip-missing-engine exactly when @tsbs/core lacks its factory today', async () => {
+    const missing = familiesMissingEngine(core);
+    for (const family of ['bytelevel-bpe', 'spm-bpe'] as const) {
+      const outcome = await checkConformance('skip-missing-engine', { ...target, family }, deps({ core }));
+      if (missing.includes(family)) {
+        expect(outcome.kind, family).toBe('skipped');
+        expect(outcome.message).toBe(
+          `CONFORMANCE SKIPPED for openai-o200k_base (${family}): @tsbs/core does not export ${ENGINE_FACTORIES[family]} yet (AD-32).`,
+        );
+      } else {
+        // The engine exists, so the gate runs: the 3-byte container (and the null reader) must fail it.
+        expect(outcome.kind, family).toBe('failed');
+      }
+    }
   });
 });
 

@@ -10,6 +10,7 @@ import * as core from '@tsbs/core';
 import { parseCommand, USAGE } from './args.ts';
 import { runBuild } from './build.ts';
 import { runExamples, runLicences } from './commands.ts';
+import { loadReadTsbv1 } from './core-reader.ts';
 import { runGuard } from './guard.ts';
 import { inspectReport } from './inspect.ts';
 import { runVerify } from './verify.ts';
@@ -36,7 +37,10 @@ async function main(argv: readonly string[]): Promise<number> {
       console.log(
         `tsbs-vocab build: --conformance ${o.conformance} (from ${o.conformanceSource}), --missing-raw ${o.missingRaw}`,
       );
-      const result = await runBuild(o, process.env, { core, conformance });
+      const reader = await loadReadTsbv1(core);
+      console.log(`  readTsbv1: ${reader.kind === 'found' ? reader.from : `absent (${reader.reason})`}`);
+      const readTsbv1 = reader.kind === 'found' ? reader.read : null;
+      const result = await runBuild(o, process.env, { core, conformance, readTsbv1 });
       for (const line of result.info) console.log(`  ${line}`);
       for (const message of result.warnings) warn(message);
       for (const a of result.assets)

@@ -122,9 +122,10 @@ export function readTestContainer(bytes: Uint8Array): TestDecoded {
   const sc = new Cursor(need('SPCL'));
   const specials: Array<{ id: number; text: string }> = [];
   const s = sc.uvar();
+  const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }); // keeps a leading U+FEFF
   for (let i = 0; i < s; i++) {
     const id = sc.uvar();
-    specials.push({ id, text: new TextDecoder('utf-8', { fatal: true }).decode(sc.take(sc.uvar())) });
+    specials.push({ id, text: utf8.decode(sc.take(sc.uvar())) });
   }
   if (!sc.atEnd) throw new Error('SPCL has trailing bytes');
   return {

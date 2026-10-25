@@ -1,16 +1,18 @@
 /**
  * The conformance hook of `tsbs-vocab build` (AD-13, AD-32, 03 §C.5): before an asset is written, the in-memory tables
- * (the encoded container, read back through `@tsbs/core`'s `readTsbv1`) are wrapped by the family's engine and run
- * against `fixtures/<tokenizerId>.json` with `@tsbs/conformance`'s `runFixture`.
+ * (the encoded container, read back through WP02's `readTsbv1` from `@tsbs/core/format/tsbv1`, located by
+ * `core-reader.ts` and injected) are wrapped by the family's engine and run against `fixtures/<tokenizerId>.json` with
+ * `@tsbs/conformance`'s `runFixture`.
  *
  * Modes: `strict` refuses an asset whose engine is missing or whose fixture fails; `skip-missing-engine` skips (with a
  * WARNING per asset) only families whose engine factory `@tsbs/core` does not export yet; `off` skips everything
- * (local development only). The engine factories, `readTsbv1` and `runFixture` are probed on the module objects, so
- * this file needs no change when WP01/WP02/WP05A/WP05B land.
+ * (local development only). The engine factories and `runFixture` are probed on the module objects, so this file needs
+ * no change when WP01/WP02/WP05A/WP05B land.
  */
 import { readFile } from 'node:fs/promises';
 import type { Family, TokenizerId } from '@tsbs/core';
 import { ENGINE_FACTORIES, type ConformanceMode } from '@tsbs/conformance';
+import { READER_SUBPATH } from './core-reader.ts';
 
 /** What the gate needs to know about one asset. */
 export interface ConformanceTarget {
@@ -32,6 +34,8 @@ export interface ConformanceDeps {
   readonly core: Readonly<Record<string, unknown>>;
   /** `import * as conformance from '@tsbs/conformance'`. */
   readonly conformance: Readonly<Record<string, unknown>>;
+  /** WP02's `readTsbv1` (`loadReadTsbv1` in `core-reader.ts`), or null while it does not exist. */
+  readonly readTsbv1: ((buf: ArrayBuffer) => unknown) | null;
   /** The registry `TokenizerEntry` the engine factory takes, or null when the registry has none (yet). */
   readonly registryEntry: (id: TokenizerId) => Promise<unknown>;
   readonly readFixture: (path: string) => Promise<unknown>;
@@ -77,12 +81,12 @@ export async function checkConformance(
           message: `strict conformance: @tsbs/core does not export ${factoryName}, so ${target.tokenizerId} cannot be checked`,
         };
   }
-  const readTsbv1 = deps.core['readTsbv1'];
+  const readTsbv1 = deps.readTsbv1;
   const runFixture = deps.conformance['runFixture'];
-  if (typeof readTsbv1 !== 'function' || typeof runFixture !== 'function')
+  if (readTsbv1 === null || typeof runFixture !== 'function')
     return {
       kind: 'failed',
-      message: `${target.tokenizerId}: ${factoryName} exists but @tsbs/core.readTsbv1 or @tsbs/conformance.runFixture is missing`,
+      message: `${target.tokenizerId}: ${factoryName} exists but readTsbv1 (${READER_SUBPATH}) or @tsbs/conformance.runFixture is missing`,
     };
   const entry = await deps.registryEntry(target.tokenizerId);
   if (entry === null || entry === undefined)
@@ -90,13 +94,12 @@ export async function checkConformance(
       kind: 'failed',
       message: `${target.tokenizerId}: no registry TokenizerEntry to construct the engine with`,
     };
+  let tokenizer: unknown = null;
   try {
     const fixture = await deps.readFixture(target.fixturePath);
-    const buffer = target.container.slice().buffer;
-    const tsbv: unknown = (readTsbv1 as (b: ArrayBuffer) => unknown)(buffer);
-    const tokenizer: unknown = await (factory as (t: unknown, e: unknown) => unknown)(tsbv, entry);
+    const tsbv = readTsbv1(target.container.slice().buffer);
+    tokenizer = await (factory as (t: unknown, e: unknown) => unknown)(tsbv, entry);
     const report: unknown = await (runFixture as (f: unknown, t: unknown) => unknown)(fixture, tokenizer);
-    if (isRecord(tokenizer) && typeof tokenizer['dispose'] === 'function') (tokenizer['dispose'] as () => void)();
     const { passed, summary } = reportPassed(report);
     return passed
       ? { kind: 'passed', message: `${target.tokenizerId}: fixture conformance passed (${summary})` }
@@ -106,6 +109,9 @@ export async function checkConformance(
       kind: 'failed',
       message: `${target.tokenizerId}: conformance threw: ${error instanceof Error ? error.message : String(error)}`,
     };
+  } finally {
+    // Disposed whatever the outcome (a failing or throwing fixture run must not leak the engine).
+    if (isRecord(tokenizer) && typeof tokenizer['dispose'] === 'function') (tokenizer['dispose'] as () => void)();
   }
 }
 

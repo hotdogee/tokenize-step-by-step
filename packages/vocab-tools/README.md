@@ -20,6 +20,10 @@ Node-only vocabulary converter (`tsbs-vocab`, docs/design/03-data-model-and-asse
 `--conformance` defaults to `$CONFORMANCE_MODE`, then `strict`. `--missing-raw` defaults to `fail` under `strict` and
 `skip` otherwise (a SHA-256 mismatch always fails). `SOURCE_DATE_EPOCH` overrides every date written.
 
+The conformance gate reads each container back through WP02's `readTsbv1`, imported from the design's subpath
+`@tsbs/core/format/tsbv1` (a root re-export is accepted too; `src/core-reader.ts`). Until WP02 merges the reader is
+absent: an asset whose engine factory exists then fails the gate, and the joint WP02/WP03 test is a todo.
+
 ## Layout
 
 Parsers (`src/sources/`): `tiktoken-text` (o200k, cl100k, Llama 3; specials committed in `src/sources/specials/`),
