@@ -1,0 +1,320 @@
+[
+  {
+    "id": "openai-o200k_base",
+    "lab": "openai",
+    "family": "bytelevel-bpe",
+    "tier": "primary",
+    "default": true,
+    "displayName": {
+      "en": "o200k_base (GPT-4o → GPT-5.x)",
+      "zh-TW": "o200k_base（GPT-4o → GPT-5.x）",
+      "ja": "o200k_base（GPT-4o → GPT-5.x）"
+    },
+    "vocabSize": 200019,
+    "rankCount": 199998,
+    "asset": {
+      "manifestId": "openai-o200k_base",
+      "sourceFile": "o200k_base.tiktoken",
+      "sourceSha256": "446a9538cb6c348e3516120d7c08b09f57c36495e2acfffe59a5bf8b0cfb1a2d"
+    },
+    "engine": { "kind": "bytelevel-bpe", "pattern": "o200k", "idOffset": 0, "maxTokenBytes": 128, "bosId": null },
+    "defaults": { "specialTokens": "as-text" },
+    "toggles": ["specialTokens"],
+    "fidelity": "confirmed",
+    "fidelityNote": {
+      "en": "OpenAI's published tokenizer: tiktoken maps GPT-4o, GPT-4.1, GPT-4.5, GPT-5.x and the o-series to o200k_base. GPT-6 is assumed to use it but is not confirmed.",
+      "zh-TW": "OpenAI 公開的分詞器：tiktoken 將 GPT-4o、GPT-4.1、GPT-4.5、GPT-5.x 與 o 系列對應到 o200k_base。GPT-6 推定沿用，但尚未確認。",
+      "ja": "OpenAI が公開しているトークナイザーです。tiktoken は GPT-4o、GPT-4.1、GPT-4.5、GPT-5.x、o シリーズを o200k_base に対応付けています。GPT-6 も同じと推定されますが、確認されていません。"
+    },
+    "licence": "openai-o200k_base",
+    "requiredNotices": ["tiktoken-rank-file-basis"],
+    "fixture": "fixtures/openai-o200k_base.json"
+  },
+  {
+    "id": "openai-cl100k_base",
+    "lab": "openai",
+    "family": "bytelevel-bpe",
+    "tier": "secondary",
+    "displayName": {
+      "en": "cl100k_base (GPT-4 / GPT-3.5)",
+      "zh-TW": "cl100k_base（GPT-4 / GPT-3.5）",
+      "ja": "cl100k_base（GPT-4 / GPT-3.5）"
+    },
+    "vocabSize": 100277,
+    "rankCount": 100256,
+    "asset": {
+      "manifestId": "openai-cl100k_base",
+      "sourceFile": "cl100k_base.tiktoken",
+      "sourceSha256": "223921b76ee99bde995b7ff738513eef100fb51d18c93597a113bcffe865b2a7"
+    },
+    "engine": { "kind": "bytelevel-bpe", "pattern": "cl100k", "idOffset": 0, "maxTokenBytes": 128, "bosId": null },
+    "defaults": { "specialTokens": "as-text" },
+    "toggles": ["specialTokens"],
+    "fidelity": "confirmed",
+    "fidelityNote": {
+      "en": "OpenAI's tokenizer for GPT-4 and GPT-3.5 Turbo (tiktoken model map), with tiktoken's current pre-tokenizer pattern. It splits 灣 in the default example mid-character.",
+      "zh-TW": "OpenAI 用於 GPT-4 與 GPT-3.5 Turbo 的分詞器（依 tiktoken 的模型對照），採用 tiktoken 目前的預分詞規則。預設範例中的「灣」會在字元中間被切開。",
+      "ja": "GPT-4 と GPT-3.5 Turbo 用の OpenAI のトークナイザーです（tiktoken のモデル対応表による）。tiktoken の現行の事前分割パターンを使い、既定の例の「灣」を文字の途中で分割します。"
+    },
+    "licence": "openai-cl100k_base",
+    "requiredNotices": ["tiktoken-rank-file-basis"],
+    "fixture": "fixtures/openai-cl100k_base.json"
+  },
+  {
+    "id": "anthropic-claude-legacy",
+    "lab": "anthropic",
+    "family": "bytelevel-bpe",
+    "tier": "primary",
+    "displayName": {
+      "en": "Claude 1/2 legacy vocabulary (65k)",
+      "zh-TW": "Claude 1/2 舊版詞彙（65k）",
+      "ja": "Claude 1/2 レガシー語彙（65k）"
+    },
+    "vocabSize": 65000,
+    "rankCount": 64995,
+    "asset": {
+      "manifestId": "anthropic-claude-legacy",
+      "sourceFile": "claude.json",
+      "sourceSha256": "58dad83d85e9cd57be209172449ebfbc395df2b455c11fe8b7e5b661e6f462ad"
+    },
+    "engine": {
+      "kind": "bytelevel-bpe",
+      "pattern": "claude-legacy",
+      "idOffset": 5,
+      "maxTokenBytes": 1024,
+      "bosId": null
+    },
+    "defaults": { "specialTokens": "as-text", "normalize": "none" },
+    "toggles": ["specialTokens", "normalize"],
+    "fidelity": "legacy",
+    "fidelityNote": {
+      "en": "Claude 1/2-era vocabulary — not the Claude 3+ tokenizer. Anthropic publishes no tokenizer for Claude 3 or later; use the live check for current token counts.",
+      "zh-TW": "Claude 1/2 時代的詞彙，並非 Claude 3 以後的分詞器。Anthropic 未公開 Claude 3 以後的分詞器；目前模型的詞元數請使用即時檢查。",
+      "ja": "Claude 1/2 時代の語彙で、Claude 3 以降のトークナイザーではありません。Anthropic は Claude 3 以降のトークナイザーを公開していません。現行モデルのトークン数はライブチェックで確認してください。"
+    },
+    "licence": "anthropic-claude-legacy",
+    "requiredNotices": ["claude-legacy-disclaimer", "modified-asset"],
+    "fixture": "fixtures/anthropic-claude-legacy.json",
+    "byok": "anthropic-count"
+  },
+  {
+    "id": "google-gemma4",
+    "lab": "google",
+    "family": "spm-bpe",
+    "tier": "primary",
+    "displayName": {
+      "en": "Gemma 4 (Gemini 2.0 → 3.5)",
+      "zh-TW": "Gemma 4（Gemini 2.0 → 3.5）",
+      "ja": "Gemma 4（Gemini 2.0 → 3.5）"
+    },
+    "vocabSize": 262144,
+    "rankCount": 262144,
+    "asset": {
+      "manifestId": "google-gemma4",
+      "sourceFile": "tokenizer.json",
+      "sourceSha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f"
+    },
+    "engine": {
+      "kind": "spm-bpe",
+      "priority": "merge-rank",
+      "fallbackOrder": "before-merge",
+      "addDummyPrefix": false,
+      "escapeWhitespace": true,
+      "byteFirstId": 238,
+      "unkId": 3,
+      "bosId": 2,
+      "eosId": 1,
+      "padId": 0,
+      "userDefinedPolicy": "atomic",
+      "controlPolicy": "as-text-unless-match"
+    },
+    "defaults": { "specialTokens": "as-text", "addBos": false },
+    "toggles": ["specialTokens", "addBos"],
+    "fidelity": "confirmed",
+    "fidelityNote": {
+      "en": "Gemma 4 tokenizer.json semantics (HF tokenizers); identical to Gemini's SentencePiece on all fixture text except literal special-token strings. Google's SDK uses this vocabulary for Gemini 2.0–3.5; Gemini 3.6 and later are inferred. Piece types follow tokenizer.json.",
+      "zh-TW": "採用 Gemma 4 tokenizer.json 的語意（HF tokenizers）；除了字面上的特殊詞元字串外，在所有測試文字上都與 Gemini 的 SentencePiece 相同。Google 的 SDK 對 Gemini 2.0–3.5 使用這套詞彙；Gemini 3.6 以後為推定。詞片類型依 tokenizer.json。",
+      "ja": "Gemma 4 の tokenizer.json の意味論（HF tokenizers）に従います。特殊トークンの文字列そのものを除き、すべてのテスト文字列で Gemini の SentencePiece と同一です。Google の SDK は Gemini 2.0–3.5 にこの語彙を使います。Gemini 3.6 以降は推定です。ピースの種類は tokenizer.json に従います。"
+    },
+    "licence": "google-gemma4",
+    "requiredNotices": ["modified-asset"],
+    "fixture": "fixtures/google-gemma4.json"
+  },
+  {
+    "id": "google-gemma2",
+    "lab": "google",
+    "family": "spm-bpe",
+    "tier": "secondary",
+    "displayName": {
+      "en": "Gemma 1/2 (Gemini 1.x)",
+      "zh-TW": "Gemma 1/2（Gemini 1.x）",
+      "ja": "Gemma 1/2（Gemini 1.x）"
+    },
+    "vocabSize": 256000,
+    "rankCount": 256000,
+    "asset": {
+      "manifestId": "google-gemma2",
+      "sourceFile": "tokenizer.model",
+      "sourceSha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2"
+    },
+    "engine": {
+      "kind": "spm-bpe",
+      "priority": "score",
+      "fallbackOrder": "after-merge",
+      "addDummyPrefix": false,
+      "escapeWhitespace": true,
+      "byteFirstId": 217,
+      "unkId": 3,
+      "bosId": 2,
+      "eosId": 1,
+      "padId": 0,
+      "userDefinedPolicy": "atomic",
+      "controlPolicy": "as-text-unless-match"
+    },
+    "defaults": { "specialTokens": "as-text", "addBos": false },
+    "toggles": ["specialTokens", "addBos"],
+    "fidelity": "confirmed",
+    "fidelityNote": {
+      "en": "The 256k Gemma 1/2 tokenizer that the Vertex AI SDK pins for Gemini 1.0 and 1.5, distributed under the Gemma Terms of Use. With special tokens on, CONTROL strings are matched by an emulation (SentencePiece has no such switch).",
+      "zh-TW": "Vertex AI SDK 為 Gemini 1.0 與 1.5 固定使用的 256k Gemma 1/2 分詞器，依《Gemma 使用條款》散布。開啟特殊詞元時，CONTROL 字串的比對屬於模擬（SentencePiece 沒有這個開關）。",
+      "ja": "Vertex AI SDK が Gemini 1.0 と 1.5 に固定している 256k の Gemma 1/2 トークナイザーで、Gemma 利用規約に基づいて配布しています。特殊トークンを有効にしたときの CONTROL 文字列の照合はエミュレーションです（SentencePiece にはこの切り替えがありません）。"
+    },
+    "licence": "google-gemma2",
+    "requiredNotices": ["gemma-notice", "gemma-terms", "modified-asset"],
+    "fixture": "fixtures/google-gemma2.json"
+  },
+  {
+    "id": "meta-llama4-muse",
+    "lab": "meta",
+    "family": "bytelevel-bpe",
+    "tier": "primary",
+    "displayName": {
+      "en": "Llama 4 / Muse (202k)",
+      "zh-TW": "Llama 4 / Muse（202k）",
+      "ja": "Llama 4 / Muse（202k）"
+    },
+    "vocabSize": 202048,
+    "rankCount": 200000,
+    "asset": {
+      "manifestId": "meta-muse-glimmer",
+      "sourceFile": "tokenizer.json",
+      "sourceSha256": "c9dbee66967b58f31a7c27f723c3760da3526ccd0427578e8905b0abb0031c4d"
+    },
+    "engine": { "kind": "bytelevel-bpe", "pattern": "o200k", "idOffset": 0, "maxTokenBytes": 113, "bosId": 200000 },
+    "defaults": { "specialTokens": "as-text", "addBos": false },
+    "toggles": ["specialTokens", "addBos"],
+    "fidelity": "confirmed",
+    "fidelityNote": {
+      "en": "Muse Glimmer's Apache-2.0 tokenizer: its 200,000 tokens are byte-identical to Llama 4's, and Muse Spark Open uses the same vocabulary. Special-token names follow Glimmer. Muse Wonder is inferred.",
+      "zh-TW": "Muse Glimmer 以 Apache-2.0 授權的分詞器：其 200,000 個詞元與 Llama 4 逐位元組相同，Muse Spark Open 也使用同一套詞彙。特殊詞元名稱依 Glimmer。Muse Wonder 為推定。",
+      "ja": "Apache-2.0 で公開された Muse Glimmer のトークナイザーです。200,000 個のトークンは Llama 4 とバイト単位で同一で、Muse Spark Open も同じ語彙を使います。特殊トークン名は Glimmer に従います。Muse Wonder は推定です。"
+    },
+    "licence": "meta-muse-glimmer",
+    "requiredNotices": ["modified-asset"],
+    "fixture": "fixtures/meta-llama4-muse.json"
+  },
+  {
+    "id": "meta-llama3",
+    "lab": "meta",
+    "family": "bytelevel-bpe",
+    "tier": "secondary",
+    "displayName": {
+      "en": "Llama 3.x (128k)",
+      "zh-TW": "Llama 3.x（128k）",
+      "ja": "Llama 3.x（128k）"
+    },
+    "vocabSize": 128256,
+    "rankCount": 128000,
+    "asset": {
+      "manifestId": "meta-llama3-model",
+      "sourceFile": "tokenizer.model",
+      "sourceSha256": "82e9d31979e92ab929cd544440f129d9ecd797b69e327f80f17e1c50d5551b55"
+    },
+    "engine": { "kind": "bytelevel-bpe", "pattern": "llama3", "idOffset": 0, "maxTokenBytes": 128, "bosId": 128000 },
+    "defaults": { "specialTokens": "as-text", "addBos": false },
+    "toggles": ["specialTokens", "addBos"],
+    "fidelity": "confirmed",
+    "fidelityNote": {
+      "en": "The base tokenizer of Llama 3.0–3.3 (128,000 tokens + 256 special tokens). Special-token names follow Llama 3.1+; Llama 3.0 named ids 128004, 128008 and 128010 <|reserved_special_token_2|>, <|reserved_special_token_4|> and <|reserved_special_token_5|>.",
+      "zh-TW": "Llama 3.0–3.3 共用的基礎分詞器（128,000 個詞元＋256 個特殊詞元）。特殊詞元名稱依 Llama 3.1 以後的版本；Llama 3.0 將 id 128004、128008、128010 分別命名為 <|reserved_special_token_2|>、<|reserved_special_token_4|>、<|reserved_special_token_5|>。",
+      "ja": "Llama 3.0–3.3 共通の基本トークナイザーです（128,000 トークン＋特殊トークン 256 個）。特殊トークン名は Llama 3.1 以降に従います。Llama 3.0 では id 128004、128008、128010 の名前がそれぞれ <|reserved_special_token_2|>、<|reserved_special_token_4|>、<|reserved_special_token_5|> でした。"
+    },
+    "licence": "meta-llama3-model",
+    "requiredNotices": ["built-with-meta-llama-3", "llama3-notice"],
+    "fixture": "fixtures/meta-llama3.json"
+  },
+  {
+    "id": "xai-grok2",
+    "lab": "xai",
+    "family": "bytelevel-bpe",
+    "tier": "primary",
+    "displayName": {
+      "en": "Grok-2 (131k)",
+      "zh-TW": "Grok-2（131k）",
+      "ja": "Grok-2（131k）"
+    },
+    "vocabSize": 131072,
+    "rankCount": 130944,
+    "asset": {
+      "manifestId": "xai-grok2",
+      "sourceFile": "tokenizer.tok.json",
+      "sourceSha256": "8132d5a6e15d09fdc06680173bb8b30b982f13128c14e14377fbbb77351dcc06"
+    },
+    "engine": { "kind": "bytelevel-bpe", "pattern": "grok2-v1", "idOffset": 128, "maxTokenBytes": 256, "bosId": null },
+    "defaults": { "specialTokens": "as-text" },
+    "toggles": ["specialTokens"],
+    "fidelity": "confirmed",
+    "fidelityNote": {
+      "en": "xAI's open Grok-2 (Grok 2.5) tokenizer; it reproduces the /v1/tokenize-text documentation example. Grok 3 and Grok 4.x are inferred — verify them with your own key in the live check.",
+      "zh-TW": "xAI 開放的 Grok-2（Grok 2.5）分詞器，可重現 /v1/tokenize-text 文件中的範例。Grok 3 與 Grok 4.x 為推定，可用你自己的金鑰在即時檢查中驗證。",
+      "ja": "xAI が公開した Grok-2（Grok 2.5）のトークナイザーで、/v1/tokenize-text のドキュメントの例を再現します。Grok 3 と Grok 4.x は推定です。ライブチェックでご自身のキーを使って確認できます。"
+    },
+    "licence": "xai-grok2",
+    "requiredNotices": ["powered-by-xai", "xai-materials-notice"],
+    "fixture": "fixtures/xai-grok2.json",
+    "byok": "xai-tokenize"
+  },
+  {
+    "id": "xai-grok1",
+    "lab": "xai",
+    "family": "spm-bpe",
+    "tier": "secondary",
+    "displayName": {
+      "en": "Grok-1 (historical)",
+      "zh-TW": "Grok-1（歷史版本）",
+      "ja": "Grok-1（過去のモデル）"
+    },
+    "vocabSize": 131072,
+    "rankCount": 131072,
+    "asset": {
+      "manifestId": "xai-grok1",
+      "sourceFile": "tokenizer.model",
+      "sourceSha256": "5c69d7cbad192fa2c9d14e2a77fbfdc11597c68907b043ddb0260e3d28eddd7f"
+    },
+    "engine": {
+      "kind": "spm-bpe",
+      "priority": "score",
+      "fallbackOrder": "after-merge",
+      "addDummyPrefix": true,
+      "escapeWhitespace": true,
+      "byteFirstId": 69,
+      "unkId": 3,
+      "bosId": 1,
+      "eosId": 2,
+      "padId": 0,
+      "userDefinedPolicy": "atomic",
+      "controlPolicy": "as-text-unless-match"
+    },
+    "defaults": { "specialTokens": "as-text", "addBos": false },
+    "toggles": ["specialTokens", "addBos"],
+    "fidelity": "legacy",
+    "fidelityNote": {
+      "en": "Grok-1's March 2024 SentencePiece tokenizer, kept as a historical example of byte fallback and a zero-width dummy prefix. Current Grok models do not use it.",
+      "zh-TW": "Grok-1 於 2024 年 3 月釋出的 SentencePiece 分詞器，作為位元組回退與零寬虛擬前綴的歷史範例保留。目前的 Grok 模型並未使用。",
+      "ja": "2024 年 3 月に公開された Grok-1 の SentencePiece トークナイザーで、バイトフォールバックとゼロ幅のダミー接頭辞を示す過去の例として残しています。現行の Grok モデルでは使われていません。"
+    },
+    "licence": "xai-grok1",
+    "requiredNotices": ["modified-asset"],
+    "fixture": "fixtures/xai-grok1.json"
+  }
+]

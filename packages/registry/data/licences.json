@@ -1,0 +1,300 @@
+{
+  "schema": 1,
+  "licences": {
+    "openai-o200k_base": {
+      "tag": "MIT (tiktoken)",
+      "spdx": "MIT",
+      "summary": {
+        "en": "The MIT licence of tiktoken (Copyright (c) 2022 OpenAI, Shantanu Jain). The rank file itself carries no licence statement.",
+        "zh-TW": "tiktoken 的 MIT 授權（Copyright (c) 2022 OpenAI, Shantanu Jain）。rank 檔本身沒有授權聲明。",
+        "ja": "tiktoken の MIT ライセンスです（Copyright (c) 2022 OpenAI, Shantanu Jain）。ランクファイル自体にはライセンス表記がありません。"
+      }
+    },
+    "openai-cl100k_base": {
+      "tag": "MIT (tiktoken)",
+      "spdx": "MIT",
+      "summary": {
+        "en": "The MIT licence of tiktoken (Copyright (c) 2022 OpenAI, Shantanu Jain). The rank file itself carries no licence statement.",
+        "zh-TW": "tiktoken 的 MIT 授權（Copyright (c) 2022 OpenAI, Shantanu Jain）。rank 檔本身沒有授權聲明。",
+        "ja": "tiktoken の MIT ライセンスです（Copyright (c) 2022 OpenAI, Shantanu Jain）。ランクファイル自体にはライセンス表記がありません。"
+      }
+    },
+    "anthropic-claude-legacy": {
+      "tag": "MIT + Apache-2.0",
+      "spdx": "MIT",
+      "summary": {
+        "en": "The archived @anthropic-ai/tokenizer package: its LICENSE file is MIT (Copyright 2023 Anthropic, PBC.) while its package.json declares Apache-2.0, so both licences are satisfied.",
+        "zh-TW": "已封存的 @anthropic-ai/tokenizer 套件：其 LICENSE 檔為 MIT（Copyright 2023 Anthropic, PBC.），而 package.json 宣告 Apache-2.0，因此本站同時遵守兩種授權。",
+        "ja": "アーカイブされた @anthropic-ai/tokenizer パッケージです。LICENSE ファイルは MIT（Copyright 2023 Anthropic, PBC.）ですが package.json は Apache-2.0 と宣言しているため、両方のライセンスを満たしています。"
+      }
+    },
+    "google-gemma4": {
+      "tag": "Apache-2.0",
+      "spdx": "Apache-2.0",
+      "summary": {
+        "en": "Gemma 4 is released under plain Apache-2.0; the Gemma Terms of Use do not apply.",
+        "zh-TW": "Gemma 4 以標準 Apache-2.0 授權釋出；不適用《Gemma 使用條款》。",
+        "ja": "Gemma 4 は通常の Apache-2.0 で公開されており、Gemma 利用規約は適用されません。"
+      }
+    },
+    "google-gemma2": {
+      "tag": "Apache-2.0 + Gemma Terms",
+      "spdx": "Apache-2.0 (repo) + LicenseRef-Gemma-Terms-of-Use (applicability unresolved)",
+      "summary": {
+        "en": "The file sits in Google's Apache-2.0 gemma_pytorch repository. Until it is settled whether the Gemma Terms of Use cover tokenizers, it is distributed with the Terms pass-through: a copy of the Terms, the Notice and the use restrictions.",
+        "zh-TW": "此檔案位於 Google 以 Apache-2.0 授權的 gemma_pytorch 儲存庫。在確定《Gemma 使用條款》是否涵蓋分詞器之前，本站依條款的轉授要求散布：附上條款全文、Notice 與使用限制。",
+        "ja": "このファイルは Google の Apache-2.0 の gemma_pytorch リポジトリにあります。Gemma 利用規約がトークナイザーに及ぶかどうかが決まるまでは、規約の継承条件（規約の写し、Notice、使用制限）を付けて配布しています。"
+      }
+    },
+    "meta-muse-glimmer": {
+      "tag": "Apache-2.0",
+      "spdx": "Apache-2.0",
+      "summary": {
+        "en": "Muse Glimmer's Apache-2.0 release; no Llama licence obligations apply to this vocabulary.",
+        "zh-TW": "Muse Glimmer 以 Apache-2.0 釋出；此詞彙不受任何 Llama 授權義務約束。",
+        "ja": "Apache-2.0 で公開された Muse Glimmer です。この語彙には Llama ライセンスの義務はかかりません。"
+      }
+    },
+    "meta-llama3-model": {
+      "tag": "Llama 3 Community License",
+      "spdx": "LicenseRef-Llama-3-Community-License",
+      "summary": {
+        "en": "Meta Llama 3 Community License: a copy of the Agreement, “Built with Meta Llama 3”, the Notice file and the Acceptable Use Policy apply.",
+        "zh-TW": "Meta Llama 3 Community License：須附上協議全文、標示「Built with Meta Llama 3」、提供 Notice 檔，並遵守可接受使用政策。",
+        "ja": "Meta Llama 3 Community License です。契約書の写し、「Built with Meta Llama 3」の表示、Notice ファイル、許容される使用に関するポリシーが適用されます。"
+      }
+    },
+    "xai-grok2": {
+      "tag": "xAI Community License",
+      "spdx": "LicenseRef-xAI-Community-License",
+      "summary": {
+        "en": "xAI Community License: non-commercial or research use, or commercial use within xAI's Acceptable Use Policy; revocable. It requires the Agreement, the licence notice and “Powered by xAI”.",
+        "zh-TW": "xAI Community License：限非商業或研究用途，或在 xAI 可接受使用政策內的商業用途；可被撤銷。須附上協議全文、授權聲明，並標示「Powered by xAI」。",
+        "ja": "xAI Community License です。非商用または研究目的、もしくは xAI の許容使用ポリシーの範囲内での商用利用に限られ、取り消される場合があります。契約書、ライセンス表示、「Powered by xAI」の表示が必要です。"
+      }
+    },
+    "xai-grok1": {
+      "tag": "Apache-2.0",
+      "spdx": "Apache-2.0",
+      "summary": {
+        "en": "Grok-1 was open-sourced under Apache-2.0.",
+        "zh-TW": "Grok-1 以 Apache-2.0 授權開源。",
+        "ja": "Grok-1 は Apache-2.0 でオープンソース化されました。"
+      }
+    }
+  },
+  "notices": {
+    "powered-by-xai": {
+      "kind": "legal",
+      "title": { "en": "xAI attribution", "zh-TW": "xAI 標示", "ja": "xAI の表示" },
+      "body": {
+        "en": "The xAI Community License requires this attribution while the Grok-2 tokenizer is in use.",
+        "zh-TW": "使用 Grok-2 分詞器時，依 xAI Community License 須顯示此標示。",
+        "ja": "Grok-2 トークナイザーの使用中は、xAI Community License によりこの表示が必要です。"
+      },
+      "verbatim": "Powered by xAI",
+      "prominent": true,
+      "links": [
+        {
+          "href": "/licenses/xai-grok2/LICENSE",
+          "label": {
+            "en": "xAI Community License Agreement",
+            "zh-TW": "xAI Community License 協議全文",
+            "ja": "xAI Community License 契約書"
+          }
+        }
+      ]
+    },
+    "xai-materials-notice": {
+      "kind": "legal",
+      "title": { "en": "xAI licence notice", "zh-TW": "xAI 授權聲明", "ja": "xAI ライセンス表示" },
+      "body": {
+        "en": "The Grok-2 tokenizer data is distributed under the xAI Community License; its required notice is reproduced exactly.",
+        "zh-TW": "Grok-2 分詞器資料依 xAI Community License 散布；以下依原文照錄其要求的聲明。",
+        "ja": "Grok-2 トークナイザーのデータは xAI Community License に基づいて配布しています。必要な表示を原文のまま掲載します。"
+      },
+      "verbatim": "This product includes materials licensed under the xAI Community License. All rights reserved. Copyright © xAI 2026.",
+      "links": [
+        {
+          "href": "/licenses/xai-grok2/LICENSE",
+          "label": {
+            "en": "xAI Community License Agreement",
+            "zh-TW": "xAI Community License 協議全文",
+            "ja": "xAI Community License 契約書"
+          }
+        },
+        {
+          "href": "https://x.ai/legal/acceptable-use-policy",
+          "label": {
+            "en": "xAI Acceptable Use Policy",
+            "zh-TW": "xAI 可接受使用政策",
+            "ja": "xAI 許容使用ポリシー"
+          }
+        }
+      ]
+    },
+    "built-with-meta-llama-3": {
+      "kind": "legal",
+      "title": { "en": "Meta Llama 3 attribution", "zh-TW": "Meta Llama 3 標示", "ja": "Meta Llama 3 の表示" },
+      "body": {
+        "en": "The Meta Llama 3 Community License requires this attribution while the Llama 3 tokenizer is in use.",
+        "zh-TW": "使用 Llama 3 分詞器時，依 Meta Llama 3 Community License 須顯示此標示。",
+        "ja": "Llama 3 トークナイザーの使用中は、Meta Llama 3 Community License によりこの表示が必要です。"
+      },
+      "verbatim": "Built with Meta Llama 3",
+      "prominent": true,
+      "links": [
+        {
+          "href": "/licenses/meta-llama3-model/LICENSE",
+          "label": {
+            "en": "Meta Llama 3 Community License Agreement",
+            "zh-TW": "Meta Llama 3 Community License 協議全文",
+            "ja": "Meta Llama 3 Community License 契約書"
+          }
+        }
+      ]
+    },
+    "llama3-notice": {
+      "kind": "legal",
+      "title": { "en": "Meta Llama 3 notice", "zh-TW": "Meta Llama 3 聲明", "ja": "Meta Llama 3 の告知" },
+      "body": {
+        "en": "Distributed with the Llama 3 tokenizer as its Notice file, together with the Agreement and the Acceptable Use Policy.",
+        "zh-TW": "隨 Llama 3 分詞器作為 Notice 檔散布，並附上協議全文與可接受使用政策。",
+        "ja": "Llama 3 トークナイザーの Notice ファイルとして、契約書と許容される使用に関するポリシーとともに配布しています。"
+      },
+      "verbatim": "Meta Llama 3 is licensed under the Meta Llama 3 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved.",
+      "links": [
+        {
+          "href": "/licenses/meta-llama3-model/NOTICE.txt",
+          "label": { "en": "Notice file", "zh-TW": "Notice 檔", "ja": "Notice ファイル" }
+        },
+        {
+          "href": "/licenses/meta-llama3-model/LICENSE",
+          "label": {
+            "en": "Meta Llama 3 Community License Agreement",
+            "zh-TW": "Meta Llama 3 Community License 協議全文",
+            "ja": "Meta Llama 3 Community License 契約書"
+          }
+        },
+        {
+          "href": "https://llama.meta.com/llama3/use-policy",
+          "label": {
+            "en": "Meta Llama 3 Acceptable Use Policy",
+            "zh-TW": "Meta Llama 3 可接受使用政策",
+            "ja": "Meta Llama 3 許容使用ポリシー"
+          }
+        }
+      ]
+    },
+    "gemma-notice": {
+      "kind": "legal",
+      "title": { "en": "Gemma notice", "zh-TW": "Gemma 聲明", "ja": "Gemma の告知" },
+      "body": {
+        "en": "Distributed with the Gemma 1/2 tokenizer as its Notice, as the Gemma Terms of Use require.",
+        "zh-TW": "依《Gemma 使用條款》的要求，隨 Gemma 1/2 分詞器作為 Notice 散布。",
+        "ja": "Gemma 利用規約の定めにより、Gemma 1/2 トークナイザーの Notice として配布しています。"
+      },
+      "verbatim": "Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms",
+      "links": [
+        {
+          "href": "/licenses/google-gemma2/gemma-terms-of-use.txt",
+          "label": { "en": "Gemma Terms of Use", "zh-TW": "Gemma 使用條款", "ja": "Gemma 利用規約" }
+        },
+        {
+          "href": "https://ai.google.dev/gemma/prohibited_use_policy",
+          "label": {
+            "en": "Gemma Prohibited Use Policy",
+            "zh-TW": "Gemma 禁止使用政策",
+            "ja": "Gemma 禁止使用ポリシー"
+          }
+        }
+      ]
+    },
+    "gemma-terms": {
+      "kind": "legal",
+      "title": { "en": "Gemma use restrictions", "zh-TW": "Gemma 使用限制", "ja": "Gemma の使用制限" },
+      "body": {
+        "en": "The Gemma 1/2 tokenizer is distributed with the Gemma Terms of Use pass-through: it is subject to the use restrictions below, and a copy of the Terms is provided.",
+        "zh-TW": "Gemma 1/2 分詞器依《Gemma 使用條款》的轉授要求散布：須遵守下列使用限制，並附上條款全文。",
+        "ja": "Gemma 1/2 トークナイザーは Gemma 利用規約の継承条件に従って配布しています。以下の使用制限が適用され、規約の写しを添付しています。"
+      },
+      "verbatim": "Use restrictions (Gemma Terms of Use, Section 3.2): you must not use the Gemma 1/2 tokenizer distributed on this site (1) for the restricted uses set forth in the Gemma Prohibited Use Policy at ai.google.dev/gemma/prohibited_use_policy, which is incorporated by reference, or (2) in violation of applicable laws and regulations. Google reserves the right to restrict (remotely or otherwise) usage that it reasonably believes violates the Gemma Terms of Use.",
+      "links": [
+        {
+          "href": "/licenses/google-gemma2/gemma-terms-of-use.txt",
+          "label": { "en": "Gemma Terms of Use", "zh-TW": "Gemma 使用條款", "ja": "Gemma 利用規約" }
+        },
+        {
+          "href": "https://ai.google.dev/gemma/prohibited_use_policy",
+          "label": {
+            "en": "Gemma Prohibited Use Policy",
+            "zh-TW": "Gemma 禁止使用政策",
+            "ja": "Gemma 禁止使用ポリシー"
+          }
+        }
+      ]
+    },
+    "claude-legacy-disclaimer": {
+      "kind": "explanatory",
+      "title": {
+        "en": "Not the Claude 3+ tokenizer",
+        "zh-TW": "並非 Claude 3 以後的分詞器",
+        "ja": "Claude 3 以降のトークナイザーではありません"
+      },
+      "body": {
+        "en": "This is the public Claude 1/2-era vocabulary from Anthropic's archived @anthropic-ai/tokenizer package. Anthropic publishes no tokenizer for Claude 3 or later and never exposes token boundaries, so the boundaries shown here do not describe current Claude models. The live check reports current totals from the count_tokens API.",
+        "zh-TW": "這是 Anthropic 已封存的 @anthropic-ai/tokenizer 套件中公開的 Claude 1/2 時代詞彙。Anthropic 未公開 Claude 3 以後的分詞器，也從不提供詞元邊界，因此這裡顯示的邊界並不代表目前的 Claude 模型。即時檢查可透過 count_tokens API 取得目前的總數。",
+        "ja": "これは Anthropic がアーカイブした @anthropic-ai/tokenizer パッケージに含まれる、Claude 1/2 時代の公開語彙です。Anthropic は Claude 3 以降のトークナイザーを公開しておらず、トークン境界も一切公開していないため、ここに表示される境界は現行の Claude モデルを表しません。ライブチェックでは count_tokens API から現在の合計を取得できます。"
+      },
+      "links": [
+        {
+          "href": "https://github.com/anthropics/anthropic-tokenizer-typescript",
+          "label": {
+            "en": "Archived @anthropic-ai/tokenizer repository",
+            "zh-TW": "已封存的 @anthropic-ai/tokenizer 儲存庫",
+            "ja": "アーカイブされた @anthropic-ai/tokenizer リポジトリ"
+          }
+        }
+      ]
+    },
+    "tiktoken-rank-file-basis": {
+      "kind": "explanatory",
+      "title": {
+        "en": "About OpenAI's rank files",
+        "zh-TW": "關於 OpenAI 的 rank 檔",
+        "ja": "OpenAI のランクファイルについて"
+      },
+      "body": {
+        "en": "OpenAI's .tiktoken rank files carry no licence statement of their own. This site redistributes them on the basis of the MIT licence of tiktoken, the OpenAI project that defines and downloads them.",
+        "zh-TW": "OpenAI 的 .tiktoken rank 檔本身沒有授權聲明。本站依據定義並下載這些檔案的 OpenAI 專案 tiktoken 的 MIT 授權來轉散布它們。",
+        "ja": "OpenAI の .tiktoken ランクファイル自体にはライセンス表記がありません。このサイトは、それらを定義しダウンロードする OpenAI のプロジェクト tiktoken の MIT ライセンスに基づいて再配布しています。"
+      },
+      "links": [
+        {
+          "href": "/licenses/openai-o200k_base/LICENSE",
+          "label": { "en": "tiktoken MIT licence", "zh-TW": "tiktoken 的 MIT 授權", "ja": "tiktoken の MIT ライセンス" }
+        }
+      ]
+    },
+    "modified-asset": {
+      "kind": "explanatory",
+      "title": {
+        "en": "Converted vocabulary file",
+        "zh-TW": "已轉換的詞彙檔",
+        "ja": "変換済みの語彙ファイル"
+      },
+      "body": {
+        "en": "The vocabulary you downloaded was converted from the upstream file to this site's compact TSBV1 format; its contents are unchanged. The About page lists the source file and its SHA-256 for every tokenizer.",
+        "zh-TW": "你下載的詞彙已由上游檔案轉換為本站精簡的 TSBV1 格式，內容未經更動。「關於」頁面列出每個分詞器的來源檔案與 SHA-256。",
+        "ja": "ダウンロードした語彙は、元のファイルからこのサイトのコンパクトな TSBV1 形式に変換したもので、内容は変わっていません。各トークナイザーの元ファイルと SHA-256 は「このサイトについて」ページに記載しています。"
+      },
+      "links": [
+        {
+          "href": "/about/",
+          "label": { "en": "About and licences", "zh-TW": "關於與授權", "ja": "このサイトとライセンス" }
+        }
+      ]
+    }
+  },
+  "modifiedTemplate": "Converted to the TSBV1 container from {file} (sha256 {sha256}) by @tsbs/vocab-tools {version} on {date}; vocabulary contents unchanged."
+}

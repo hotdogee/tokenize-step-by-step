@@ -1,0 +1,546 @@
+[
+  {
+    "model": "GPT-5.x (GPT-5 → GPT-5.6)",
+    "lab": "openai",
+    "tokenizer": "openai-o200k_base",
+    "fidelity": "confirmed",
+    "status": "current",
+    "evidenceUrl": "https://raw.githubusercontent.com/openai/tiktoken/main/tiktoken/model.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "tiktoken maps the gpt-5 model prefix to o200k_base.",
+      "zh-TW": "tiktoken 將 gpt-5 模型前綴對應到 o200k_base。",
+      "ja": "tiktoken は gpt-5 のモデル接頭辞を o200k_base に対応付けています。"
+    }
+  },
+  {
+    "model": "GPT-6 Astra",
+    "lab": "openai",
+    "tokenizer": "openai-o200k_base",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://github.com/openai/tiktoken/pull/616",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Not in tiktoken's model map: PR #616 proposes o200k_base but is unreviewed, and issue #608 was closed without an answer.",
+      "zh-TW": "不在 tiktoken 的模型對照表中：PR #616 提議對應到 o200k_base，但尚未審查；issue #608 未獲回覆即被關閉。",
+      "ja": "tiktoken のモデル対応表にはありません。PR #616 が o200k_base への対応を提案していますが未レビューで、issue #608 は回答なしで閉じられました。"
+    }
+  },
+  {
+    "model": "GPT-6.1 Sol",
+    "lab": "openai",
+    "tokenizer": "openai-o200k_base",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://github.com/openai/tiktoken/issues/608",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Assumed to share GPT-6's tokenizer; tiktoken raises KeyError for gpt-6.1-sol, and equal token counts do not prove identity.",
+      "zh-TW": "推定與 GPT-6 共用分詞器；tiktoken 對 gpt-6.1-sol 會拋出 KeyError，而詞元數相同並不能證明是同一個分詞器。",
+      "ja": "GPT-6 と同じトークナイザーと推定されます。tiktoken は gpt-6.1-sol に対して KeyError を返し、トークン数が同じでも同一とは証明できません。"
+    }
+  },
+  {
+    "model": "GPT-4.5",
+    "lab": "openai",
+    "tokenizer": "openai-o200k_base",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/openai/tiktoken/main/tiktoken/model.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "tiktoken maps the gpt-4.5- model prefix to o200k_base.",
+      "zh-TW": "tiktoken 將 gpt-4.5- 模型前綴對應到 o200k_base。",
+      "ja": "tiktoken は gpt-4.5- のモデル接頭辞を o200k_base に対応付けています。"
+    }
+  },
+  {
+    "model": "GPT-4.1",
+    "lab": "openai",
+    "tokenizer": "openai-o200k_base",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/openai/tiktoken/main/tiktoken/model.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "tiktoken maps the gpt-4.1- model prefix to o200k_base.",
+      "zh-TW": "tiktoken 將 gpt-4.1- 模型前綴對應到 o200k_base。",
+      "ja": "tiktoken は gpt-4.1- のモデル接頭辞を o200k_base に対応付けています。"
+    }
+  },
+  {
+    "model": "GPT-4o",
+    "lab": "openai",
+    "tokenizer": "openai-o200k_base",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/openai/tiktoken/main/tiktoken/model.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "tiktoken maps the gpt-4o- and chatgpt-4o- model prefixes to o200k_base.",
+      "zh-TW": "tiktoken 將 gpt-4o- 與 chatgpt-4o- 模型前綴對應到 o200k_base。",
+      "ja": "tiktoken は gpt-4o- と chatgpt-4o- のモデル接頭辞を o200k_base に対応付けています。"
+    }
+  },
+  {
+    "model": "o1 / o3 / o4-mini",
+    "lab": "openai",
+    "tokenizer": "openai-o200k_base",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/openai/tiktoken/main/tiktoken/model.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "tiktoken maps the o1-, o3- and o4-mini- model prefixes to o200k_base.",
+      "zh-TW": "tiktoken 將 o1-、o3- 與 o4-mini- 模型前綴對應到 o200k_base。",
+      "ja": "tiktoken は o1-、o3-、o4-mini- のモデル接頭辞を o200k_base に対応付けています。"
+    }
+  },
+  {
+    "model": "GPT-4",
+    "lab": "openai",
+    "tokenizer": "openai-cl100k_base",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/openai/tiktoken/main/tiktoken/model.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "tiktoken maps the gpt-4- model prefix to cl100k_base.",
+      "zh-TW": "tiktoken 將 gpt-4- 模型前綴對應到 cl100k_base。",
+      "ja": "tiktoken は gpt-4- のモデル接頭辞を cl100k_base に対応付けています。"
+    }
+  },
+  {
+    "model": "GPT-3.5 Turbo",
+    "lab": "openai",
+    "tokenizer": "openai-cl100k_base",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/openai/tiktoken/main/tiktoken/model.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "tiktoken maps the gpt-3.5-turbo- model prefix to cl100k_base.",
+      "zh-TW": "tiktoken 將 gpt-3.5-turbo- 模型前綴對應到 cl100k_base。",
+      "ja": "tiktoken は gpt-3.5-turbo- のモデル接頭辞を cl100k_base に対応付けています。"
+    }
+  },
+  {
+    "model": "Claude Opus 5.5",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "current",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer. The count_tokens API returns totals only, never token boundaries.",
+      "zh-TW": "沒有公開的分詞器。count_tokens API 只回傳總數，不提供詞元邊界。",
+      "ja": "公開されたトークナイザーはありません。count_tokens API は合計のみを返し、トークン境界は返しません。"
+    }
+  },
+  {
+    "model": "Claude Sonnet 5.5",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "current",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer. The count_tokens API returns totals only, never token boundaries.",
+      "zh-TW": "沒有公開的分詞器。count_tokens API 只回傳總數，不提供詞元邊界。",
+      "ja": "公開されたトークナイザーはありません。count_tokens API は合計のみを返し、トークン境界は返しません。"
+    }
+  },
+  {
+    "model": "Claude Haiku 5.5",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "current",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer. The count_tokens API returns totals only, never token boundaries.",
+      "zh-TW": "沒有公開的分詞器。count_tokens API 只回傳總數，不提供詞元邊界。",
+      "ja": "公開されたトークナイザーはありません。count_tokens API は合計のみを返し、トークン境界は返しません。"
+    }
+  },
+  {
+    "model": "Claude Fable 5 / 5.1",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "current",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer. Zero-data-retention organisations cannot count tokens for these models.",
+      "zh-TW": "沒有公開的分詞器。零資料保留（ZDR）組織無法為這些模型計算詞元數。",
+      "ja": "公開されたトークナイザーはありません。ゼロデータ保持（ZDR）の組織はこれらのモデルのトークン数を数えられません。"
+    }
+  },
+  {
+    "model": "Claude Mythos 5 / 5.1",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "current",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer. Zero-data-retention organisations cannot count tokens for these models.",
+      "zh-TW": "沒有公開的分詞器。零資料保留（ZDR）組織無法為這些模型計算詞元數。",
+      "ja": "公開されたトークナイザーはありません。ゼロデータ保持（ZDR）の組織はこれらのモデルのトークン数を数えられません。"
+    }
+  },
+  {
+    "model": "Claude Opus 4.7 / 4.8 / 5, Sonnet 5",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "previous",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer. The Opus 4.7 generation uses roughly 1.0–1.35× as many tokens on English text; CJK counts barely change.",
+      "zh-TW": "沒有公開的分詞器。Opus 4.7 世代在英文文字上約使用 1.0–1.35 倍的詞元；中日韓文字的詞元數幾乎不變。",
+      "ja": "公開されたトークナイザーはありません。Opus 4.7 世代は英語テキストで約 1.0–1.35 倍のトークンを使いますが、CJK のトークン数はほとんど変わりません。"
+    }
+  },
+  {
+    "model": "Claude Opus 4 → 4.6, Sonnet 4 → 4.6, Haiku 4.5",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "previous",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer. Opus 4.6 and Sonnet 4.6 remain callable as references for this generation in the live check.",
+      "zh-TW": "沒有公開的分詞器。即時檢查中仍可用 Opus 4.6 與 Sonnet 4.6 作為這一世代的參考。",
+      "ja": "公開されたトークナイザーはありません。ライブチェックでは、この世代の参照として Opus 4.6 と Sonnet 4.6 を引き続き使えます。"
+    }
+  },
+  {
+    "model": "Claude 3 / 3.5 / 3.7",
+    "lab": "anthropic",
+    "tokenizer": null,
+    "byok": "anthropic-count",
+    "fidelity": "unavailable",
+    "status": "historical",
+    "evidenceUrl": "https://platform.claude.com/docs/en/build-with-claude/token-counting",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer, and these models are retired; the live check counts with Opus 4.6 or Sonnet 4.6 instead.",
+      "zh-TW": "沒有公開的分詞器，且這些模型已停用；即時檢查改以 Opus 4.6 或 Sonnet 4.6 計算。",
+      "ja": "公開されたトークナイザーはなく、これらのモデルは提供終了しています。ライブチェックでは代わりに Opus 4.6 か Sonnet 4.6 で数えます。"
+    }
+  },
+  {
+    "model": "Claude 2.x",
+    "lab": "anthropic",
+    "tokenizer": "anthropic-claude-legacy",
+    "fidelity": "legacy",
+    "status": "historical",
+    "evidenceUrl": "https://github.com/anthropics/anthropic-tokenizer-typescript",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "The archived @anthropic-ai/tokenizer package; its README says the algorithm is no longer accurate as of Claude 3.",
+      "zh-TW": "已封存的 @anthropic-ai/tokenizer 套件；其 README 表示自 Claude 3 起此演算法已不再準確。",
+      "ja": "アーカイブされた @anthropic-ai/tokenizer パッケージです。README には Claude 3 以降このアルゴリズムは正確ではないと書かれています。"
+    }
+  },
+  {
+    "model": "Claude 1.x",
+    "lab": "anthropic",
+    "tokenizer": "anthropic-claude-legacy",
+    "fidelity": "legacy",
+    "status": "historical",
+    "evidenceUrl": "https://github.com/anthropics/anthropic-tokenizer-typescript",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "The archived @anthropic-ai/tokenizer package; its README says the algorithm is no longer accurate as of Claude 3.",
+      "zh-TW": "已封存的 @anthropic-ai/tokenizer 套件；其 README 表示自 Claude 3 起此演算法已不再準確。",
+      "ja": "アーカイブされた @anthropic-ai/tokenizer パッケージです。README には Claude 3 以降このアルゴリズムは正確ではないと書かれています。"
+    }
+  },
+  {
+    "model": "Gemini 3.5",
+    "lab": "google",
+    "tokenizer": "google-gemma4",
+    "fidelity": "confirmed",
+    "status": "current",
+    "evidenceUrl": "https://github.com/googleapis/python-genai/blob/main/google/genai/_local_tokenizer_loader.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "google-genai's LocalTokenizer maps gemini-3.5-flash to Gemma 4.",
+      "zh-TW": "google-genai 的 LocalTokenizer 將 gemini-3.5-flash 對應到 Gemma 4。",
+      "ja": "google-genai の LocalTokenizer は gemini-3.5-flash を Gemma 4 に対応付けています。"
+    }
+  },
+  {
+    "model": "Gemini 3 / 3.1",
+    "lab": "google",
+    "tokenizer": "google-gemma4",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://github.com/googleapis/python-genai/blob/main/google/genai/_local_tokenizer_loader.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "LocalTokenizer maps gemini-3 previews to the Gemma 3 model file (the same 262,144-entry vocabulary) and gemini-3.1 models to Gemma 4.",
+      "zh-TW": "LocalTokenizer 將 gemini-3 預覽版對應到 Gemma 3 模型檔（同一套 262,144 項詞彙），gemini-3.1 則對應到 Gemma 4。",
+      "ja": "LocalTokenizer は gemini-3 のプレビューを Gemma 3 のモデルファイル（同じ 262,144 項目の語彙）に、gemini-3.1 を Gemma 4 に対応付けています。"
+    }
+  },
+  {
+    "model": "Gemini 2.5",
+    "lab": "google",
+    "tokenizer": "google-gemma4",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://github.com/googleapis/python-genai/blob/main/google/genai/_local_tokenizer_loader.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "LocalTokenizer maps gemini-2.5 models to the Gemma 3 model file, whose vocabulary is identical to Gemma 4's.",
+      "zh-TW": "LocalTokenizer 將 gemini-2.5 模型對應到 Gemma 3 模型檔，其詞彙與 Gemma 4 相同。",
+      "ja": "LocalTokenizer は gemini-2.5 のモデルを Gemma 3 のモデルファイルに対応付けています。その語彙は Gemma 4 と同一です。"
+    }
+  },
+  {
+    "model": "Gemini 2.0",
+    "lab": "google",
+    "tokenizer": "google-gemma4",
+    "fidelity": "confirmed",
+    "status": "historical",
+    "evidenceUrl": "https://github.com/googleapis/python-genai/blob/main/google/genai/_local_tokenizer_loader.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Shut down on 2026-06-01; LocalTokenizer mapped it to the Gemma 3 model file (same vocabulary).",
+      "zh-TW": "已於 2026-06-01 停用；LocalTokenizer 曾將它對應到 Gemma 3 模型檔（同一套詞彙）。",
+      "ja": "2026-06-01 に提供終了しました。LocalTokenizer は Gemma 3 のモデルファイル（同じ語彙）に対応付けていました。"
+    }
+  },
+  {
+    "model": "Gemini 4 Argon",
+    "lab": "google",
+    "tokenizer": "google-gemma4",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://arxiv.org/html/2607.02770v1",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No SDK mapping yet; the Gemma 4 report says Gemma 4 uses the same tokenizer as Gemini.",
+      "zh-TW": "SDK 尚無對應；Gemma 4 技術報告指出 Gemma 4 與 Gemini 使用相同的分詞器。",
+      "ja": "SDK の対応付けはまだありません。Gemma 4 の技術報告は Gemma 4 が Gemini と同じトークナイザーを使うとしています。"
+    }
+  },
+  {
+    "model": "Gemini 3.6 Flash / 3.8 Flash",
+    "lab": "google",
+    "tokenizer": "google-gemma4",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://arxiv.org/html/2607.02770v1",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No SDK mapping yet; inferred from the shared Gemini/Gemma tokenizer lineage.",
+      "zh-TW": "SDK 尚無對應；依 Gemini 與 Gemma 共用分詞器的沿革推定。",
+      "ja": "SDK の対応付けはまだありません。Gemini と Gemma がトークナイザーを共有してきた経緯から推定しています。"
+    }
+  },
+  {
+    "model": "Gemini 1.0 / 1.5",
+    "lab": "google",
+    "tokenizer": "google-gemma2",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/googleapis/python-aiplatform/main/vertexai/tokenization/_tokenizer_loading.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "The Vertex AI SDK's local tokenizer pins the Gemma 1/2 tokenizer.model for gemini-1.0 and gemini-1.5.",
+      "zh-TW": "Vertex AI SDK 的本機分詞器為 gemini-1.0 與 gemini-1.5 固定使用 Gemma 1/2 的 tokenizer.model。",
+      "ja": "Vertex AI SDK のローカルトークナイザーは gemini-1.0 と gemini-1.5 に Gemma 1/2 の tokenizer.model を固定しています。"
+    }
+  },
+  {
+    "model": "Muse Glimmer",
+    "lab": "meta",
+    "tokenizer": "meta-llama4-muse",
+    "fidelity": "confirmed",
+    "status": "current",
+    "evidenceUrl": "https://huggingface.co/meta-models/Muse-Glimmer-30B",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "The shipped vocabulary is Glimmer's own Apache-2.0 tokenizer.json.",
+      "zh-TW": "本站提供的詞彙即 Glimmer 本身以 Apache-2.0 授權的 tokenizer.json。",
+      "ja": "このサイトの語彙は Glimmer 自身の Apache-2.0 の tokenizer.json です。"
+    }
+  },
+  {
+    "model": "Muse Spark Open",
+    "lab": "meta",
+    "tokenizer": "meta-llama4-muse",
+    "fidelity": "confirmed",
+    "status": "current",
+    "evidenceUrl": "https://huggingface.co/blog/meta-muse-spark-open",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Hugging Face's launch post says Spark Open and Glimmer use the same tokenizer and vocabulary (202,048 entries); the repository is gated.",
+      "zh-TW": "Hugging Face 的發表文章指出 Spark Open 與 Glimmer 使用相同的分詞器與詞彙（202,048 項）；該儲存庫需申請存取。",
+      "ja": "Hugging Face の公開記事によると、Spark Open と Glimmer は同じトークナイザーと語彙（202,048 項目）を使います。リポジトリはアクセス申請制です。"
+    }
+  },
+  {
+    "model": "Llama 4 Scout / Maverick",
+    "lab": "meta",
+    "tokenizer": "meta-llama4-muse",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/meta-llama/llama-models/main/models/llama4/tokenizer.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Llama 4's tokenizer.model has the same 200,000 tokens and pre-tokenizer regex, verified byte for byte.",
+      "zh-TW": "Llama 4 的 tokenizer.model 具有相同的 200,000 個詞元與預分詞正規表示式，已逐位元組驗證。",
+      "ja": "Llama 4 の tokenizer.model は同じ 200,000 トークンと事前分割の正規表現を持ち、バイト単位で検証済みです。"
+    }
+  },
+  {
+    "model": "Muse Wonder",
+    "lab": "meta",
+    "tokenizer": "meta-llama4-muse",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://github.com/williamliu-ai/token-count-compare",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Meta has not disclosed Muse Wonder's tokenizer; near-equal counts with Muse Spark 1.3 on a public corpus suggest, but do not prove, the same vocabulary.",
+      "zh-TW": "Meta 未公開 Muse Wonder 的分詞器；在公開語料上與 Muse Spark 1.3 的詞元數幾乎相同，暗示但不能證明使用同一套詞彙。",
+      "ja": "Meta は Muse Wonder のトークナイザーを公開していません。公開コーパスで Muse Spark 1.3 とほぼ同じトークン数になることは同じ語彙を示唆しますが、証明にはなりません。"
+    }
+  },
+  {
+    "model": "Llama 3.0 → 3.3",
+    "lab": "meta",
+    "tokenizer": "meta-llama3",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://raw.githubusercontent.com/meta-llama/llama-models/main/models/llama3/tokenizer.py",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Llama 3.0–3.3 share one base tokenizer; only some special-token names changed in 3.1.",
+      "zh-TW": "Llama 3.0–3.3 共用同一個基礎分詞器；3.1 只更改了部分特殊詞元的名稱。",
+      "ja": "Llama 3.0–3.3 は同じ基本トークナイザーを共有しています。3.1 で一部の特殊トークン名だけが変わりました。"
+    }
+  },
+  {
+    "model": "Grok 4.7",
+    "lab": "xai",
+    "tokenizer": "xai-grok2",
+    "byok": "xai-tokenize",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://docs.x.ai/developers/rest-api-reference/inference/other",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer; Grok-2's vocabulary reproduces the API's documented example. Verify it with your own key in the live check.",
+      "zh-TW": "沒有公開的分詞器；Grok-2 的詞彙可重現 API 文件中的範例。可用你自己的金鑰在即時檢查中驗證。",
+      "ja": "公開されたトークナイザーはありません。Grok-2 の語彙は API ドキュメントの例を再現します。ライブチェックでご自身のキーを使って確認できます。"
+    }
+  },
+  {
+    "model": "Grok 4.6",
+    "lab": "xai",
+    "tokenizer": "xai-grok2",
+    "byok": "xai-tokenize",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://docs.x.ai/developers/rest-api-reference/inference/other",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer; Grok-2's vocabulary reproduces the API's documented example. Verify it with your own key in the live check.",
+      "zh-TW": "沒有公開的分詞器；Grok-2 的詞彙可重現 API 文件中的範例。可用你自己的金鑰在即時檢查中驗證。",
+      "ja": "公開されたトークナイザーはありません。Grok-2 の語彙は API ドキュメントの例を再現します。ライブチェックでご自身のキーを使って確認できます。"
+    }
+  },
+  {
+    "model": "Grok 4.5",
+    "lab": "xai",
+    "tokenizer": "xai-grok2",
+    "byok": "xai-tokenize",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://docs.x.ai/developers/rest-api-reference/inference/other",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer; Grok-2's vocabulary reproduces the API's documented example. Verify it with your own key in the live check.",
+      "zh-TW": "沒有公開的分詞器；Grok-2 的詞彙可重現 API 文件中的範例。可用你自己的金鑰在即時檢查中驗證。",
+      "ja": "公開されたトークナイザーはありません。Grok-2 の語彙は API ドキュメントの例を再現します。ライブチェックでご自身のキーを使って確認できます。"
+    }
+  },
+  {
+    "model": "Grok 4.3",
+    "lab": "xai",
+    "tokenizer": "xai-grok2",
+    "byok": "xai-tokenize",
+    "fidelity": "inferred",
+    "status": "current",
+    "evidenceUrl": "https://docs.x.ai/developers/rest-api-reference/inference/other",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "No public tokenizer; Grok-2's vocabulary reproduces the API's documented example. Verify it with your own key in the live check.",
+      "zh-TW": "沒有公開的分詞器；Grok-2 的詞彙可重現 API 文件中的範例。可用你自己的金鑰在即時檢查中驗證。",
+      "ja": "公開されたトークナイザーはありません。Grok-2 の語彙は API ドキュメントの例を再現します。ライブチェックでご自身のキーを使って確認できます。"
+    }
+  },
+  {
+    "model": "Grok 3",
+    "lab": "xai",
+    "tokenizer": "xai-grok2",
+    "fidelity": "inferred",
+    "status": "historical",
+    "evidenceUrl": "https://docs.x.ai/developers/rest-api-reference/inference/other",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Retired on 2026-05-15; inferred from the same documentation example.",
+      "zh-TW": "已於 2026-05-15 停用；依同一個文件範例推定。",
+      "ja": "2026-05-15 に提供終了しました。同じドキュメントの例から推定しています。"
+    }
+  },
+  {
+    "model": "Grok 2 / 2.5",
+    "lab": "xai",
+    "tokenizer": "xai-grok2",
+    "fidelity": "confirmed",
+    "status": "previous",
+    "evidenceUrl": "https://huggingface.co/xai-org/grok-2",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "xai-org/grok-2 ships tokenizer.tok.json; it reproduces the /v1/tokenize-text documentation example exactly.",
+      "zh-TW": "xai-org/grok-2 隨附 tokenizer.tok.json；它能完全重現 /v1/tokenize-text 文件中的範例。",
+      "ja": "xai-org/grok-2 には tokenizer.tok.json が含まれ、/v1/tokenize-text のドキュメントの例を正確に再現します。"
+    }
+  },
+  {
+    "model": "Grok-1",
+    "lab": "xai",
+    "tokenizer": "xai-grok1",
+    "fidelity": "legacy",
+    "status": "historical",
+    "evidenceUrl": "https://github.com/xai-org/grok-1",
+    "checkedOn": "2026-10-25",
+    "note": {
+      "en": "Open-sourced in March 2024 under Apache-2.0 with its SentencePiece tokenizer.model.",
+      "zh-TW": "2024 年 3 月連同 SentencePiece 的 tokenizer.model 以 Apache-2.0 開源。",
+      "ja": "2024 年 3 月に SentencePiece の tokenizer.model とともに Apache-2.0 でオープンソース化されました。"
+    }
+  }
+]

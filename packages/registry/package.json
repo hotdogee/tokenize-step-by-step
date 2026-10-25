@@ -2,13 +2,15 @@
   "name": "@tsbs/registry",
   "version": "0.0.0",
   "private": true,
-  "description": "Registry data (tokenizers, models, licences, examples, BYOK) with zod schemas. zod is build/test only; the browser imports types and plain JSON.",
+  "description": "Registry data (tokenizers, models, licences, examples, BYOK, strings) with zod schemas and registry:check. zod is build/test only; the browser imports types and plain JSON.",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema.ts"
+    "./schema": "./src/schema.ts",
+    "./check": "./src/check.ts",
+    "./data/*.json": "./data/*.json"
   },
   "dependencies": {
     "@tsbs/core": "workspace:*",
