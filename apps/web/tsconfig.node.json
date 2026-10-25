@@ -8,5 +8,5 @@
     "allowImportingTsExtensions": true,
     "tsBuildInfoFile": "../../node_modules/.cache/tsbuild/web-node.tsbuildinfo"
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "plugins/**/*.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "vitest.browser.config.ts", "plugins/**/*.ts"]
 }

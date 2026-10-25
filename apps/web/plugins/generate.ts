@@ -1,6 +1,6 @@
 /**
  * `pnpm generate`: writes the gitignored `src/generated/*.json` that app code imports — `examples-default.json`,
- * `examples-index.json` (the `examples()` plugin's `buildStart` output) and `licences.json` (the `licences()` plugin's) —
+ * `examples-index.json` (the `examples()` plugin's `buildStart` output) and `licences.json` (the `licences()` plugin's), plus the board's `src/board/grid-classes.css` —
  * through the same `@tsbs/vocab-tools` functions, so lint, typecheck and the unit tests work before any Vite build. The
  * Vite plugins still regenerate these files at the start of every `vite build`/`vite dev`; both write only on change.
  */
@@ -9,6 +9,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { generateExamples, generateLicences, MANIFEST_FILE, stableJson } from '@tsbs/vocab-tools';
 import { writeIfChanged } from '@tsbs/vocab-tools/vite-support';
+import { gridClassesCss } from './grid-classes.ts';
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
 const generated = join(repo, 'apps', 'web', 'src', 'generated');
@@ -30,3 +31,7 @@ const licences = await generateLicences(
   process.env,
 );
 await writeIfChanged(join(generated, 'licences.json'), stableJson(licences));
+
+// The board's placement classes (.c1…c64 / .s1…s64, AD-15), also written by the gridClasses() plugin, so the component tests
+// and svelte-check see the stylesheet without a Vite build.
+await writeIfChanged(join(repo, 'apps', 'web', 'src', 'board', 'grid-classes.css'), gridClassesCss());

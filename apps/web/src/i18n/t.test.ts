@@ -37,7 +37,9 @@ describe('number rules (05 §10)', () => {
   });
 
   it('prints ids, ranks, offsets, steps and byte values as raw ASCII digits', () => {
-    expect(translate('en', 'board.cell.token', { id: 133072 })).toBe('token id 133072');
+    expect(translate('en', 'a11y.cell.token', { index: 2, count: 1200, id: 133072 })).toBe(
+      'token 2 of 1,200, id 133072',
+    );
     expect(
       translate('en', 'step.sentence', {
         step: 1200,
