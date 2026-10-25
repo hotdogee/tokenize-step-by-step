@@ -242,7 +242,8 @@ test.describe('touch at 600 px (Pixel 5 emulation)', () => {
           });
         }),
     );
-    await expect(page.getByTestId('status')).not.toContainText('chunk');
+    // No "pinned: chunk …" (stop 4's own announcement, "Chunks: 4 chunks", stays when the tap pins nothing).
+    await expect(page.getByTestId('status')).not.toContainText('pinned: chunk');
     await expect(grid(page).locator('[data-tier="chunk"][data-pinned]')).toHaveCount(0);
   });
 
