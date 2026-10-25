@@ -3,6 +3,11 @@
    * Icon-only header button that discloses a small panel of native radio buttons (the UI-language menu 文/A and the theme
    * toggle, 05 §3.5). Native radios give arrow-key selection for free; the choice applies immediately. Esc closes the
    * panel and returns focus to the button; so does a click outside or Tab leaving the panel.
+   *
+   * A press inside the menu never moves focus (`mousedown` is cancelled): WebKit does not focus a radio or button on
+   * mousedown but blurs the focused radio with no `relatedTarget`, and after a tap it fires that compatibility mousedown
+   * only after `pointerup`, so the blur would close the panel before the click selects the choice. The click still lands
+   * and moves focus itself: the clicked radio takes it, and the button takes it back when it closes the panel.
    */
   import Icon from './Icon.svelte';
   import type { IconName } from './icons.ts';
@@ -26,11 +31,6 @@
   let open = $state(false);
   let root: HTMLDivElement | undefined = $state();
   let button: HTMLButtonElement | undefined = $state();
-  /**
-   * A pointer press inside the menu is in progress. WebKit does not focus a radio (or button) on mousedown: it blurs the
-   * focused radio with no `relatedTarget`, which must not close the panel before the click selects the new choice.
-   */
-  let pressing = false;
 
   function close(returnFocus: boolean): void {
     open = false;
@@ -45,7 +45,6 @@
   }
 
   function onFocusOut(event: FocusEvent): void {
-    if (pressing) return;
     if (open && !(event.relatedTarget instanceof Node && root?.contains(event.relatedTarget) === true)) close(false);
   }
 
@@ -56,26 +55,19 @@
   function toggle(): void {
     open = !open;
     if (open) queueMicrotask(() => root?.querySelector<HTMLInputElement>('input:checked')?.focus());
+    else button?.focus();
   }
 </script>
 
-<svelte:window
-  onpointerdown={onWindowPointer}
-  onpointerup={() => {
-    pressing = false;
-  }}
-  onpointercancel={() => {
-    pressing = false;
-  }}
-/>
+<svelte:window onpointerdown={onWindowPointer} />
 
 <div
   class="menu"
   bind:this={root}
   onkeydown={onKeydown}
   onfocusout={onFocusOut}
-  onpointerdown={() => {
-    pressing = true;
+  onmousedown={(event) => {
+    event.preventDefault();
   }}
   role="presentation"
 >
@@ -104,7 +96,7 @@
               onchange(choice.value);
             }}
             onclick={(event) => {
-              event.currentTarget.focus(); // WebKit leaves focus on <body> after a click; Esc and Tab-out need it here
+              event.currentTarget.focus(); // the press moved no focus (see above); Esc and Tab-out need it here
             }}
           />
           <span class="control-label" lang={choice.lang}>{choice.label}</span>

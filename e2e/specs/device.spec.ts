@@ -6,6 +6,9 @@
  *   A native checkbox or radio inside its `<label>` is measured by the label, which is what a tap hits; elements with
  *   `pointer-events: none` (the keyboard-only chunk brackets, 05 §3.3) are not pointer targets; a link inside running
  *   text (the picker's "evidence · checked on …") takes the 2.5.8 inline exception;
+ * - theme and language menus by touch: on the touch projects a `.tap()` on a radio applies the choice (`data-theme`,
+ *   `lang`) and the panel stays open and usable — WebKit's compatibility mousedown after a tap used to blur the focused
+ *   radio and close the panel before the click landed (the mouse-only `.click()`/`.check()` steps elsewhere miss it);
  * - reflow (WCAG 1.4.10): on every project the page chrome never scrolls horizontally, at 320 px in particular
  *   (`chromium-320`); the board is the declared exempt region (`[data-reflow-exempt]`) and scrolls inside itself.
  */
@@ -96,6 +99,41 @@ test.describe('touch targets ≥ 24 × 24 (WCAG 2.5.8)', () => {
     await page.getByRole('button', { name: 'Keyboard shortcuts and help' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await expectTargets(page, 'help dialog');
+  });
+});
+
+test.describe('theme and language menus by touch', () => {
+  test.skip(({ hasTouch }) => !hasTouch, 'touch projects only (pixel-5, iphone-12)');
+
+  test('a tap on a radio applies the choice and the panel stays open and usable', async ({ page }) => {
+    await openShell(page, 'en');
+    const html = page.locator('html');
+    await expect(html).toHaveAttribute('data-theme', 'auto');
+
+    const themeButton = page.getByRole('button', { name: 'Colour theme' });
+    await themeButton.tap();
+    const dark = page.getByRole('radio', { name: 'Dark' });
+    await dark.tap();
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await expect(dark).toBeChecked();
+    await expect(dark).toBeFocused();
+    await page.getByRole('radio', { name: 'Light' }).tap();
+    await expect(html).toHaveAttribute('data-theme', 'light');
+    await themeButton.tap();
+    await expect(dark).toBeHidden();
+    await expect(themeButton).toBeFocused();
+
+    await page.getByRole('button', { name: 'Interface language' }).tap();
+    const japanese = page.getByRole('radio', { name: '日本語' });
+    await japanese.tap();
+    await expect(html).toHaveAttribute('lang', 'ja');
+    await expect(japanese).toBeChecked();
+    await expect(japanese).toBeFocused();
+    await page.getByRole('radio', { name: 'English' }).tap();
+    await expect(html).toHaveAttribute('lang', 'en');
+    await page.keyboard.press('Escape');
+    await expect(japanese).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Interface language' })).toBeFocused();
   });
 });
 
