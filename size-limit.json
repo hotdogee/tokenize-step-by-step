@@ -25,7 +25,7 @@
     "limit": "8 KiB"
   },
   {
-    "name": "Worker core (loader + protocol + host)",
+    "name": "Worker core (loader + protocol + host: entry-*.js, the Worker entry, and the entry-core-*.js it imports; apps/web/vite.config.ts)",
     "path": "apps/web/dist/assets/entry-*.js",
     "limit": "12 KiB"
   },

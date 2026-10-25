@@ -32,9 +32,12 @@ references to `node_modules/.cache/tsbuild/`.
 
 The page tokenizes in a Web Worker (`@tsbs/worker`, PA-8): `apps/web/src/app/bootstrap.ts` builds
 `new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }))` from the Vite worker import
-`@tsbs/worker/entry?worker`, behind `DeferredClient`, so the client code, the Worker's host chunk (`assets/entry-*.js`)
-and the first engine chunk (`assets/bytelevel-*.js` or `assets/spm-*.js`, plus the shared `assets/engine-core-*.js`)
-load after first paint, followed by the tokenizer's `/tok/<id>/<sha12>.bin`. Typed text is tokenized live.
+`@tsbs/worker/entry?worker`, behind `DeferredClient`, so the client code, the Worker's host chunks (`assets/entry-*.js`
+and the `assets/entry-core-*.js` it imports) and the first engine chunk (`assets/bytelevel-*.js` or `assets/spm-*.js`,
+plus the shared `assets/engine-core-*.js`) load after first paint, followed by the tokenizer's `/tok/<id>/<sha12>.bin`.
+Typed text is tokenized live. No chunk may import `entry-*.js` itself: WebKit evaluates a module Worker's top-level
+script again when another module imports it (a second host), so `apps/web/vite.config.ts` moves everything the entry
+imports into `entry-core` and `check:dist` fails on such an import.
 
 Append `?mock=1` to the URL (`http://localhost:5173/?mock=1`, or `/?lang=ja&mock=1`) to use the precomputed-examples
 client instead (`ExamplesClient` over WP01's `MockTokenizerClient`): no Worker and no vocabulary download; the example

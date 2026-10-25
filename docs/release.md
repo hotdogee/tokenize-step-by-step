@@ -8,14 +8,28 @@ once, and the checklist signed off before the first production deploy and re-run
 
 1. **Pull request → `ci`** (`.github/workflows/ci.yml`): `check`, `vocab` (uv, raw-vocabulary cache, `vocab:fetch`,
    conformance gate, `vocab:build`, guards), `unit`, `build` (`vite build` → `check:dist` → `wrangler deploy --dry-run`,
-   uploads `dist`), `e2e` (Playwright on `vite preview`, axe), `e2e-headers` (Playwright on
+   uploads `dist`), `e2e` (the full Playwright matrix on `vite preview`, see below), `e2e-headers` (Playwright on
    `wrangler dev --assets apps/web/dist`, plus the deploy smoke checks). When the Cloudflare secrets exist, `preview`
    publishes `pr-<n>` with `wrangler preview`, comments its URL on the PR, runs `e2e:headers` and `deploy:smoke` against
    it, and `lighthouse` runs LHCI against it. Closing the PR deletes the preview (`preview-cleanup`).
+   - **The e2e matrix** (06 §1, §4): `E2E_FULL_MATRIX=1`, one job per engine × 3 shards — `e2e (chromium n/3)` runs the
+     chromium, Pixel 5, 320 × 568, 360 × 780, 2560 × 1440@2× and `visual` projects; `e2e (firefox n/3)` firefox;
+     `e2e (webkit n/3)` webkit and iPhone 12 (one retry in CI; every other project has none). Each job installs only its
+     browser (cached per Playwright version, `.github/actions/playwright`) plus `fonts-noto-cjk`, and uploads the HTML
+     report, traces and screenshots of failures as `e2e-report-<engine>-<shard>`. The suites: shell, board, device
+     (touch targets on Pixel 5 / iPhone 12, reflow on every viewport), live Worker, axe, the `@parity` harness
+     (chromium, firefox, webkit) and the visual baselines (below). Locally: `E2E_FULL_MATRIX=1 pnpm e2e` (after
+     `pnpm --filter @tsbs/e2e exec playwright install chromium firefox webkit`), or one CI job with
+     `E2E_FULL_MATRIX=1 E2E_ENGINE=webkit pnpm e2e --shard=1/3`.
+   - **Wall-time target ≤ 15 min** (06 §4): `check` ∥ `vocab` (≈ 1–4 min with warm caches) → `build` ∥ `unit` (≈ 2–3 min)
+     → the nine e2e shards and `e2e-headers` in parallel (≈ 4–6 min each: install from cache, CJK fonts, ≈ 20–60 tests at
+     the runner's two Playwright workers). If a shard grows past ≈ 8 min, add shards in the `e2e` matrix
+     (`shard: [1, 2, 3, 4]` and `--shard=${{ matrix.shard }}/4`) rather than more workers per runner.
 2. **Merge to `main` → `ci`** runs again on the merge commit.
 3. **`deploy`** (`.github/workflows/deploy.yml`) is triggered only by that `ci` run completing successfully on `main`. It
    downloads the `dist` artifact that run tested (no rebuild), runs `wrangler deploy`, then `pnpm deploy:smoke` against
-   production and a report-only Lighthouse run. A push never deploys directly, so a commit is never deployed twice.
+   production and a report-only Lighthouse run. A push never deploys directly, so a commit is never deployed twice, and
+   a manually dispatched `ci` run (the visual-baselines path below) never deploys at all.
 
 Without the secrets (forks, Dependabot PRs, or before the setup below) `preview`, `lighthouse`, `preview-cleanup` and
 `deploy` are skipped and every workflow stays green: the first job of `ci.yml` and `deploy.yml` (`cloudflare secrets`)
@@ -58,10 +72,31 @@ Do this once, before the first deploy.
    pnpm build   # strict conformance (the default); ends with wrangler deploy --dry-run
    ```
 
-7. **Branch protection on `main`**: require the status checks `check`, `vocab`, `unit`, `build`, `e2e (chromium)`,
-   `e2e-headers` and `lighthouse` (a skipped job counts as passing, so `lighthouse` does not block before the secrets
-   exist). The `production` environment is created by the first deploy; adding required reviewers to it pauses every
-   deploy until approved.
+7. **Branch protection on `main`**: require the status checks `check`, `vocab`, `unit`, `build`, the nine
+   `e2e (chromium 1/3)` … `e2e (webkit 3/3)` checks (`e2e (<engine> <shard>/3)` for chromium, firefox and webkit, shards
+   1–3; the single `e2e (chromium)` check of waves 1–2 no longer exists), `e2e-headers` and `lighthouse` (a skipped job
+   counts as passing, so `lighthouse` does not block before the secrets exist). The `production` environment is created
+   by the first deploy; adding required reviewers to it pauses every deploy until approved.
+
+## Visual baselines
+
+The `visual` project (`e2e/visual/board.visual.ts`, 06 §1) compares 4 fixtures (台灣台南 on o200k, cl100k and Grok-1;
+𰻝 on Gemma 4) × 2 themes × 3 viewports (360, 768, 1440) with `toHaveScreenshot` at `maxDiffPixelRatio` 0.002. The
+baselines are Linux renders (chromium + `fonts-noto-cjk` on `ubuntu-24.04`), stored as
+`e2e/visual/__screenshots__/<fixture>-<theme>-<width>-linux.png`; off Linux, or while a baseline is absent, each test
+skips with a notice (and the `e2e (chromium 1/3)` job prints a "Visual baselines absent" notice). They cannot be
+produced on Windows or macOS — fonts and anti-aliasing differ. To create or refresh them:
+
+1. Actions → **ci** → _Run workflow_ on the branch whose UI the baselines should show (after the last UI change of a
+   wave). Tick **open_pr** to have the run push `visual-baselines/<sha>` and open a PR (needs _Settings → Actions →
+   General → Allow GitHub Actions to create and approve pull requests_); otherwise leave it off.
+2. The `visual-baselines` job renders the 24 images with `--update-snapshots=all` against the `dist` that run built and
+   uploads them as the **`visual-baselines`** artifact (30 days).
+3. Without the PR: download the artifact (`gh run download <run-id> -n visual-baselines -D e2e/visual/__screenshots__`),
+   look at every image, commit them on a branch and open a PR. With the PR: review the images in it; a PR opened with
+   `GITHUB_TOKEN` does not start `ci`, so push an empty commit (or close and reopen it) to run the checks.
+4. An intended UI change that moves pixels needs the same refresh in its PR; an unintended diff fails `e2e (chromium n/3)`
+   with the expected/actual/diff images in the `e2e-report-chromium-<n>` artifact.
 
 ## Pre-launch re-verification of inferred mappings
 
@@ -104,7 +139,9 @@ JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
       → `404` with the `404.html` page; `"$BASE/.env"` → `404`.
 - [ ] **9. Performance.** `pnpm lhci --collect.url="$BASE/"` meets 06 §3 (mobile, Lighthouse "Slow 4G"); a Safari 16.4 /
       iOS 16.4 smoke on BrowserStack (Playwright WebKit is newer than the floor); one mid-range Android Chrome run timed
-      and recorded in `docs/perf-log.md`.
+      and recorded in `docs/perf-log.md`. Only a deployed URL (the PR preview in the `lighthouse` job, or production) is
+      budget-authoritative: `pnpm lhci-local` runs the same `lighthouserc.json` against `wrangler dev` on loopback (no
+      edge compression, no HTTP/3, no real RTT) as a smoke read and never fails on an assertion.
 
 ## Legal and content
 
@@ -137,3 +174,7 @@ JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
 - _No preview on a PR_: the PR comes from a fork or Dependabot (no secrets), or the secrets are not set; the
   `cloudflare secrets` job prints a notice.
 - _Deploy skipped_: the `ci` run did not succeed, was not a push to `main`, or the secrets are missing.
+- _An e2e shard failed_: download `e2e-report-<engine>-<shard>` and open `playwright-report/functional/index.html`
+  (traces: `pnpm exec playwright show-trace <trace.zip>`). Reproduce one job locally with
+  `E2E_FULL_MATRIX=1 E2E_ENGINE=<engine> pnpm e2e --shard=<n>/3`. A WebKit-only failure is often a real Safari difference
+  (wave 3 found two: a re-evaluated Worker entry module and radios that do not take focus on click), not a flaky test.

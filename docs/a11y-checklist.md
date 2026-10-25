@@ -5,6 +5,18 @@ The automated gates catch what tools can see: every E2E page/state runs axe with
 assert the grid ARIA contract. They cannot judge the criteria below, so a person checks them before every release and
 records the result at the end (`docs/design/06-quality-ci-deploy.md` §1, §7 item 12; 05 §3.3, §5, §8, §9).
 
+**Already asserted by the e2e matrix** (`E2E_FULL_MATRIX=1`, 06 §1; `docs/release.md` § How a change ships). These
+checks run on every PR; repeat them by hand only where the matrix is red, skipped, or cannot reach (real devices, AT):
+
+| Criterion                     | Automated check                                                                                                                                                                        | Projects                                    |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 2.5.8 Target Size             | every visible pointer target ≥ 24 × 24 on the default view, at stop 4 and in the picker and help dialogs (`device.spec.ts`); board cells and the sheet handle (`board-layout.spec.ts`) | `pixel-5`, `iphone-12` (touch projects)     |
+| 1.4.10 Reflow                 | no horizontal page overflow in en / zh-TW / ja with the picker open, and on About (`device.spec.ts`); 320 px chrome with `[data-reflow-exempt]` on the board (`shell-layout.spec.ts`)  | every project, `chromium-320` in particular |
+| 2.4.11 Focus Not Obscured     | at 360 px the focused cell never meets the sheet or the header over 120 key presses; at 768–1023 px never under the anchored panel (`board-layout.spec.ts`)                            | every project                               |
+| 2.1.4 Character Key Shortcuts | "Single-key shortcuts: off" makes `t`, `?`, `h`, `3` inert while arrows, Enter, `i`, `c`, Esc keep working (`shell-notices.spec.ts`, `board-keyboard.spec.ts`)                         | every project                               |
+| Forced colours                | borders in CanvasText, hatch and focus outline in Highlight (`board-layout.spec.ts`)                                                                                                   | every project                               |
+| axe (WCAG 2.2 AA)             | zero violations on `/` and `/about/` × 3 locales × 2 themes, the open dialogs and menus, the pinned board                                                                              | every project                               |
+
 **Setup.** The release build on the preview or production URL. Desktop: NVDA (current) + Firefox (current) on Windows;
 VoiceOver + Safari on macOS. Phone: a real 360 px-wide Android device (Chrome) and an iPhone (Safari, VoiceOver). Run
 each section in English and spot-check zh-TW and ja.
