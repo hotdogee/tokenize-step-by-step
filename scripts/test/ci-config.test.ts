@@ -26,9 +26,11 @@ const actions = readdirSync(new URL('.github/actions/', root)).map((name) => ({
 interface Workflow {
   name?: string;
   on?: Record<string, unknown>;
+  concurrency?: { group?: string; 'cancel-in-progress'?: string };
   jobs?: Record<
     string,
     {
+      name?: string;
       'runs-on'?: string;
       'timeout-minutes'?: number;
       needs?: string | string[];
@@ -118,7 +120,7 @@ describe('workflows', () => {
   });
 
   it('run the full e2e matrix as engine × 3 shards with the CJK fonts (06 §4)', () => {
-    const e2e = parsed('ci.yml').jobs?.['e2e'];
+    const e2e = parsed('ci.yml').jobs?.['e2e-matrix'];
     expect(e2e?.strategy?.matrix).toMatchObject({ engine: ['chromium', 'firefox', 'webkit'], shard: [1, 2, 3] });
     expect(e2e?.env).toEqual({ E2E_FULL_MATRIX: '1', E2E_ENGINE: '${{ matrix.engine }}' });
     const steps = e2e?.steps ?? [];
@@ -128,6 +130,26 @@ describe('workflows', () => {
     });
     expect(steps.some((step) => step.run === 'pnpm e2e --shard=${{ matrix.shard }}/3')).toBe(true);
     expect(steps.some((step) => step.if === 'failure()' && step.with?.['path'] !== undefined)).toBe(true);
+  });
+
+  it('report the matrix as one stable `e2e` check that fails unless every shard succeeded (06 §4)', () => {
+    const jobs = parsed('ci.yml').jobs ?? {};
+    const gate = jobs['e2e'];
+    expect(gate?.name).toBeUndefined();
+    expect(gate?.needs).toBe('e2e-matrix');
+    expect(gate?.if).toBe("always() && github.event.action != 'closed'");
+    expect(gate?.steps?.[0]?.run).toContain('test "$RESULT" = success');
+    expect(jobs['e2e-matrix']?.name).toMatch(/^e2e \(/);
+    // No other job may claim the required check's name.
+    for (const [id, job] of Object.entries(jobs)) if (id !== 'e2e') expect(job.name ?? id, id).not.toBe('e2e');
+  });
+
+  it('keep a dispatched ci run out of the push group, so it never cancels a pending push run on main', () => {
+    const { concurrency } = parsed('ci.yml');
+    expect(concurrency?.group).toBe(
+      "ci-${{ github.event_name == 'workflow_dispatch' && 'dispatch-' || '' }}${{ github.event.pull_request.number || github.ref }}",
+    );
+    expect(concurrency?.['cancel-in-progress']).toBe("${{ github.event_name == 'pull_request' }}");
   });
 
   it('render the visual baselines only on workflow_dispatch, never on push or pull_request', () => {

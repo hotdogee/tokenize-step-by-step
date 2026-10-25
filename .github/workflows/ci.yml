@@ -4,9 +4,10 @@
 #   vocab ──┬─ unit                        uv + raw-vocab cache · vocab:fetch · conformance gate · vocab:build · guard
 #           │                              (unit: registry:check --require-built on the vocab-dist artifact · chromium ·
 #           │                               pnpm test incl. the Vitest browser-mode projects)
-#           ├─ build ──┬─ e2e              vite build · check:dist · wrangler deploy --dry-run → `dist` artifact
-#           │          │                   e2e: the full matrix (E2E_FULL_MATRIX=1) as engine × 3 shards — chromium (+ Pixel 5,
-#           │          │                   320/360/2560, visual), firefox, webkit (+ iPhone 12) — axe, parity, visual
+#           ├─ build ──┬─ e2e-matrix → e2e vite build · check:dist · wrangler deploy --dry-run → `dist` artifact
+#           │          │                   e2e-matrix: the full matrix (E2E_FULL_MATRIX=1) as engine × 3 shards — chromium
+#           │          │                   (+ Pixel 5, 320/360/2560, visual), firefox, webkit (+ iPhone 12) — axe, parity,
+#           │          │                   visual; e2e: the gate job, the one required check over all shards
 #           │          ├─ e2e-headers      Playwright on `wrangler dev --assets apps/web/dist` (workerd applies _headers)
 #           │          ├─ preview ── lighthouse   PRs only, and only when the Cloudflare secrets exist (cf-secrets)
 #           │          └─ visual-baselines workflow_dispatch only: renders the Linux baselines → artifact (+ optional PR)
@@ -30,8 +31,10 @@ on:
         type: boolean
         default: false
 
+# A workflow_dispatch run (visual-baselines) gets its own group: in the push group it would cancel a pending push run on
+# main (a group keeps one pending run), and that commit would never deploy (deploy.yml takes push runs only).
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event_name == 'workflow_dispatch' && 'dispatch-' || '' }}${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -188,7 +191,7 @@ jobs:
   # The functional matrix (06 §1, §4): one job per engine and shard, each installing only its browser. E2E_ENGINE picks the
   # engine's projects (e2e/projects.ts): chromium = chromium, pixel-5, chromium-320/360/2560 and visual; firefox; webkit =
   # webkit and iphone-12 (one retry in CI). Traces and screenshots of failures are uploaded per shard.
-  e2e:
+  e2e-matrix:
     name: e2e (${{ matrix.engine }} ${{ matrix.shard }}/3)
     needs: build
     runs-on: ubuntu-24.04
@@ -232,6 +235,21 @@ jobs:
             e2e/playwright-report
             e2e/test-results
           retention-days: 7
+
+  # The one required e2e check (06 §4 lists `e2e`): green only when every matrix job succeeded. Branch protection names this
+  # job, never a shard, so changing the shard count renames no required check. `always()`: a skipped required check
+  # counts as passing, so a failed `build` (matrix skipped) must fail here.
+  e2e:
+    needs: e2e-matrix
+    if: always() && github.event.action != 'closed'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - env:
+          RESULT: ${{ needs.e2e-matrix.result }}
+        run: |
+          echo "e2e matrix: ${RESULT}"
+          test "$RESULT" = success
 
   e2e-headers:
     needs: build
