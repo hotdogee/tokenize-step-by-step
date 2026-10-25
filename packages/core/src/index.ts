@@ -35,4 +35,7 @@ export * from './layout/pack-rows.ts';
 export * from './fixture/examples-wire.ts';
 export * from './fixture/from-fixture-case.ts';
 export * from './fixture/mock-client.ts';
+
+// ---- WP05A / WP05B: engine factories (names fixed by ENGINE_FACTORIES in @tsbs/conformance; AD-32 probes them) ----
 export { createByteLevelTokenizer } from './engines/bytelevel/index.ts';
+export { createSpmTokenizer } from './engines/spm/index.ts';
