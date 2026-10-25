@@ -8,13 +8,14 @@
    */
   import { onMount } from 'svelte';
   import Board from '../board/Board.svelte';
+  import { openLiveCheck } from '../byok/drawer.svelte.ts';
+  import LiveCheckDrawer from '../byok/LiveCheckDrawer.svelte';
   import { i18n } from '../i18n/locale.svelte.ts';
   import CountsLine from '../shell/CountsLine.svelte';
   import ExampleChips from '../shell/ExampleChips.svelte';
   import Footer from '../shell/Footer.svelte';
   import Header from '../shell/Header.svelte';
   import type HelpDialogComponent from '../shell/HelpDialog.svelte';
-  import LiveCheckPlaceholder from '../shell/LiveCheckPlaceholder.svelte';
   import LiveRegions from '../shell/LiveRegions.svelte';
   import NoticesStrip from '../shell/NoticesStrip.svelte';
   import OptionsRow from '../shell/OptionsRow.svelte';
@@ -41,7 +42,6 @@
   let PickerDialog: typeof PickerDialogComponent | null = $state.raw(null);
   let HelpDialog: typeof HelpDialogComponent | null = $state.raw(null);
   let textarea: HTMLTextAreaElement | undefined = $state();
-  let liveCheckHeading: HTMLHeadingElement | undefined = $state();
 
   const STAGE_NAME = {
     1: 'stage.1',
@@ -170,7 +170,7 @@
         pickerOpen = false;
       }}
       onlivecheck={() => {
-        liveCheckHeading?.focus();
+        openLiveCheck('anthropic-count');
       }}
     />
   {/if}
@@ -190,7 +190,7 @@
   {/snippet}
 </Footer>
 
-<LiveCheckPlaceholder bind:heading={liveCheckHeading} />
+<LiveCheckDrawer />
 
 <style>
   .main {

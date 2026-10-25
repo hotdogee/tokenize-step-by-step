@@ -234,11 +234,8 @@ export const en = {
   'help.key.play': 'Play / pause',
   'help.key.firstLast': 'First / last step',
 
-  // ---- Live check (placeholder until WP10) ----
+  // ---- Live-check drawer trigger (first paint, PA-10; the open drawer's strings are in src/byok/i18n) ----
   'liveCheck.heading': 'Live check with your own API key',
-  'liveCheck.privacy':
-    'Your key stays in this tab’s memory, is sent only to the provider over HTTPS and is forgotten when you reload. This site has no backend and no analytics.',
-  'liveCheck.unavailable': 'Live checks are not available in this build yet.',
 
   // ---- Reserved for other work packages (see reserved.ts) ----
   'a11y.fragment': 'token {index}, continued (part {part} of {parts})',

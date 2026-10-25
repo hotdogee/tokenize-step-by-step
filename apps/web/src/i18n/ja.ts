@@ -234,11 +234,8 @@ export const ja = {
   'help.key.play': '再生／一時停止',
   'help.key.firstLast': '最初／最後のステップ',
 
-  // ---- Live check ----
+  // ---- Live-check drawer trigger (the open drawer's strings are in src/byok/i18n) ----
   'liveCheck.heading': 'ご自身の API キーでライブチェック',
-  'liveCheck.privacy':
-    'キーはこのタブのメモリーにのみ保持され、HTTPS でプロバイダーにだけ送信され、再読み込みすると消去されます。このサイトにはバックエンドもアクセス解析もありません。',
-  'liveCheck.unavailable': 'このビルドではライブチェックはまだ利用できません。',
 
   // ---- Reserved for other work packages ----
   'a11y.fragment': 'トークン {index}（続き、{parts} 個中 {part} 個目）',
