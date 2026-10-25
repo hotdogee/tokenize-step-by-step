@@ -9,7 +9,7 @@
  ┌───────────────────────────────────────────────────────────┐      ┌──────────────────────────────────────────────────────────────┐
  │ tools/oracle (Python, unchanged ownership)                 │      │ main thread (apps/web, Svelte 5)                              │
  │  manifest.json ──► fetch_vocab.py ──► data/vocab/raw/**    │      │  boot.js (lang/theme) → app.js (≤45 KB br)                    │
- │  gen_fixtures.py ──► fixtures/*.json (12 × 358 cases)      │      │  ┌ Input (textarea, chips, toggles)                           │
+ │  gen_fixtures.py ──► fixtures/*.json (12 × 374 cases)      │      │  ┌ Input (textarea, chips, toggles)                           │
  │  export_unicode_tables.py ──► core/unicode/tables.gen.ts  │      │  ├ Pipeline rail + scrubber                                   │
  └───────────────┬───────────────────────────┬───────────────┘      │  ├ Board (packRows → rows of K byte columns, 3 tiers)          │
                  │ raw vocab + sha256         │ fixtures             │  ├ Inspector (rail ≥1024 / anchored 768–1023 / sheet <768)     │
@@ -114,7 +114,7 @@ apps/web ──► @tsbs/registry (JSON + types), @tsbs/ui-tokens
 | TypeScript | 5.9.x | `erasableSyntaxOnly`, `verbatimModuleSyntax` |
 | Vite | 7.x (8 only after a green branch run) | `build.target ['es2022','safari16.4','chrome109','firefox115']` |
 | Svelte | 5.x, runes only (`compilerOptions.runes: true`) | `transition:`, `in:`, `out:`, `animate:` directives forbidden by lint in `apps/web` (they inject a runtime `<style>`; AD-15) — own WAAPI FLIP (05 §7) |
-| @sveltejs/vite-plugin-svelte | 5.x | |
+| @sveltejs/vite-plugin-svelte | 6.x | Vite 7 requires 6.x |
 | Vitest | 4.x (+ `@vitest/coverage-v8`, `@vitest/browser` with the Playwright provider for component tests) | |
 | fast-check | 3.x/4.x | property tests |
 | Playwright | 1.5x; chromium, firefox, webkit + `Pixel 5`, `iPhone 12` device projects | `@axe-core/playwright` |
@@ -180,19 +180,20 @@ export default defineConfig({
     assetsInlineLimit: 0,
     sourcemap: 'hidden',                       // *.map excluded from deploy via .assetsignore
     rollupOptions: {
-      input: { main: resolve(__dirname, 'index.html'), about: resolve(__dirname, 'about/index.html') },   // boot.ts is NOT a Rollup input (it would become a deferred ES module); bootScript() emits it
+      input: { main: resolve(__dirname, 'index.html'), about: resolve(__dirname, 'about/index.html'), notFound: resolve(__dirname, '404.html') },   // boot.ts is NOT a Rollup input (it would become a deferred ES module); bootScript() emits it. 404.html is an input so it gets the boot script and the hashed CSS
       output: { manualChunks: { i18n: ['./src/i18n/en.ts', './src/i18n/zh-TW.ts', './src/i18n/ja.ts'] } },
     },
     reportCompressedSize: true,
   },
   worker: { format: 'es' },                    // REQUIRED for the lazy engine import()s inside the Worker; constructed via `import TokWorker from '@tsbs/worker/entry?worker'` (Vite worker import; a bare specifier inside new URL() is NOT resolved by Vite)
   css: { transformer: 'lightningcss' },
-  esbuild: { supported: { 'regexp-modifiers': false } },   // never emit inline (?i:) — Safari < 26 (PD-5)
+  // PD-5 (no inline (?i:) — Safari < 26): esbuild 0.28 (Vite 7) has no 'regexp-modifiers' feature key (transformWithEsbuild rejects it) and never introduces modifiers itself;
+  // the guard is the ESLint regex-literal rule (no-restricted-syntax in eslint.config.js) plus WP02's pattern-expansion tests.
   define: { __BUILD_SHA__: JSON.stringify(process.env.GITHUB_SHA ?? 'dev'), __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)) },
 });
 ```
 
-Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esbuild on `src/app/boot.ts` with `{ format: 'iife', minify: true, target: 'safari16.4' }`, emits it through `this.emitFile` as `assets/boot-[hash].js`, and injects `<script src="/assets/boot-[hash].js">` (no `type="module"`, no `defer`, so it runs before first paint) at the top of `<head>` of **both** HTML entries via `transformIndexHtml`; it sets `<html lang>` and `data-theme` (AD-15/AD-29) and is on the size-limit list (≤ 0.5 KB). **Worker**: constructed with the Vite worker import `import TokWorker from '@tsbs/worker/entry?worker'` (resolved through the workspace alias; `worker.format: 'es'` so the lazy `import('./engines/bytelevel.js')` inside it works); never a bare specifier inside `new URL(…, import.meta.url)`. Engine families are dynamic imports inside the Worker entry only; `/about/` is its own HTML entry sharing `src/shell` and `src/i18n`; dev mode serves `data/vocab/dist` under `/tok` and falls back to the dev loaders (`loadTiktokenText`, `loadSpmModel`, `loadHfJson` in `@tsbs/vocab-tools/dev`) when `dist` is missing so engine agents never block on the converter; `headersMiddleware()` applies `public/_headers` in `vite dev`/`vite preview` so the strict CSP and `/tok/*` headers are exercised locally too (the authoritative check runs on `wrangler dev` and the deployed preview, 06 §4).
+Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esbuild on `src/app/boot.ts` with `{ format: 'iife', minify: true, target: 'safari16.4' }`, emits it through `this.emitFile` as `assets/boot-[hash].js`, and injects `<script src="/assets/boot-[hash].js">` (no `type="module"`, no `defer`, so it runs before first paint) at the top of `<head>` of **every** HTML entry (`index.html`, `about/index.html`, `404.html`) via `transformIndexHtml`; it sets `<html lang>` and `data-theme` (AD-15/AD-29) and is on the size-limit list (≤ 0.5 KB). **Worker**: constructed with the Vite worker import `import TokWorker from '@tsbs/worker/entry?worker'` (resolved through the workspace alias; `worker.format: 'es'` so the lazy `import('./engines/bytelevel.js')` inside it works); never a bare specifier inside `new URL(…, import.meta.url)`. Engine families are dynamic imports inside the Worker entry only; `/about/` is its own HTML entry sharing `src/shell` and `src/i18n`; dev mode serves `data/vocab/dist` under `/tok` and falls back to the dev loaders (`loadTiktokenText`, `loadSpmModel`, `loadHfJson` in `@tsbs/vocab-tools/dev`) when `dist` is missing so engine agents never block on the converter; `headersMiddleware()` applies `public/_headers` in `vite dev`/`vite preview` so the strict CSP and `/tok/*` headers are exercised locally too (the authoritative check runs on `wrangler dev` and the deployed preview, 06 §4).
 
 ## 6. Root scripts
 
@@ -213,7 +214,7 @@ Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esb
 | `pnpm check:dist` | `size-limit`, 25 MiB / 20,000-file guards, dotfile guard, manifest ↔ files cross-check, `_headers` rule count |
 | `pnpm lhci -- --url <preview url>` | `@lhci/cli autorun` (mobile preset) against the **deployed preview URL** (real edge compression, `_headers`, HTTP/3); `vite preview` serves uncompressed bytes and is never a budget target |
 | `pnpm deploy` / `pnpm preview:pr -- <n>` | `wrangler deploy` / `wrangler preview --name pr-<n>` (CI only) |
-| `pnpm oracle:check` | `fetch_vocab.py` (idempotent) · `make_corpus.py --check` · `gen_fixtures.py --check` · `render_license_docs.py --check` |
+| `pnpm oracle:check` | `fetch_vocab.py` (idempotent) · `make_corpus.py --check` · `gen_fixtures.py --check` · `render_license_docs.py --check` · `export_unicode_tables.py --check` |
 
 ## 7. Build graph
 
