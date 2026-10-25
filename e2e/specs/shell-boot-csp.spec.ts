@@ -3,6 +3,7 @@
  * with zero violations (vite preview + headersMiddleware here; e2e-headers repeats it on wrangler dev, 06 §4).
  */
 import { expect, test, type Page } from '@playwright/test';
+import { LIVE_READY_TIMEOUT_MS } from './shell-helpers.ts';
 
 /** Records CSP violations and the <html> attributes at the moment <body> is created (before any paint). */
 async function instrument(page: Page): Promise<{ consoleViolations: string[] }> {
@@ -49,7 +50,8 @@ for (const path of ['/', '/about/', '/404.html']) {
     expect(response?.headers()['content-security-policy']).toContain("style-src 'self'");
     await expect(page.locator('h1')).toBeVisible();
     // Let the app settle: the default tokenizer loads after first paint (06 §3).
-    if (path === '/') await expect(page.locator('[data-source="live"]')).toBeVisible();
+    if (path === '/')
+      await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
     const { csp, atBody } = await read(page);
     expect(atBody).toEqual({ lang: 'ja', theme: 'dark' });
     expect(csp).toEqual([]);
@@ -68,7 +70,7 @@ test('the boot script is the first element of <head> and there is no inline scri
 test('switching theme and language at runtime causes no CSP violation', async ({ page }) => {
   const { consoleViolations } = await instrument(page);
   await page.goto('/?lang=en');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await page.getByRole('button', { name: 'Colour theme' }).click();
   await page.getByRole('radio', { name: 'Dark' }).check();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');

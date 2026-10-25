@@ -98,6 +98,14 @@ export function functionalProjects(options: MatrixOptions): PlaywrightTestProjec
   return selected
     .filter((project) => engine === null || engineOf(project) === engine)
     .map((project) =>
-      engineOf(project) === 'webkit' ? { ...project, retries: options.ci === true ? 1 : 0 } : project,
+      engineOf(project) === 'webkit'
+        ? { ...project, retries: options.ci === true ? 1 : 0, timeout: WEBKIT_TEST_TIMEOUT_MS }
+        : project,
     );
 }
+
+/**
+ * Per-test timeout of the WebKit projects (the default is 30 s): WebKit's `page.evaluate` and axe scans run 2–3× slower
+ * than chromium's, so the layout loops and axe specs that take 10–15 s there alone pass 30 s on a busy machine.
+ */
+export const WEBKIT_TEST_TIMEOUT_MS = 60_000;

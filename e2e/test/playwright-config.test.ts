@@ -42,6 +42,11 @@ describe('functional config (playwright.config.ts)', () => {
       'iphone-12',
     ]);
     expect(functionalProjects({ full: true, ci: false }).every((project) => (project.retries ?? 0) === 0)).toBe(true);
+    const timeouts = functionalProjects({ full: true }).map((project) => [project.name, project.timeout]);
+    expect(timeouts.filter(([, timeout]) => timeout !== undefined)).toEqual([
+      ['webkit', 60_000],
+      ['iphone-12', 60_000],
+    ]);
   });
 });
 

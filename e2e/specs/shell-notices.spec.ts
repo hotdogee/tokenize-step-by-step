@@ -4,7 +4,7 @@
  * help dialog, and "Single-key shortcuts: off" disables both while Esc keeps closing dialogs.
  */
 import { expect, test } from '@playwright/test';
-import { openShell, pickTokenizer } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
 
 test('"Powered by xAI" is visible iff Grok-2 is selected', async ({ page }) => {
   await openShell(page, 'en');
@@ -83,7 +83,7 @@ test('single-key shortcuts can be turned off (WCAG 2.1.4); Esc still closes dial
   await page.keyboard.press('t');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await page.keyboard.press('t');
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
