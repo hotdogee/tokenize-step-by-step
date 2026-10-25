@@ -213,7 +213,7 @@ Legacy Claude 1/2-era vocabulary claude.json (65,000 ids, byte-level BPE) from t
 - **SPDX:** `MIT`
 - **Ship intent:** `ship` (pending owner decision (research section 8.1); must be labelled as the obsolete Claude 1/2 vocabulary)
 - **Licence source (pinned):** <https://registry.npmjs.org/@anthropic-ai/tokenizer/-/tokenizer-0.0.4.tgz#package/LICENSE>
-- **Snapshots:** [LICENSE](anthropic-claude-legacy/LICENSE) (license), [package.json](anthropic-claude-legacy/package.json) (license-evidence)
+- **Snapshots:** [LICENSE](anthropic-claude-legacy/LICENSE) (license), [LICENSE-2.0.txt](anthropic-claude-legacy/LICENSE-2.0.txt) (license), [package.json](anthropic-claude-legacy/package.json) (license-evidence)
 - **Obligations:**
   - Include the package's LICENSE text (MIT permission notice, "Copyright 2023 Anthropic, PBC.") with the shipped claude.json data.
   - Because package.json declares Apache-2.0, also satisfy Apache-2.0 until the owner resolves the conflict: include an Apache-2.0 copy and state modifications (e.g. format conversion).

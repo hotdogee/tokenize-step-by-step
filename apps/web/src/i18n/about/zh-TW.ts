@@ -54,8 +54,9 @@ export const aboutZhTW = {
   'about.notices.gemmaRestrictions':
     'Gemma 1/2 分詞器依 Gemma 使用條款第 3.2 節的使用限制提供。使用它即表示你同意不將其用於禁止使用政策所禁止的任何用途。',
   'about.notices.apacheBody':
-    'Gemma 4、Muse Glimmer 與 Grok-1 的詞彙表以 Apache License 2.0 發布，全文見上方各自的授權區塊。',
-  'about.notices.mitBody': 'OpenAI 的 rank 檔案與舊版 Claude 詞彙表適用上方收錄的 MIT 授權。',
+    'Gemma 4、Muse Glimmer 與 Grok-1 的詞彙表以 Apache License 2.0 發布，全文見上方各自的授權區塊。舊版 Claude 套件也在 package.json 中宣告 Apache-2.0，因此其授權區塊同樣收錄 Apache-2.0 全文。',
+  'about.notices.mitBody':
+    'OpenAI 的 rank 檔案適用上方收錄的 MIT 授權。舊版 Claude 套件（@anthropic-ai/tokenizer 0.0.4）同時宣告兩種授權：LICENSE 檔案為 MIT，package.json 則為 Apache-2.0，因此其授權區塊收錄兩份全文，並同時遵守兩者。',
   'about.engine.heading': '引擎',
   'about.engine.unicode': '預分詞規則使用 Unicode {version} 資料表，與參考分詞器一致。',
   'about.engine.browserUnicode': '你的瀏覽器支援 Unicode {version} 或更新版本。',

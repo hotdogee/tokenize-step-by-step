@@ -779,6 +779,24 @@
           "url": "https://registry.npmjs.org/@anthropic-ai/tokenizer/-/tokenizer-0.0.4.tgz#package/LICENSE"
         },
         {
+          "bytes": 11358,
+          "contentType": "text/plain",
+          "httpHeaders": {
+            "etag": "\"2c5e-64706305a0bd1\"",
+            "lastModified": "Sun, 28 Dec 2025 17:09:26 GMT"
+          },
+          "name": "LICENSE-2.0.txt",
+          "retrievedOn": "2026-10-24",
+          "revision": "etag:\"2c5e-64706305a0bd1\"",
+          "role": "license",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "source": {
+            "type": "url",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+          },
+          "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+        },
+        {
           "bytes": 1146,
           "contentType": "application/json",
           "name": "package.json",

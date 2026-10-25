@@ -55,9 +55,9 @@ export const aboutJa = {
   'about.notices.gemmaRestrictions':
     'Gemma 1/2 のトークナイザーは、Gemma 利用規約第 3.2 条の利用制限に従って提供されます。使用することで、禁止用途ポリシーが禁じる目的に使用しないことに同意したものとみなされます。',
   'about.notices.apacheBody':
-    'Gemma 4、Muse Glimmer、Grok-1 の語彙は Apache License 2.0 で配布されています。全文は上の各ライセンス欄にあります。',
+    'Gemma 4、Muse Glimmer、Grok-1 の語彙は Apache License 2.0 で配布されています。全文は上の各ライセンス欄にあります。レガシー Claude のパッケージも package.json で Apache-2.0 を宣言しているため、そのライセンス欄にも Apache-2.0 の全文を掲載しています。',
   'about.notices.mitBody':
-    'OpenAI の rank ファイルとレガシー Claude の語彙には、上に掲載した MIT ライセンスが適用されます。',
+    'OpenAI の rank ファイルには、上に掲載した MIT ライセンスが適用されます。レガシー Claude のパッケージ（@anthropic-ai/tokenizer 0.0.4）は、LICENSE ファイルで MIT、package.json で Apache-2.0 と二つのライセンスを宣言しているため、そのライセンス欄に両方の全文を掲載し、両方の条件を満たしています。',
   'about.engine.heading': 'エンジン',
   'about.engine.unicode':
     '事前トークン化のパターンは、参照トークナイザーと同じ Unicode {version} のテーブルを使います。',

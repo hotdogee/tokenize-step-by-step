@@ -60,9 +60,9 @@ export const aboutEn = {
   'about.notices.gemmaRestrictions':
     'The Gemma 1/2 tokenizer is provided subject to the use restrictions in section 3.2 of the Gemma Terms of Use. By using it you agree not to use it for any purpose that the Prohibited Use Policy forbids.',
   'about.notices.apacheBody':
-    'The Gemma 4, Muse Glimmer and Grok-1 vocabularies are distributed under the Apache License 2.0; its text is in their licence blocks above.',
+    'The Gemma 4, Muse Glimmer and Grok-1 vocabularies are distributed under the Apache License 2.0; its text is in their licence blocks above. The legacy Claude package also declares Apache-2.0 (in its package.json), so its licence block reproduces the Apache-2.0 text too.',
   'about.notices.mitBody':
-    'The OpenAI rank files and the legacy Claude vocabulary are covered by the MIT licences reproduced above.',
+    'The OpenAI rank files are covered by the MIT licence reproduced above. The legacy Claude package (@anthropic-ai/tokenizer 0.0.4) declares both licences, MIT in its LICENSE file and Apache-2.0 in its package.json, so both texts are reproduced in its licence block and both are satisfied.',
   'about.engine.heading': 'Engine',
   'about.engine.unicode':
     'Pre-tokenizer patterns use Unicode {version} tables, the version the reference tokenizers use.',

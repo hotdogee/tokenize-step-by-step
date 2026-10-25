@@ -85,6 +85,32 @@ describe('About page (server-rendered)', () => {
     );
   });
 
+  it('links both an MIT and an Apache-2.0 text in the legacy Claude block (00 §D answer 4)', () => {
+    const snapshots = import.meta.glob<string>('../../../../docs/licenses/anthropic-claude-legacy/*', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    });
+    const textOf = (file: string): string =>
+      Object.entries(snapshots).find(([path]) => path.endsWith(`/anthropic-claude-legacy/${file}`))?.[1] ?? '';
+    const isMit = (text: string): boolean => text.includes('Permission is hereby granted, free of charge');
+    const isApache2 = (text: string): boolean =>
+      text.includes('Apache License') && text.includes('Version 2.0, January 2004');
+    const files = LICENCES.assets.find((licence) => licence.assetId === 'anthropic-claude-legacy')?.licenceFiles ?? [];
+    const mit = files.filter((file) => isMit(textOf(file)));
+    const apache = files.filter((file) => isApache2(textOf(file)));
+    expect(mit.length).toBeGreaterThan(0);
+    expect(apache.length).toBeGreaterThan(0);
+
+    i18n.current = 'en';
+    const body = render(About).body;
+    const start = body.indexOf('id="licence-anthropic-claude-legacy"');
+    const block = body.slice(start, body.indexOf('</article>', start));
+    expect(start).toBeGreaterThan(-1);
+    for (const file of [...mit, ...apache])
+      expect(block).toContain(`href="${licenceTextUrl('anthropic-claude-legacy', file)}"`);
+  });
+
   it('has the fidelity table and the keyboard setting', () => {
     i18n.current = 'en';
     const body = render(About).body;
