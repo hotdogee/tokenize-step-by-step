@@ -1,7 +1,8 @@
 /**
  * WP13 integration — URL state (05 §1.1): `?t=…&q=…&s=<stage>.<step>&b=…&lang=…&tl=…` read once at load; invalid values
  * fall back to the defaults; `history.replaceState` (500 ms debounce) writes everything but the text; "Copy link" alone
- * writes the text (≤ 2,000 code points) and confirms it visibly.
+ * writes the text (≤ 2,000 code points) and confirms it visibly; a `q` that no longer equals the text leaves the address
+ * bar after the next edit.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { grid } from './board-helpers.ts';
@@ -69,4 +70,19 @@ test('state changes reach the URL after 500 ms, never the text; "Copy link" writ
     'Link copied without the text (longer than 2,000 characters)',
   );
   expect(params(page).has('q')).toBe(false);
+});
+
+test('a q from a deep link or from "Copy link" leaves the address bar once the text is edited', async ({ page }) => {
+  await page.goto(`/?${new URLSearchParams({ q: RAMEN, lang: 'en' }).toString()}`);
+  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  expect(params(page).get('q')).toBe(RAMEN);
+  await page.locator('#text-input').fill('熱鬧');
+  await expect.poll(() => params(page).has('q')).toBe(false);
+  expect(params(page).get('lang')).toBe('en');
+
+  await page.getByTestId('copy-link').click();
+  await expect(page.getByTestId('copy-link-status')).toHaveText('Link copied');
+  expect(params(page).get('q')).toBe('熱鬧');
+  await page.locator('#text-input').fill('熱鬧台南');
+  await expect.poll(() => params(page).has('q')).toBe(false);
 });

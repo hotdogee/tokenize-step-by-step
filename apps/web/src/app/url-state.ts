@@ -5,7 +5,8 @@
  *   before first paint (AD-29), so it is parsed here only for completeness.
  * - Written with `history.replaceState`, debounced 500 ms, for everything except the text (`urlFor` without `text`); the
  *   text goes into `q` only on an explicit "Copy link" (`urlFor` with `text`, ≤ 2,000 code points), and a `q` that
- *   came with the page stays while the text is unchanged. Parameters this module does not own (`mock=1`) are kept.
+ *   came with the page (or from "Copy link") stays while the text equals it and is removed by the next write once the
+ *   text changes (App.svelte). Parameters this module does not own (`mock=1`) are kept.
  */
 import type { TextLangChoice, TokenizerId } from '@tsbs/core';
 import type { Locale } from '../i18n/types.ts';

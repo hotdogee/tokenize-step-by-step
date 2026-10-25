@@ -8,7 +8,7 @@
    * with it (registry-details.ts), so both stay out of the initial Main JS of `/` (06 §3).
    *
    * WP13 wiring: the long-input banners and "Copy link" in the input panel, the URL writer (`history.replaceState`,
-   * debounced 500 ms, everything but the text — url-state.ts) and the crossfade a result swap runs in (precomputed →
+   * debounced 500 ms, everything but the text, and a `q` that no longer equals the text removed — url-state.ts) and the crossfade a result swap runs in (precomputed →
    * live, one tokenizer's answer → another's: the board's View Transition of motion/view-transition.ts).
    */
   import { onMount } from 'svelte';
@@ -72,8 +72,9 @@
     app.error = { code: 'fetch', message: String(error), retryable: false, tokenizer: app.tokenizer, previous: null };
   }
 
-  // URL state (05 §1.1): everything but the text, 500 ms after the last change; a `q` already in the URL stays while the
-  // text is unchanged. The state the page opened with is never rewritten.
+  // URL state (05 §1.1): everything but the text, 500 ms after the last change; a `q` already in the URL (a deep link,
+  // "Copy link") stays while the text equals it and goes 500 ms after an edit, so the address bar never brings back a text
+  // that is no longer in the textarea. The state the page opened with is never rewritten.
   let urlKey: string | null = null;
   let urlTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
@@ -93,17 +94,22 @@
       snapshot.locale,
       snapshot.textLang,
     ].join('|');
-    if (urlKey === null || urlKey === key) {
-      urlKey = key;
-      return;
-    }
+    const first = urlKey === null;
+    const changed = urlKey !== key;
     urlKey = key;
+    if (first || (!changed && !staleQuery(text))) return;
     clearTimeout(urlTimer);
     urlTimer = setTimeout(() => {
       const q = new URL(location.href).searchParams.get('q');
       history.replaceState(history.state, '', urlFor(location.href, snapshot, q === text ? text : undefined));
     }, URL_WRITE_DELAY_MS);
   });
+
+  /** True when the URL carries a `q` that is not the current text. */
+  function staleQuery(text: string): boolean {
+    const q = new URL(location.href).searchParams.get('q');
+    return q !== null && q !== text;
+  }
 
   function openPicker(): void {
     pickerOpen = true;
