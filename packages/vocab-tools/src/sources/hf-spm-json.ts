@@ -14,14 +14,13 @@
  * as `hfMergesRegenerable` (informational, never relied on).
  */
 import { PieceType, type MergeTable, type SpecialEntry, type VocabTables } from '../tables.ts';
+import { mergesRegenerable } from './hf-merges-regen.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 const BYTE_PIECE = /^<0x([0-9A-F]{2})>$/;
-/** Pieces made of one repeated whitespace symbol: Gemma 3's USER_DEFINED score class (score 0). */
-const WHITESPACE_RUN = /^(?:\n+|▁+|\t+)$/u;
 const utf8 = new TextEncoder();
 
 /** A merge as listed in `model.merges` (`[left, right]` pairs; the legacy "left right" string form is rejected). */
@@ -29,41 +28,6 @@ function mergePair(entry: unknown, rank: number): [string, string] {
   if (Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' && typeof entry[1] === 'string')
     return [entry[0], entry[1]];
   throw new Error(`google-gemma4: merge ${String(rank)} is not a [left, right] pair`);
-}
-
-/**
- * A2 regeneration check: HF `generate_merges` (every split of every piece into two vocabulary pieces, sorted by
- * `(score, len(left), len(right))` descending with a stable order and the per-piece splits pre-sorted by the halves'
- * ids), with scores derived from the JSON alone — whitespace-run pieces score 0, every other piece
- * `(byteFirstId + 256) − id`. True iff the regenerated list equals `merges` exactly.
- */
-export function mergesRegenerable(
-  vocab: ReadonlyMap<string, number>,
-  idToPiece: readonly string[],
-  merges: ReadonlyArray<readonly [string, string]>,
-  byteFirstId: number,
-): boolean {
-  const firstNormal = byteFirstId + 256;
-  const regenerated: Array<{ l: string; r: string; score: number }> = [];
-  idToPiece.forEach((piece, id) => {
-    const local: Array<{ l: string; r: string; li: number; ri: number }> = [];
-    for (let i = 1; i < piece.length; i++) {
-      const l = piece.slice(0, i);
-      const r = piece.slice(i);
-      const li = vocab.get(l);
-      const ri = vocab.get(r);
-      if (li !== undefined && ri !== undefined) local.push({ l, r, li, ri });
-    }
-    local.sort((a, b) => a.li - b.li || a.ri - b.ri);
-    const score = WHITESPACE_RUN.test(piece) ? 0 : firstNormal - id;
-    for (const { l, r } of local) regenerated.push({ l, r, score });
-  });
-  if (regenerated.length !== merges.length) return false;
-  regenerated.sort((a, b) => b.score - a.score || b.l.length - a.l.length || b.r.length - a.r.length);
-  return regenerated.every(({ l, r }, rank) => {
-    const merge = merges[rank];
-    return merge?.[0] === l && merge[1] === r;
-  });
 }
 
 /** Options for synthetic inputs (the real file uses the defaults). */
