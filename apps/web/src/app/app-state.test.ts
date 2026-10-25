@@ -167,6 +167,42 @@ describe('AppState (05 §1.1)', () => {
     expect(app.stage).toBe(1);
   });
 
+  it('steps ×10 symmetrically at both ends: stop 6 is one past the last step, stops 1–4 one before the first', () => {
+    const app = make();
+    expect(app.stepCount).toBe(8);
+    app.setStage(6);
+    app.moveStep(-10); // 9 − 10 = −1: before the start → stop 4 (not stop 5 at step 0)
+    expect([app.stage, app.step]).toEqual([4, 0]);
+    app.moveStep(10); // −1 + 10 = 9 > 8: past the end → stop 6 (not stop 5 at the last step)
+    expect([app.stage, app.step]).toEqual([6, 8]);
+    app.moveStep(-1);
+    expect([app.stage, app.step]).toEqual([5, 8]);
+    app.setStage(6);
+    app.moveStep(-9); // 9 − 9 = 0
+    expect([app.stage, app.step]).toEqual([5, 0]);
+    app.setStage(4);
+    app.moveStep(9); // −1 + 9 = 8: the last step
+    expect([app.stage, app.step]).toEqual([5, 8]);
+    app.setStage(2);
+    app.moveStep(-10); // backward from stops 1–3 stays put
+    expect([app.stage, app.step]).toEqual([2, 0]);
+    app.moveStep(10);
+    expect(app.stage).toBe(6);
+  });
+
+  it('announces the stop with its count (05 §8)', () => {
+    const app = make();
+    app.setStage(3);
+    app.announceStage();
+    expect(app.status).toBe('UTF-8 bytes: 12 bytes');
+    app.setStage(2);
+    app.announceStage();
+    expect(app.status).toBe('Code points: 4 code points');
+    app.setStage(4);
+    app.announceStage();
+    expect(app.status).toBe('Chunks: 4 tokens');
+  });
+
   it('cycles the byte view hex → dec (→ both only when wide)', () => {
     const app = make();
     app.setByteView('hex');

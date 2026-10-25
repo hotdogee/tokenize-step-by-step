@@ -231,6 +231,7 @@
           aria-label={i18n.t('a11y.stop', { n: stage, name: stageName(stage) })}
           onchange={() => {
             app.setStage(stage);
+            app.announceStage();
           }}
         />
         <span class="num" aria-hidden="true">{stage}</span>

@@ -3,7 +3,7 @@
  * as "3 of 6: UTF-8 bytes" (the radio's name) with the status region's "UTF-8 bytes: 12 bytes"; `,` `.` step one merge
  * and `Shift` steps ten (matched by `event.code`), past the end to stop 6 and before the start to stop 4, saying the merge
  * sentence; Space plays and pauses on the scrubber only; Home/End go to the first/last step; arrows move the rail's
- * radios; and with "Single-key shortcuts: off" every global key is inert while the rail's own keys keep working.
+ * radios (a radio change is announced like the keys); and with "Single-key shortcuts: off" every global key is inert while the rail's own keys keep working.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { chooseExample, grid } from './board-helpers.ts';
@@ -37,6 +37,18 @@ test('[ and ] move between stops; 1–6 jump; each stop is announced', async ({ 
   await page.keyboard.press('Digit1');
   await page.keyboard.press('BracketLeft'); // no stop before 1
   expect(await checkedStop(page)).toBe(1);
+  // The rail's radios announce the stop the same way: a click, then the arrow keys inside the radiogroup.
+  const bytes = page.getByRole('radio', { name: '3 of 6: UTF-8 bytes' });
+  await bytes.click();
+  await expect(status(page)).toHaveText('UTF-8 bytes: 12 bytes');
+  await bytes.focus(); // WebKit does not focus a clicked radio
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('radio', { name: '2 of 6: Code points' })).toBeChecked();
+  await expect(status(page)).toHaveText('Code points: 4 code points');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('radio', { name: '4 of 6: Chunks' })).toBeChecked();
+  await expect(status(page)).toHaveText('Chunks: 4 tokens');
   await expect(rail(page).getByRole('radiogroup', { name: 'pipeline stage' })).toBeVisible();
 });
 

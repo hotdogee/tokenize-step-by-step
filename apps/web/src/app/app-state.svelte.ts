@@ -31,6 +31,7 @@ import { DEFAULT_EXAMPLE } from './constants.ts';
 import { isNoPrecomputedResult } from './no-precomputed.ts';
 import { DEFAULT_TOKENIZER, tokenizerEntry } from './registry.ts';
 import { readStored, STORAGE_KEYS, writeStored } from './storage.ts';
+import { textStats } from './text-stats.ts';
 
 export type Stage = 1 | 2 | 3 | 4 | 5 | 6;
 export type ByteView = 'hex' | 'dec' | 'both';
@@ -51,6 +52,16 @@ export interface UiError {
 export const ENCODE_DEBOUNCE_MS = 40;
 
 const BYTE_VIEWS: readonly ByteView[] = ['hex', 'dec', 'both'];
+
+/** Catalog key of each stop's name (stop 4 says "symbols" instead for SentencePiece, see `announceStage`). */
+const STAGE_NAME = {
+  1: 'stage.1',
+  2: 'stage.2',
+  3: 'stage.3',
+  4: 'stage.4.chunks',
+  5: 'stage.5',
+  6: 'stage.6',
+} as const;
 
 function readByteView(): ByteView {
   const stored = readStored(STORAGE_KEYS.byteView);
@@ -334,27 +345,36 @@ export class AppState {
     this.setStage(Math.min(6, Math.max(1, this.stage + delta)) as Stage);
   }
 
-  /** `,` / `.` (Shift ×10): past the end → stop 6, before the start → stop 4 (05 §8). */
+  /**
+   * `,` / `.` (Shift ×10): past the end → stop 6, before the start → stop 4 (05 §8). One line of positions, so ±1 and
+   * ±10 behave the same at both ends: stops 1–4 are position −1, stop 5 at step k is k (0…count), stop 6 is count + 1.
+   * A backward move from stops 1–3 stays put (it would otherwise jump forward to stop 4).
+   */
   moveStep(delta: number): void {
     const count = this.stepCount;
-    if (this.stage === 6) {
-      if (delta < 0) {
-        this.stage = 5;
-        this.step = Math.max(0, count + delta + 1);
-      }
-      return;
+    const position = this.stage === 6 ? count + 1 : this.stage < 5 ? -1 : this.step;
+    const next = position + delta;
+    if (next > count) {
+      this.setStage(6);
+    } else if (next >= 0) {
+      this.stage = 5;
+      this.step = next;
+    } else if (this.stage >= 4) {
+      this.setStage(4);
     }
-    if (this.stage < 5) {
-      if (delta > 0) {
-        this.stage = 5;
-        this.step = Math.min(count, delta - 1);
-      }
-      return;
-    }
-    const next = this.step + delta;
-    if (next > count) this.setStage(6);
-    else if (next < 0) this.setStage(4);
-    else this.step = next;
+  }
+
+  /** Says the stop and its count in the status region, "UTF-8 bytes: 12 bytes" (05 §8): for the keys and rail radios. */
+  announceStage(): void {
+    const stage = this.stage;
+    const name = stage === 4 && this.entry.family === 'spm-bpe' ? i18n.t('stage.4.symbols') : i18n.t(STAGE_NAME[stage]);
+    const result = this.currentResult;
+    let detail: string;
+    if (stage <= 2) detail = i18n.t('counts.codePoints', { n: textStats(this.text, 0).codePoints });
+    else if (stage === 3) detail = i18n.t('counts.bytes', { n: textStats(this.text, 0).bytes });
+    else if (result !== null) detail = i18n.t('counts.tokens', { n: result.stats.tokens });
+    else detail = i18n.t('counts.tokensPending');
+    this.announce(i18n.t('status.stage', { name, detail }));
   }
 
   /** Puts `message` in the polite status region (re-announces identical text). */
