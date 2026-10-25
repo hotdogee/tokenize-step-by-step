@@ -2,7 +2,7 @@
  * WP08 E2E layout (05 §3.3, §5, §9; WCAG 1.4.10, 2.4.11, 2.5.8): zero horizontal overflow at 320/360/768/1440/2560 px;
  * at 360 px the focused cell never sits under the bottom sheet or the header while arrowing through a whole paragraph;
  * the inspector surface follows the viewport width; touch pins and unpins; coarse-pointer targets are ≥ 24 × 24
- * (cells 36 px wide); forced colours keep the borders; no inline style violates the CSP.
+ * (cells 36 px wide); forced colours keep the borders, the hatch and the focus outline; no inline style violates the CSP.
  */
 import { devices, expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
@@ -100,7 +100,7 @@ test.describe('touch (Pixel 5)', () => {
   });
 });
 
-test('forced colours keep the cell borders and the hatched cut', async ({ page }) => {
+test('forced colours keep the cell borders, the hatched cut and the focus outline', async ({ page }) => {
   await page.emulateMedia({ forcedColors: 'active' });
   await openShell(page, 'en');
   await page.getByTestId('picker-button').click();
@@ -118,5 +118,14 @@ test('forced colours keep the cell borders and the hatched cut', async ({ page }
     });
   expect(style.border).not.toBe('none');
   expect(style.hatch).toContain('repeating-linear-gradient');
-  expect(await focusedCell(page)).not.toBe('none:');
+  await focusBoard(page);
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => focusedCell(page)).toBe('char:1');
+  const outline = await page.evaluate(() => {
+    const box = document.activeElement?.querySelector('.bd-vis');
+    if (box === null || box === undefined) return null;
+    const { outlineStyle, outlineWidth } = getComputedStyle(box);
+    return `${outlineStyle} ${outlineWidth}`;
+  });
+  expect(outline).toBe('solid 2px');
 });

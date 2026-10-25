@@ -3,14 +3,16 @@
  * which lands at integration): the board is one tab stop; ←/→/↑/↓/Home/End/PageUp/PageDown move as the APG layout grid
  * says, ↑ on the top tier and ↓ on the bottom tier are no-ops; a span wrapped over rows is one cell; Enter pins and
  * announces, `i` moves into the inspector and Esc returns, Esc unpins, Esc again returns to the textarea; focus keeps its
- * byte anchor when a stage change remounts the tiers; "Single-key shortcuts: off" leaves the board keys working; the
- * whole tour runs under the strict CSP with zero violations and axe stays clean.
+ * byte anchor when a stage change remounts the tiers, across re-tokenization (picker: o200k → cl100k) and across a
+ * virtual remount (a new K repacks the rows); "Single-key shortcuts: off" leaves the board keys working; the inspector
+ * catalog and the keyboard hint arrive on the first interaction, never at startup (PA-7); the whole tour runs under the
+ * strict CSP with zero violations and axe stays clean.
  */
 import { expect, test } from '@playwright/test';
 import { expectNoAxeViolations } from '../support/axe.ts';
 import { watchPage } from '../support/page-guards.ts';
 import { chooseExample, focusBoard, focusedCell, grid } from './board-helpers.ts';
-import { openShell } from './shell-helpers.ts';
+import { openShell, pickTokenizer } from './shell-helpers.ts';
 
 test('the board is one tab stop between the controls and the inspector', async ({ page }) => {
   await openShell(page, 'en');
@@ -108,6 +110,57 @@ test('focus keeps its byte anchor when a stage change remounts the tiers', async
   await page.keyboard.press('ArrowUp');
   await expect.poll(() => focusedCell(page)).toBe('hex:3');
   await expect(grid(page).locator('[tabindex="0"]')).toHaveCount(1);
+});
+
+test('focus keeps its byte anchor across re-tokenization (o200k → cl100k) and a virtual remount (new K)', async ({
+  page,
+}) => {
+  await openShell(page, 'en');
+  await chooseExample(page, 'zh-tw-tainan');
+  await focusBoard(page);
+  for (const key of ['ArrowDown', 'ArrowDown', 'ArrowRight', 'ArrowRight']) await page.keyboard.press(key);
+  await expect.poll(() => focusedCell(page)).toBe('token:2'); // o200k: 台 = bytes [6, 9)
+  await pickTokenizer(page, 'cl100k_base');
+  await expect(grid(page)).not.toHaveAttribute('data-pending', '');
+  const stop = grid(page).locator('[tabindex="0"]');
+  await expect(stop).toHaveCount(1);
+  // cl100k splits 灣 into 66285 + 96, so the token covering byte 6 (台) is token 4 now.
+  await expect(stop).toHaveAttribute('data-tier', 'token');
+  await expect(stop).toHaveAttribute('data-index', '3');
+
+  // A new K repacks a multi-row text: the focused cell moves to another packed row and focus follows its byte anchor.
+  await chooseExample(page, 'zh-tw-paragraph');
+  await focusBoard(page);
+  await page.keyboard.press('Control+End');
+  const last = await focusedCell(page);
+  const rowOfFocus = (): Promise<string | null> =>
+    page.evaluate(() => document.activeElement?.closest('.bd-row')?.getAttribute('data-row') ?? null);
+  const rowBefore = await rowOfFocus();
+  await page.setViewportSize({ width: 800, height: 900 });
+  await expect.poll(rowOfFocus).not.toBe(rowBefore);
+  await expect.poll(() => focusedCell(page)).toBe(last);
+  await expect(grid(page).locator('[tabindex="0"]')).toHaveCount(1);
+});
+
+test('the inspector catalog and the keyboard hint load on the first interaction, not at startup (PA-7)', async ({
+  page,
+}) => {
+  const fetched: string[] = [];
+  page.on('request', (request) => {
+    if (/\/lazy-catalogs-[\w-]+\.js$/.test(new URL(request.url()).pathname)) fetched.push(request.url());
+  });
+  await openShell(page, 'en');
+  await page.waitForLoadState('networkidle');
+  expect(fetched).toEqual([]);
+  const layout = page.locator('#board [data-inspector]');
+  await expect(layout).toHaveAttribute('data-inspector', 'loading');
+  await focusBoard(page);
+  await expect(layout).toHaveAttribute('data-inspector', 'ready');
+  expect(fetched).toHaveLength(1);
+  await expect(page.locator('#board .hint')).toHaveText(
+    'Arrow keys move between cells · Enter pins the inspector · i opens it',
+  );
+  await expect(page.locator('#inspector-heading')).toHaveText('Inspector — character 1 of 4');
 });
 
 test('"Single-key shortcuts: off" leaves the board keys (arrows, Enter, i, c, Esc) working', async ({ page }) => {
