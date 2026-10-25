@@ -4822,6 +4822,915 @@
    "utf8Len": 0
   },
   {
+   "ids": [325, 3963, 16001, 19884],
+   "name": "ws-bom-mid",
+   "text": " using ﻿namespace",
+   "tokens": [
+    {
+     "bytes": "20",
+     "end": 1,
+     "id": 325,
+     "partial": false,
+     "piece": "▁▁",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7573696e67",
+     "end": 6,
+     "id": 3963,
+     "partial": false,
+     "piece": "using",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20efbbbf",
+     "end": 10,
+     "id": 16001,
+     "partial": false,
+     "piece": "▁﻿",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6e616d657370616365",
+     "end": 19,
+     "id": 19884,
+     "partial": false,
+     "piece": "namespace",
+     "start": 10,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 19
+  },
+  {
+   "ids": [327, 263, 202, 348],
+   "name": "nel-after-space",
+   "text": "a b",
+   "tokens": [
+    {
+     "bytes": "61",
+     "end": 1,
+     "id": 327,
+     "partial": false,
+     "piece": "▁a",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c2",
+     "end": 2,
+     "id": 263,
+     "partial": true,
+     "piece": "<0xC2>",
+     "start": 1,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "85",
+     "end": 3,
+     "id": 202,
+     "partial": true,
+     "piece": "<0x85>",
+     "start": 2,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2062",
+     "end": 5,
+     "id": 348,
+     "partial": false,
+     "piece": "▁b",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [1734, 130089, 263, 202, 130107],
+   "name": "nel-before-letter",
+   "text": "x y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20",
+     "end": 2,
+     "id": 130089,
+     "partial": false,
+     "piece": "▁",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c2",
+     "end": 3,
+     "id": 263,
+     "partial": true,
+     "piece": "<0xC2>",
+     "start": 2,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "85",
+     "end": 4,
+     "id": 202,
+     "partial": true,
+     "piece": "<0x85>",
+     "start": 3,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "79",
+     "end": 5,
+     "id": 130107,
+     "partial": false,
+     "piece": "y",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [327, 97, 130110],
+   "name": "fs-control",
+   "text": "a\u001cb",
+   "tokens": [
+    {
+     "bytes": "61",
+     "end": 1,
+     "id": 327,
+     "partial": false,
+     "piece": "▁a",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "1c",
+     "end": 2,
+     "id": 97,
+     "partial": false,
+     "piece": "<0x1C>",
+     "start": 1,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "62",
+     "end": 3,
+     "id": 130110,
+     "partial": false,
+     "piece": "b",
+     "start": 2,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 3
+  },
+  {
+   "ids": [1734, 130089, 97, 130107],
+   "name": "fs-before-letter",
+   "text": "x \u001cy",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20",
+     "end": 2,
+     "id": 130089,
+     "partial": false,
+     "piece": "▁",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "1c",
+     "end": 3,
+     "id": 97,
+     "partial": false,
+     "piece": "<0x1C>",
+     "start": 2,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "79",
+     "end": 4,
+     "id": 130107,
+     "partial": false,
+     "piece": "y",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 4
+  },
+  {
+   "ids": [13826, 130128, 130117, 1047],
+   "name": "contraction-upper",
+   "text": "HE'S here",
+   "tokens": [
+    {
+     "bytes": "4845",
+     "end": 2,
+     "id": 13826,
+     "partial": false,
+     "piece": "▁HE",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 3,
+     "id": 130128,
+     "partial": false,
+     "piece": "'",
+     "start": 2,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "53",
+     "end": 4,
+     "id": 130117,
+     "partial": false,
+     "piece": "S",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2068657265",
+     "end": 9,
+     "id": 1047,
+     "partial": false,
+     "piece": "▁here",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
+   "ids": [415, 130128, 266, 260],
+   "name": "contraction-long-s",
+   "text": "it'ſ",
+   "tokens": [
+    {
+     "bytes": "6974",
+     "end": 2,
+     "id": 415,
+     "partial": false,
+     "piece": "▁it",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 3,
+     "id": 130128,
+     "partial": false,
+     "piece": "'",
+     "start": 2,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c5",
+     "end": 4,
+     "id": 266,
+     "partial": true,
+     "piece": "<0xC5>",
+     "start": 3,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "bf",
+     "end": 5,
+     "id": 260,
+     "partial": true,
+     "piece": "<0xBF>",
+     "start": 4,
+     "type": "BYTE",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [36399, 130128, 130115],
+   "name": "contraction-dont-upper",
+   "text": "DON'T",
+   "tokens": [
+    {
+     "bytes": "444f4e",
+     "end": 3,
+     "id": 36399,
+     "partial": false,
+     "piece": "▁DON",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 4,
+     "id": 130128,
+     "partial": false,
+     "piece": "'",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "54",
+     "end": 5,
+     "id": 130115,
+     "partial": false,
+     "piece": "T",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [683, 42836, 2145],
+   "name": "contraction-upper-run",
+   "text": "'TWAS",
+   "tokens": [
+    {
+     "bytes": "27",
+     "end": 1,
+     "id": 683,
+     "partial": false,
+     "piece": "▁'",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5457",
+     "end": 3,
+     "id": 42836,
+     "partial": false,
+     "piece": "TW",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4153",
+     "end": 5,
+     "id": 2145,
+     "partial": false,
+     "piece": "AS",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [683, 266, 260, 67160],
+   "name": "contraction-long-s-run",
+   "text": "'ſtill",
+   "tokens": [
+    {
+     "bytes": "27",
+     "end": 1,
+     "id": 683,
+     "partial": false,
+     "piece": "▁'",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c5",
+     "end": 2,
+     "id": 266,
+     "partial": true,
+     "piece": "<0xC5>",
+     "start": 1,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "bf",
+     "end": 3,
+     "id": 260,
+     "partial": true,
+     "piece": "<0xBF>",
+     "start": 2,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "74696c6c",
+     "end": 7,
+     "id": 67160,
+     "partial": false,
+     "piece": "till",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 7
+  },
+  {
+   "ids": [1734, 112586, 2189, 130127, 1406, 130127, 1271, 47989, 385],
+   "name": "special-llama3-bot",
+   "text": "x <|begin_of_text|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c7c",
+     "end": 4,
+     "id": 112586,
+     "partial": false,
+     "piece": "▁<|",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "626567696e",
+     "end": 9,
+     "id": 2189,
+     "partial": false,
+     "piece": "begin",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 10,
+     "id": 130127,
+     "partial": false,
+     "piece": "_",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f66",
+     "end": 12,
+     "id": 1406,
+     "partial": false,
+     "piece": "of",
+     "start": 10,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 13,
+     "id": 130127,
+     "partial": false,
+     "piece": "_",
+     "start": 12,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "74657874",
+     "end": 17,
+     "id": 1271,
+     "partial": false,
+     "piece": "text",
+     "start": 13,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c3e",
+     "end": 19,
+     "id": 47989,
+     "partial": false,
+     "piece": "|>",
+     "start": 17,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 21,
+     "id": 385,
+     "partial": false,
+     "piece": "▁y",
+     "start": 19,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 21
+  },
+  {
+   "ids": [1734, 112586, 103392, 47989, 385],
+   "name": "special-llama4-eot",
+   "text": "x <|eot|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c7c",
+     "end": 4,
+     "id": 112586,
+     "partial": false,
+     "piece": "▁<|",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656f74",
+     "end": 7,
+     "id": 103392,
+     "partial": false,
+     "piece": "eot",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c3e",
+     "end": 9,
+     "id": 47989,
+     "partial": false,
+     "piece": "|>",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": 385,
+     "partial": false,
+     "piece": "▁y",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 11
+  },
+  {
+   "ids": [1734, 112586, 73790, 47989, 385],
+   "name": "special-grok2-eos",
+   "text": "x <|eos|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c7c",
+     "end": 4,
+     "id": 112586,
+     "partial": false,
+     "piece": "▁<|",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656f73",
+     "end": 7,
+     "id": 73790,
+     "partial": false,
+     "piece": "eos",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c3e",
+     "end": 9,
+     "id": 47989,
+     "partial": false,
+     "piece": "|>",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": 385,
+     "partial": false,
+     "piece": "▁y",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 11
+  },
+  {
+   "ids": [1734, 794, 130131, 2917, 130165, 385],
+   "idsWithSpecials": [1734, 130089, 1, 385],
+   "name": "special-grok1-bos",
+   "text": "x [BOS] y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "205b",
+     "end": 3,
+     "id": 794,
+     "partial": false,
+     "piece": "▁[",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "42",
+     "end": 4,
+     "id": 130131,
+     "partial": false,
+     "piece": "B",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f53",
+     "end": 6,
+     "id": 2917,
+     "partial": false,
+     "piece": "OS",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5d",
+     "end": 7,
+     "id": 130165,
+     "partial": false,
+     "piece": "]",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": 385,
+     "partial": false,
+     "piece": "▁y",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
+   "ids": [1734, 687, 493, 130127, 1406, 130127, 13262, 130151, 385],
+   "name": "special-gemma2-end-of-turn",
+   "text": "x <end_of_turn> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 687,
+     "partial": false,
+     "piece": "▁<",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656e64",
+     "end": 6,
+     "id": 493,
+     "partial": false,
+     "piece": "end",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 7,
+     "id": 130127,
+     "partial": false,
+     "piece": "_",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f66",
+     "end": 9,
+     "id": 1406,
+     "partial": false,
+     "piece": "of",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 10,
+     "id": 130127,
+     "partial": false,
+     "piece": "_",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7475726e",
+     "end": 14,
+     "id": 13262,
+     "partial": false,
+     "piece": "turn",
+     "start": 10,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 15,
+     "id": 130151,
+     "partial": false,
+     "piece": ">",
+     "start": 14,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 17,
+     "id": 385,
+     "partial": false,
+     "piece": "▁y",
+     "start": 15,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 17
+  },
+  {
+   "ids": [1734, 687, 130130, 2568, 130151, 385],
+   "name": "special-claude-eot",
+   "text": "x <EOT> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 1734,
+     "partial": false,
+     "piece": "▁x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 687,
+     "partial": false,
+     "piece": "▁<",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "45",
+     "end": 4,
+     "id": 130130,
+     "partial": false,
+     "piece": "E",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f54",
+     "end": 6,
+     "id": 2568,
+     "partial": false,
+     "piece": "OT",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 7,
+     "id": 130151,
+     "partial": false,
+     "piece": ">",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": 385,
+     "partial": false,
+     "piece": "▁y",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
    "ids": [7246, 29712, 130816, 99426, 130279, 130730, 21737, 298, 259, 202, 130348, 130876, 130899, 130248, 301, 238, 247, 299, 197, 211, 302, 255, 257, 130699, 130871, 23451, 299, 225, 208, 298, 212, 208, 130348, 299, 210, 252, 302, 198, 208, 130336, 302, 197, 222, 299, 237, 232, 130817, 130515, 130202, 130515, 130924, 130465, 130924, 130248, 130628, 301, 242, 245, 130643, 130279, 299, 220, 238, 130583, 130976, 298, 225, 208, 301, 212, 244, 301, 230, 220, 298, 219, 226, 300, 231, 220, 300, 203, 246, 302, 237, 245, 302, 237, 245, 130241, 300, 206, 224, 301, 199, 206, 299, 254, 244, 130248, 130617, 130279, 300, 231, 220, 301, 199, 206, 300, 204, 234, 302, 232, 244, 130248, 130960, 130509, 302, 222, 201, 130853, 130241, 301, 197, 198, 130581, 301, 247, 252, 130279, 299, 226, 244, 298, 203, 241, 300, 216, 225, 301, 209, 251, 130202, 130299, 298, 210, 205, 21737, 130837, 130509, 301, 250, 233, 298, 249, 198, 299, 237, 216, 130279, 298, 253, 251, 130248, 302, 229, 203, 130733, 298, 221, 220, 298, 221, 220, 300, 231, 220, 300, 247, 260, 130201, 301, 226, 235, 299, 210, 247, 130437, 302, 246, 217, 302, 242, 223, 130568, 302, 255, 250, 130202, 130876, 130899, 130241, 130469, 298, 213, 200, 298, 198, 212, 300, 217, 225, 130248, 58964, 130645, 297, 259, 203, 93601, 130749, 130749, 298, 223, 204, 130279, 301, 252, 248, 130248, 297, 258, 203, 298, 213, 200, 297, 254, 202, 130465, 298, 212, 210, 131044, 299, 225, 200, 299, 204, 252, 298, 260, 250, 302, 199, 232, 300, 237, 243, 130962, 130573, 130202, 301, 237, 246, 130519, 301, 197, 198, 130581, 131066, 298, 198, 223, 299, 220, 238, 90602, 130367, 130568, 130248, 130365, 80352, 130730, 131066, 301, 248, 232, 298, 202, 238, 300, 222, 259, 297, 256, 258, 130248, 301, 248, 232, 130895, 130701, 299, 217, 251, 299, 217, 233, 130248, 302, 197, 246, 299, 225, 240, 130976, 302, 199, 201, 130659, 130871, 302, 223, 207, 130202, 130373, 298, 210, 205, 130730, 299, 245, 232, 300, 203, 246, 130248, 130347, 298, 235, 237, 301, 255, 247, 302, 197, 247, 298, 252, 252, 298, 257, 201, 301, 232, 230, 130241, 298, 215, 219, 298, 218, 230, 130581, 130248, 130911, 130911, 301, 197, 198, 299, 205, 260, 130370, 130771, 130628, 130241, 128233, 299, 197, 211, 302, 255, 257, 130517, 300, 218, 222, 130672, 130309, 130241, 130886, 300, 239, 220, 301, 205, 204, 300, 232, 237, 300, 228, 248, 130370, 130426, 299, 226, 260, 130202, 298, 199, 210, 299, 222, 223, 130960, 130976, 130699, 130653, 301, 197, 198, 301, 230, 220, 299, 218, 232, 299, 242, 234, 130248, 301, 247, 252, 297, 255, 224, 301, 225, 225, 302, 233, 227, 300, 218, 251, 297, 257, 249, 130420, 300, 235, 243, 130248, 130911, 298, 233, 218, 302, 222, 258, 299, 202, 231, 299, 202, 231, 301, 213, 258, 302, 197, 247, 130876, 300, 198, 232, 130737, 298, 248, 258, 130202, 29712, 34918, 302, 199, 201, 298, 233, 229, 130248, 299, 222, 223, 130336, 21737, 130976, 301, 207, 246, 298, 225, 215, 298, 233, 225, 130480, 302, 197, 224, 302, 197, 224, 130248, 130347, 302, 198, 211, 130418, 55348, 298, 243, 200, 131066, 130348, 302, 197, 246, 130975, 130201, 302, 197, 246, 298, 202, 242, 130437, 302, 197, 246, 130276, 300, 204, 228, 130604, 130202, 130394, 299, 200, 225, 130876, 130899, 93167, 302, 199, 201, 299, 247, 215, 130365, 299, 210, 252, 302, 198, 208, 130248, 92424, 130307, 130519, 130659, 302, 226, 229, 130696, 130504, 130918, 130627, 130504, 308, 257, 224, 298, 259, 227, 130876, 130769, 299, 213, 242, 130503, 302, 213, 250, 130899, 130373, 130307, 300, 249, 201, 130279, 298, 197, 208, 298, 210, 207, 130469, 130411, 130248, 130960, 301, 258, 206, 130601, 302, 236, 198, 130504, 302, 197, 247, 130480, 298, 210, 197, 130202, 299, 225, 208, 298, 212, 208, 301, 198, 258, 130895, 131054, 301, 214, 220, 301, 239, 239, 130303, 130255, 302, 197, 222, 299, 237, 232, 301, 198, 258, 130877, 297, 259, 203, 130248, 130279, 130730, 131050, 130309, 130347, 298, 233, 229, 130248, 301, 204, 248, 130646, 130418, 297, 258, 212, 130557, 299, 222, 223, 298, 213, 236, 31818, 130515, 302, 256, 227, 302, 256, 227, 302, 229, 242, 130248, 302, 229, 203, 130420, 299, 207, 207, 299, 217, 251, 301, 220, 212, 130241, 130778, 130879, 299, 253, 202, 298, 219, 243, 298, 199, 248, 300, 250, 235, 130643, 130248, 130752, 302, 203, 215, 130643, 130768, 130659, 298, 253, 251, 299, 199, 229, 302, 198, 207, 298, 210, 230, 130248, 130479, 130876, 130769, 301, 258, 206, 297, 254, 221, 299, 210, 252, 302, 198, 208, 130411, 299, 206, 210, 130347, 299, 225, 200, 130420, 298, 260, 222, 301, 202, 248, 297, 255, 199, 130202],
    "name": "zh-tw-paragraph",
    "text": "「如果你只有一天可以待在台南，該怎麼安排？」朋友在捷運上這樣問我。我想了想，建議他一早先去國華街喝碗熱騰騰的牛肉湯，配一碗肉燥飯，再到附近的老店買一杯冬瓜茶。中午可以走到赤崁樓一帶，順路嘗嘗碗粿、蝦捲和鱔魚意麵。台南的小吃偏甜，第一次來的人常常嚇一跳，但吃久了反而會懷念那種味道。許多老店只做早上的生意，有的一天只賣兩百份，賣完就收攤，週末去還得排隊。下午天氣熱，不妨躲進巷弄裡的咖啡店，看看老房子改建的空間怎麼保留原本的木窗與磨石子地板。傍晚再去安平老街散步，買些蜜餞當伴手禮，看夕陽慢慢落進台灣海峽。如果時間還夠，晚上可以去花園夜市逛逛，不過要注意它只在週四、週六和週日營業。可惜台南目前還沒有捷運，移動大多得靠機車或公車；從台北搭高鐵南下大約一個半小時，再轉接駁車進市區。朋友聽完笑著說：「這樣聽起來，一天根本不夠，至少要住三晚吧！」我點點頭，順手把收藏的美食清單傳給他，提醒他記得帶悠遊卡，回台北轉乘捷運時才不會手忙腳亂。",
@@ -129295,7 +130204,7 @@
   }
  ],
  "crossCheck": {
-  "agreedCases": 358,
+  "agreedCases": 374,
   "disagreedCases": [],
   "library": "tools/oracle/oracles/spm_bpe_ref.py (pure-Python SentencePiece BPE)",
   "version": "1.1"
@@ -129309,7 +130218,7 @@
  },
  "policy": {
   "addBos": false,
-  "notes": "Oracle: sentencepiece 0.2.2 on xai-grok1/tokenizer.model, encode(text, add_bos=False, add_eos=False). Model proto: model_type=BPE, byte_fallback=true, add_dummy_prefix=true, escape_whitespaces=true, remove_extra_whitespaces=false, split_by_unicode_script=true, split_by_whitespace=true, split_digits=true, normalizer=identity (precompiled_charsmap 0 bytes, so input text is never rewritten except spaces); 131072 pieces: NORMAL 130747, USER_DEFINED 65, BYTE 256 (ids 69..324), CONTROL 3, UNK 1; unk_id=3, bos_id=1, eos_id=2, pad_id=0. Special tokens: SentencePiece has no switch. It never matches CONTROL or UNK pieces in input text ([PAD] 0, [BOS] 1, [EOS] 2, [UNK] 3) and always matches the 65 USER_DEFINED pieces (ids 4..68: newline runs, digits 0-9, tab runs, space runs, <|separator|> 47, <|mask|> 48, <|control1|> 49, <|control2|> 50, <|control3|> 51, <|control4|> 52, <|control5|> 53, <|control6|> 54, <|control7|> 55, <|control8|> 56, <|control9|> 57, <|control10|> 58, <|control11|> 59, <|control12|> 60, <|control13|> 61, <|control14|> 62, <|control15|> 63, <|control16|> 64, <|control17|> 65, <|control18|> 66, <|control19|> 67, <|control20|> 68). The space-run pieces (ids 32..46) contain U+0020 and can never match, because escape_whitespaces rewrites every space to U+2581 before matching. No corpus text contains one of the special-token-like USER_DEFINED pieces (asserted), so ids never hold one and the policy is as-text. idsWithSpecials is an EMULATION of 'match' semantics: the sentencepiece library has no special-token switch, so tools/oracle/oracles/spm_bpe_ref.py encode(text, match_specials=True) adds the CONTROL and UNK pieces ([PAD] 0, [BOS] 1, [EOS] 2, [UNK] 3) to its longest-first USER_DEFINED prefix match, as frozen symbols that map straight to their own ids (never to byte fallback), with the dummy prefix still only at the start of the text. This is the web app's specialTokens: 'match'. Each emulated result must tile the input bytes (a matched piece covers its own text) and must equal the sentencepiece library's ids for the plain text between the matched strings (dummy prefix only on the first stretch) joined by the special ids. It is present only where it differs from ids: no case. add_dummy_prefix=true: SentencePiece prepends one U+2581 to every non-empty input. It is always the first character of the first piece and covers zero bytes. When the first piece is the bare U+2581 (id 130089) the token is zeroWidth with start == end == 0; when it is fused (for example U+2581 + 'Hello', or four U+2581 for three leading spaces) only the remaining characters consume input bytes. The dummy is skipped unconditionally, never by testing for a space at the cursor, so leading spaces in the input stay covered (research section 5.2 case b). The empty string encodes to no tokens. Byte spans: research section 5.2 cursor walk. A BYTE piece (ids 69..324, from the proto piece types) covers the one byte id - 69; other pieces cover their UTF-8 text, with each U+2581 matching a 0x20 space or a literal U+2581 (E2 96 81) at the cursor. Cross-check: tools/oracle/oracles/spm_bpe_ref.py re-implements SentencePiece BPE encoding in pure Python (no code shared with the library) and must reproduce every case.",
+  "notes": "Oracle: sentencepiece 0.2.2 on xai-grok1/tokenizer.model, encode(text, add_bos=False, add_eos=False). Model proto: model_type=BPE, byte_fallback=true, add_dummy_prefix=true, escape_whitespaces=true, remove_extra_whitespaces=false, split_by_unicode_script=true, split_by_whitespace=true, split_digits=true, normalizer=identity (precompiled_charsmap 0 bytes, so input text is never rewritten except spaces); 131072 pieces: NORMAL 130747, USER_DEFINED 65, BYTE 256 (ids 69..324), CONTROL 3, UNK 1; unk_id=3, bos_id=1, eos_id=2, pad_id=0. Special tokens: SentencePiece has no switch. It never matches CONTROL or UNK pieces in input text ([PAD] 0, [BOS] 1, [EOS] 2, [UNK] 3) and always matches the 65 USER_DEFINED pieces (ids 4..68: newline runs, digits 0-9, tab runs, space runs, <|separator|> 47, <|mask|> 48, <|control1|> 49, <|control2|> 50, <|control3|> 51, <|control4|> 52, <|control5|> 53, <|control6|> 54, <|control7|> 55, <|control8|> 56, <|control9|> 57, <|control10|> 58, <|control11|> 59, <|control12|> 60, <|control13|> 61, <|control14|> 62, <|control15|> 63, <|control16|> 64, <|control17|> 65, <|control18|> 66, <|control19|> 67, <|control20|> 68). The space-run pieces (ids 32..46) contain U+0020 and can never match, because escape_whitespaces rewrites every space to U+2581 before matching. No corpus text contains one of the special-token-like USER_DEFINED pieces (asserted), so ids never hold one and the policy is as-text. idsWithSpecials is an EMULATION of 'match' semantics: the sentencepiece library has no special-token switch, so tools/oracle/oracles/spm_bpe_ref.py encode(text, match_specials=True) adds the CONTROL and UNK pieces ([PAD] 0, [BOS] 1, [EOS] 2, [UNK] 3) to its longest-first USER_DEFINED prefix match, as frozen symbols that map straight to their own ids (never to byte fallback), with the dummy prefix still only at the start of the text. This is the web app's specialTokens: 'match'. Each emulated result must tile the input bytes (a matched piece covers its own text) and must equal the sentencepiece library's ids for the plain text between the matched strings (dummy prefix only on the first stretch) joined by the special ids. It is present only where it differs from ids: special-grok1-bos. add_dummy_prefix=true: SentencePiece prepends one U+2581 to every non-empty input. It is always the first character of the first piece and covers zero bytes. When the first piece is the bare U+2581 (id 130089) the token is zeroWidth with start == end == 0; when it is fused (for example U+2581 + 'Hello', or four U+2581 for three leading spaces) only the remaining characters consume input bytes. The dummy is skipped unconditionally, never by testing for a space at the cursor, so leading spaces in the input stay covered (research section 5.2 case b). The empty string encodes to no tokens. Byte spans: research section 5.2 cursor walk. A BYTE piece (ids 69..324, from the proto piece types) covers the one byte id - 69; other pieces cover their UTF-8 text, with each U+2581 matching a 0x20 space or a literal U+2581 (E2 96 81) at the cursor. Cross-check: tools/oracle/oracles/spm_bpe_ref.py re-implements SentencePiece BPE encoding in pure Python (no code shared with the library) and must reproduce every case.",
   "specialTokens": "as-text"
  },
  "tokenizer": "xai-grok1",

@@ -475,6 +475,152 @@
    "text": ""
   },
   {
+   "name": "ws-bom-mid",
+   "tags": [
+    "core",
+    "whitespace",
+    "zero-width",
+    "discriminator"
+   ],
+   "text": " using ﻿namespace"
+  },
+  {
+   "name": "nel-after-space",
+   "tags": [
+    "core",
+    "whitespace",
+    "control",
+    "discriminator"
+   ],
+   "text": "a b"
+  },
+  {
+   "name": "nel-before-letter",
+   "tags": [
+    "core",
+    "whitespace",
+    "control",
+    "discriminator"
+   ],
+   "text": "x y"
+  },
+  {
+   "name": "fs-control",
+   "tags": [
+    "core",
+    "control",
+    "discriminator"
+   ],
+   "text": "a\u001cb"
+  },
+  {
+   "name": "fs-before-letter",
+   "tags": [
+    "core",
+    "control",
+    "discriminator"
+   ],
+   "text": "x \u001cy"
+  },
+  {
+   "name": "contraction-upper",
+   "tags": [
+    "core",
+    "latin",
+    "contraction",
+    "discriminator"
+   ],
+   "text": "HE'S here"
+  },
+  {
+   "name": "contraction-long-s",
+   "tags": [
+    "core",
+    "latin",
+    "contraction",
+    "discriminator"
+   ],
+   "text": "it'ſ"
+  },
+  {
+   "name": "contraction-dont-upper",
+   "tags": [
+    "core",
+    "latin",
+    "contraction",
+    "discriminator"
+   ],
+   "text": "DON'T"
+  },
+  {
+   "name": "contraction-upper-run",
+   "tags": [
+    "core",
+    "latin",
+    "contraction",
+    "discriminator"
+   ],
+   "text": "'TWAS"
+  },
+  {
+   "name": "contraction-long-s-run",
+   "tags": [
+    "core",
+    "latin",
+    "contraction",
+    "discriminator"
+   ],
+   "text": "'ſtill"
+  },
+  {
+   "name": "special-llama3-bot",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "x <|begin_of_text|> y"
+  },
+  {
+   "name": "special-llama4-eot",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "x <|eot|> y"
+  },
+  {
+   "name": "special-grok2-eos",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "x <|eos|> y"
+  },
+  {
+   "name": "special-grok1-bos",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "x [BOS] y"
+  },
+  {
+   "name": "special-gemma2-end-of-turn",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "x <end_of_turn> y"
+  },
+  {
+   "name": "special-claude-eot",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "x <EOT> y"
+  },
+  {
    "name": "zh-tw-paragraph",
    "tags": [
     "paragraph",

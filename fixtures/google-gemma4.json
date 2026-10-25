@@ -2834,6 +2834,924 @@
    "utf8Len": 0
   },
   {
+   "ids": [1699, 39131, 10699],
+   "name": "ws-bom-mid",
+   "text": " using ﻿namespace",
+   "tokens": [
+    {
+     "bytes": "207573696e67",
+     "end": 6,
+     "id": 1699,
+     "partial": false,
+     "piece": "▁using",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20efbbbf",
+     "end": 10,
+     "id": 39131,
+     "partial": false,
+     "piece": "▁﻿",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6e616d657370616365",
+     "end": 19,
+     "id": 10699,
+     "partial": false,
+     "piece": "namespace",
+     "start": 10,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 19
+  },
+  {
+   "ids": [236746, 432, 371, 518],
+   "name": "nel-after-space",
+   "text": "a b",
+   "tokens": [
+    {
+     "bytes": "61",
+     "end": 1,
+     "id": 236746,
+     "partial": false,
+     "piece": "a",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c2",
+     "end": 2,
+     "id": 432,
+     "partial": true,
+     "piece": "<0xC2>",
+     "start": 1,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "85",
+     "end": 3,
+     "id": 371,
+     "partial": true,
+     "piece": "<0x85>",
+     "start": 2,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2062",
+     "end": 5,
+     "id": 518,
+     "partial": false,
+     "piece": "▁b",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [236781, 236743, 432, 371, 236762],
+   "name": "nel-before-letter",
+   "text": "x y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20",
+     "end": 2,
+     "id": 236743,
+     "partial": false,
+     "piece": "▁",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c2",
+     "end": 3,
+     "id": 432,
+     "partial": true,
+     "piece": "<0xC2>",
+     "start": 2,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "85",
+     "end": 4,
+     "id": 371,
+     "partial": true,
+     "piece": "<0x85>",
+     "start": 3,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "79",
+     "end": 5,
+     "id": 236762,
+     "partial": false,
+     "piece": "y",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [236746, 266, 236763],
+   "name": "fs-control",
+   "text": "a\u001cb",
+   "tokens": [
+    {
+     "bytes": "61",
+     "end": 1,
+     "id": 236746,
+     "partial": false,
+     "piece": "a",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "1c",
+     "end": 2,
+     "id": 266,
+     "partial": false,
+     "piece": "<0x1C>",
+     "start": 1,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "62",
+     "end": 3,
+     "id": 236763,
+     "partial": false,
+     "piece": "b",
+     "start": 2,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 3
+  },
+  {
+   "ids": [236781, 236743, 266, 236762],
+   "name": "fs-before-letter",
+   "text": "x \u001cy",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20",
+     "end": 2,
+     "id": 236743,
+     "partial": false,
+     "piece": "▁",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "1c",
+     "end": 3,
+     "id": 266,
+     "partial": false,
+     "piece": "<0x1C>",
+     "start": 2,
+     "type": "BYTE",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "79",
+     "end": 4,
+     "id": 236762,
+     "partial": false,
+     "piece": "y",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 4
+  },
+  {
+   "ids": [2808, 236789, 236773, 1590],
+   "name": "contraction-upper",
+   "text": "HE'S here",
+   "tokens": [
+    {
+     "bytes": "4845",
+     "end": 2,
+     "id": 2808,
+     "partial": false,
+     "piece": "HE",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 3,
+     "id": 236789,
+     "partial": false,
+     "piece": "'",
+     "start": 2,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "53",
+     "end": 4,
+     "id": 236773,
+     "partial": false,
+     "piece": "S",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2068657265",
+     "end": 9,
+     "id": 1590,
+     "partial": false,
+     "piece": "▁here",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
+   "ids": [509, 236789, 238071],
+   "name": "contraction-long-s",
+   "text": "it'ſ",
+   "tokens": [
+    {
+     "bytes": "6974",
+     "end": 2,
+     "id": 509,
+     "partial": false,
+     "piece": "it",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 3,
+     "id": 236789,
+     "partial": false,
+     "piece": "'",
+     "start": 2,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c5bf",
+     "end": 5,
+     "id": 238071,
+     "partial": false,
+     "piece": "ſ",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [70266, 236789, 236774],
+   "name": "contraction-dont-upper",
+   "text": "DON'T",
+   "tokens": [
+    {
+     "bytes": "444f4e",
+     "end": 3,
+     "id": 70266,
+     "partial": false,
+     "piece": "DON",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 4,
+     "id": 236789,
+     "partial": false,
+     "piece": "'",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "54",
+     "end": 5,
+     "id": 236774,
+     "partial": false,
+     "piece": "T",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [236789, 47747, 2371],
+   "name": "contraction-upper-run",
+   "text": "'TWAS",
+   "tokens": [
+    {
+     "bytes": "27",
+     "end": 1,
+     "id": 236789,
+     "partial": false,
+     "piece": "'",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5457",
+     "end": 3,
+     "id": 47747,
+     "partial": false,
+     "piece": "TW",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4153",
+     "end": 5,
+     "id": 2371,
+     "partial": false,
+     "piece": "AS",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "ids": [236789, 35476, 644],
+   "name": "contraction-long-s-run",
+   "text": "'ſtill",
+   "tokens": [
+    {
+     "bytes": "27",
+     "end": 1,
+     "id": 236789,
+     "partial": false,
+     "piece": "'",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c5bf74",
+     "end": 4,
+     "id": 35476,
+     "partial": false,
+     "piece": "ſt",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "696c6c",
+     "end": 7,
+     "id": 644,
+     "partial": false,
+     "piece": "ill",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 7
+  },
+  {
+   "ids": [236781, 655, 236909, 1906, 236779, 1340, 236779, 1005, 111038, 570],
+   "name": "special-llama3-bot",
+   "text": "x <|begin_of_text|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 655,
+     "partial": false,
+     "piece": "▁<",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 4,
+     "id": 236909,
+     "partial": false,
+     "piece": "|",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "626567696e",
+     "end": 9,
+     "id": 1906,
+     "partial": false,
+     "piece": "begin",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 10,
+     "id": 236779,
+     "partial": false,
+     "piece": "_",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f66",
+     "end": 12,
+     "id": 1340,
+     "partial": false,
+     "piece": "of",
+     "start": 10,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 13,
+     "id": 236779,
+     "partial": false,
+     "piece": "_",
+     "start": 12,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "74657874",
+     "end": 17,
+     "id": 1005,
+     "partial": false,
+     "piece": "text",
+     "start": 13,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c3e",
+     "end": 19,
+     "id": 111038,
+     "partial": false,
+     "piece": "|>",
+     "start": 17,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 21,
+     "id": 570,
+     "partial": false,
+     "piece": "▁y",
+     "start": 19,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 21
+  },
+  {
+   "ids": [236781, 655, 236909, 236744, 557, 111038, 570],
+   "name": "special-llama4-eot",
+   "text": "x <|eot|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 655,
+     "partial": false,
+     "piece": "▁<",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 4,
+     "id": 236909,
+     "partial": false,
+     "piece": "|",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "65",
+     "end": 5,
+     "id": 236744,
+     "partial": false,
+     "piece": "e",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f74",
+     "end": 7,
+     "id": 557,
+     "partial": false,
+     "piece": "ot",
+     "start": 5,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c3e",
+     "end": 9,
+     "id": 111038,
+     "partial": false,
+     "piece": "|>",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": 570,
+     "partial": false,
+     "piece": "▁y",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 11
+  },
+  {
+   "ids": [236781, 655, 236909, 211827, 111038, 570],
+   "name": "special-grok2-eos",
+   "text": "x <|eos|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 655,
+     "partial": false,
+     "piece": "▁<",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 4,
+     "id": 236909,
+     "partial": false,
+     "piece": "|",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656f73",
+     "end": 7,
+     "id": 211827,
+     "partial": false,
+     "piece": "eos",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c3e",
+     "end": 9,
+     "id": 111038,
+     "partial": false,
+     "piece": "|>",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": 570,
+     "partial": false,
+     "piece": "▁y",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 11
+  },
+  {
+   "ids": [236781, 870, 236799, 3354, 236842, 570],
+   "name": "special-grok1-bos",
+   "text": "x [BOS] y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "205b",
+     "end": 3,
+     "id": 870,
+     "partial": false,
+     "piece": "▁[",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "42",
+     "end": 4,
+     "id": 236799,
+     "partial": false,
+     "piece": "B",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f53",
+     "end": 6,
+     "id": 3354,
+     "partial": false,
+     "piece": "OS",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5d",
+     "end": 7,
+     "id": 236842,
+     "partial": false,
+     "piece": "]",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": 570,
+     "partial": false,
+     "piece": "▁y",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
+   "ids": [236781, 655, 643, 236779, 1340, 236779, 887, 236813, 570],
+   "name": "special-gemma2-end-of-turn",
+   "text": "x <end_of_turn> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 655,
+     "partial": false,
+     "piece": "▁<",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656e64",
+     "end": 6,
+     "id": 643,
+     "partial": false,
+     "piece": "end",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 7,
+     "id": 236779,
+     "partial": false,
+     "piece": "_",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f66",
+     "end": 9,
+     "id": 1340,
+     "partial": false,
+     "piece": "of",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 10,
+     "id": 236779,
+     "partial": false,
+     "piece": "_",
+     "start": 9,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7475726e",
+     "end": 14,
+     "id": 887,
+     "partial": false,
+     "piece": "turn",
+     "start": 10,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 15,
+     "id": 236813,
+     "partial": false,
+     "piece": ">",
+     "start": 14,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 17,
+     "id": 570,
+     "partial": false,
+     "piece": "▁y",
+     "start": 15,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 17
+  },
+  {
+   "ids": [236781, 655, 236788, 2586, 236813, 570],
+   "name": "special-claude-eot",
+   "text": "x <EOT> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 236781,
+     "partial": false,
+     "piece": "x",
+     "start": 0,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 655,
+     "partial": false,
+     "piece": "▁<",
+     "start": 1,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "45",
+     "end": 4,
+     "id": 236788,
+     "partial": false,
+     "piece": "E",
+     "start": 3,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f54",
+     "end": 6,
+     "id": 2586,
+     "partial": false,
+     "piece": "OT",
+     "start": 4,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 7,
+     "id": 236813,
+     "partial": false,
+     "piece": ">",
+     "start": 6,
+     "type": "NORMAL",
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": 570,
+     "partial": false,
+     "piece": "▁y",
+     "start": 7,
+     "type": "NORMAL",
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
    "ids": [237374, 54112, 25773, 73812, 5157, 238628, 237075, 237838, 238162, 236900, 239524, 43820, 56503, 65526, 24442, 237075, 240688, 238670, 237152, 42991, 238199, 237169, 236924, 62133, 237089, 237690, 236900, 95658, 237300, 237009, 238498, 237804, 237648, 238285, 239584, 239249, 240146, 241562, 239160, 243118, 243118, 236918, 137355, 240793, 236900, 237868, 237009, 241562, 238875, 240869, 240304, 236900, 237921, 237238, 69615, 94078, 237954, 238969, 157137, 239572, 241012, 239082, 236924, 183220, 5157, 120449, 239559, 250985, 241069, 237009, 239809, 236900, 239869, 237844, 243562, 243562, 241562, 247991, 236951, 242736, 244461, 237206, 251398, 239973, 237588, 242059, 236924, 237838, 238162, 33292, 238606, 239759, 240353, 236900, 54882, 237967, 14726, 100849, 243960, 237009, 239693, 236900, 237678, 238606, 238924, 237089, 102288, 238003, 242010, 238630, 237581, 238396, 79376, 236924, 80770, 238019, 237954, 237787, 237893, 238498, 19982, 127124, 236900, 237078, 14185, 237471, 237787, 241437, 239199, 238192, 238762, 236900, 241437, 237888, 237278, 238107, 245622, 236900, 203821, 237648, 238632, 237439, 238497, 239965, 236924, 73160, 223694, 239160, 236900, 214515, 242251, 238417, 242882, 240859, 230032, 76113, 237954, 236900, 40060, 238019, 81149, 238035, 237724, 236918, 47001, 43820, 74076, 73637, 236918, 238422, 239875, 238693, 240379, 238441, 237313, 201185, 236924, 242699, 239278, 229033, 237655, 237688, 238019, 239249, 239057, 238269, 236900, 238969, 237709, 240989, 250790, 238834, 239563, 237463, 241105, 236900, 237506, 240648, 240133, 69308, 238468, 238417, 44953, 237866, 245427, 236924, 9522, 13413, 238632, 240955, 236900, 67138, 5157, 237648, 238078, 239367, 238978, 237594, 242318, 242318, 236900, 64728, 138524, 238010, 237787, 237075, 239594, 238134, 236951, 239594, 238830, 237206, 239594, 237205, 228572, 236924, 109722, 237838, 238162, 23529, 238632, 22062, 240688, 238670, 236900, 44107, 101557, 237439, 239527, 237981, 238139, 237800, 237486, 238139, 237996, 239290, 79285, 239332, 237390, 241225, 238162, 237245, 237110, 238496, 19966, 238464, 107948, 236900, 237921, 240002, 237637, 245016, 238139, 238417, 237594, 239370, 236924, 24442, 240319, 237888, 238504, 238609, 238458, 61252, 42991, 240319, 53909, 236900, 73812, 48738, 237070, 240955, 236900, 59339, 237208, 238327, 237589, 239278, 238702, 56987, 237169, 238745, 238745, 238889, 236900, 239869, 237463, 238061, 101268, 90518, 237931, 238128, 239480, 239878, 238966, 237300, 236900, 79057, 237300, 141012, 239809, 241298, 239207, 238679, 236900, 237535, 79285, 240002, 239945, 240688, 238670, 237479, 238184, 68594, 237463, 239967, 241803, 242215, 236924],
    "name": "zh-tw-paragraph",
    "text": "「如果你只有一天可以待在台南，該怎麼安排？」朋友在捷運上這樣問我。我想了想，建議他一早先去國華街喝碗熱騰騰的牛肉湯，配一碗肉燥飯，再到附近的老店買一杯冬瓜茶。中午可以走到赤崁樓一帶，順路嘗嘗碗粿、蝦捲和鱔魚意麵。台南的小吃偏甜，第一次來的人常常嚇一跳，但吃久了反而會懷念那種味道。許多老店只做早上的生意，有的一天只賣兩百份，賣完就收攤，週末去還得排隊。下午天氣熱，不妨躲進巷弄裡的咖啡店，看看老房子改建的空間怎麼保留原本的木窗與磨石子地板。傍晚再去安平老街散步，買些蜜餞當伴手禮，看夕陽慢慢落進台灣海峽。如果時間還夠，晚上可以去花園夜市逛逛，不過要注意它只在週四、週六和週日營業。可惜台南目前還沒有捷運，移動大多得靠機車或公車；從台北搭高鐵南下大約一個半小時，再轉接駁車進市區。朋友聽完笑著說：「這樣聽起來，一天根本不夠，至少要住三晚吧！」我點點頭，順手把收藏的美食清單傳給他，提醒他記得帶悠遊卡，回台北轉乘捷運時才不會手忙腳亂。",
@@ -93147,14 +94065,20 @@
   }
  ],
  "crossCheck": {
-  "agreedCases": 357,
-  "disagreedCases": ["special-start-of-turn"],
+  "agreedCases": 372,
+  "disagreedCases": ["special-start-of-turn", "special-gemma2-end-of-turn"],
   "disagreements": [
    {
     "crossCheckIds": [105, 2364],
     "explanation": "'<start_of_turn>' is USER_DEFINED piece 105 in the Gemma 3 model, which SentencePiece always matches as one atomic token; Gemma 4 renamed id 105 to '<|turn>' and has no '<start_of_turn>' entry, so HF tokenizers BPE-encodes the string as ordinary text.",
     "ids": [236820, 3041, 236779, 1340, 236779, 887, 236813, 2364],
     "name": "special-start-of-turn"
+   },
+   {
+    "crossCheckIds": [236781, 236743, 106, 570],
+    "explanation": "'<end_of_turn>' is USER_DEFINED piece 106 in the Gemma 3 model, which SentencePiece always matches as one atomic token; Gemma 4 renamed id 106 to '<turn|>' and has no '<end_of_turn>' entry, so HF tokenizers BPE-encodes the string as ordinary text.",
+    "ids": [236781, 655, 643, 236779, 1340, 236779, 887, 236813, 570],
+    "name": "special-gemma2-end-of-turn"
    }
   ],
   "library": "sentencepiece",

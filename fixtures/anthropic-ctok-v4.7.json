@@ -4571,6 +4571,1200 @@
    "utf8Len": 0
   },
   {
+   "absorbed": [
+    {
+     "end": 1,
+     "reason": "bow-space",
+     "start": 0,
+     "token": 0
+    },
+    {
+     "end": 7,
+     "reason": "bow-space",
+     "start": 6,
+     "token": 1
+    }
+   ],
+   "contentCount": 8,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null, null, null],
+   "name": "ws-bom-mid",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩using⟨eow⟩", "⟨bow⟩", "⟨0xEF⟩", "⟨0xBB⟩", "⟨0xBF⟩", "⟨bow⟩nam", "esp", "ace⟨eow⟩"],
+   "text": " using ﻿namespace",
+   "tokens": [
+    {
+     "bytes": "207573696e67",
+     "end": 6,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩using⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩",
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "ef",
+     "end": 8,
+     "id": null,
+     "partial": true,
+     "piece": "⟨0xEF⟩",
+     "start": 7,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "bb",
+     "end": 9,
+     "id": null,
+     "partial": true,
+     "piece": "⟨0xBB⟩",
+     "start": 8,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "bf",
+     "end": 10,
+     "id": null,
+     "partial": true,
+     "piece": "⟨0xBF⟩",
+     "start": 9,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6e616d",
+     "end": 13,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩nam",
+     "start": 10,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "657370",
+     "end": 16,
+     "id": null,
+     "partial": false,
+     "piece": "esp",
+     "start": 13,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "616365",
+     "end": 19,
+     "id": null,
+     "partial": false,
+     "piece": "ace⟨eow⟩",
+     "start": 16,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 19,
+   "utf8Len": 19
+  },
+  {
+   "absorbed": [
+    {
+     "end": 3,
+     "reason": "stripped",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 4,
+     "reason": "bow-space",
+     "start": 3,
+     "token": 1
+    }
+   ],
+   "contentCount": 2,
+   "frameCount": 11,
+   "ids": [null, null],
+   "name": "nel-after-space",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩a⟨eow⟩", "⟨bow⟩b⟨eow⟩"],
+   "text": "a b",
+   "tokens": [
+    {
+     "bytes": "61",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩a⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c2852062",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩b⟨eow⟩",
+     "start": 1,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 13,
+   "utf8Len": 5
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 4,
+     "reason": "stripped",
+     "start": 2,
+     "token": 1
+    }
+   ],
+   "contentCount": 2,
+   "frameCount": 11,
+   "ids": [null, null],
+   "name": "nel-before-letter",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20c28579",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 1,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 13,
+   "utf8Len": 5
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "stripped",
+     "start": 1,
+     "token": 1
+    }
+   ],
+   "contentCount": 2,
+   "frameCount": 11,
+   "ids": [null, null],
+   "name": "fs-control",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩", "ab⟨eow⟩"],
+   "text": "a\u001cb",
+   "tokens": [
+    {
+     "bytes": "",
+     "end": 0,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩",
+     "start": 0,
+     "zeroWidth": true
+    },
+    {
+     "bytes": "611c62",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "ab⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 13,
+   "utf8Len": 3
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 3,
+     "reason": "stripped",
+     "start": 2,
+     "token": 1
+    }
+   ],
+   "contentCount": 2,
+   "frameCount": 11,
+   "ids": [null, null],
+   "name": "fs-before-letter",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x \u001cy",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "201c79",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 1,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 13,
+   "utf8Len": 4
+  },
+  {
+   "absorbed": [
+    {
+     "end": 5,
+     "reason": "bow-space",
+     "start": 4,
+     "token": 4
+    }
+   ],
+   "contentCount": 5,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null],
+   "name": "contraction-upper",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩H", "E⟨eow⟩", "'", "⟨shift⟩⟨bow⟩s⟨eow⟩", "⟨bow⟩here⟨eow⟩"],
+   "text": "HE'S here",
+   "tokens": [
+    {
+     "bytes": "48",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩H",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "45",
+     "end": 2,
+     "id": null,
+     "partial": false,
+     "piece": "E⟨eow⟩",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "'",
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "53",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "⟨shift⟩⟨bow⟩s⟨eow⟩",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2068657265",
+     "end": 9,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩here⟨eow⟩",
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 16,
+   "utf8Len": 9
+  },
+  {
+   "contentCount": 5,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null],
+   "name": "contraction-long-s",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩it⟨eow⟩", "'", "⟨bow⟩", "ſ", "⟨eow⟩"],
+   "text": "it'ſ",
+   "tokens": [
+    {
+     "bytes": "6974",
+     "end": 2,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩it⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "'",
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩",
+     "start": 3,
+     "zeroWidth": true
+    },
+    {
+     "bytes": "c5bf",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "ſ",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "⟨eow⟩",
+     "start": 5,
+     "zeroWidth": true
+    }
+   ],
+   "totalCount": 16,
+   "utf8Len": 5
+  },
+  {
+   "contentCount": 4,
+   "frameCount": 11,
+   "ids": [null, null, null, null],
+   "name": "contraction-dont-upper",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩D", "ON⟨eow⟩", "'", "⟨shift⟩⟨bow⟩t⟨eow⟩"],
+   "text": "DON'T",
+   "tokens": [
+    {
+     "bytes": "44",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩D",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f4e",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "ON⟨eow⟩",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "'",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "54",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "⟨shift⟩⟨bow⟩t⟨eow⟩",
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 15,
+   "utf8Len": 5
+  },
+  {
+   "contentCount": 6,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null],
+   "name": "contraction-upper-run",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", " ", "'", "⟨bow⟩T", "W", "A", "S⟨eow⟩"],
+   "text": "'TWAS",
+   "tokens": [
+    {
+     "bytes": "",
+     "end": 0,
+     "id": null,
+     "partial": false,
+     "piece": " ",
+     "start": 0,
+     "zeroWidth": true
+    },
+    {
+     "bytes": "27",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "'",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "54",
+     "end": 2,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩T",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "57",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "W",
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "41",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "A",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "53",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "S⟨eow⟩",
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 17,
+   "utf8Len": 5
+  },
+  {
+   "contentCount": 6,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null],
+   "name": "contraction-long-s-run",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", " ", "'", "⟨bow⟩", "ſ", "t", "ill⟨eow⟩"],
+   "text": "'ſtill",
+   "tokens": [
+    {
+     "bytes": "",
+     "end": 0,
+     "id": null,
+     "partial": false,
+     "piece": " ",
+     "start": 0,
+     "zeroWidth": true
+    },
+    {
+     "bytes": "27",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "'",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩",
+     "start": 1,
+     "zeroWidth": true
+    },
+    {
+     "bytes": "c5bf",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "ſ",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "74",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "t",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "696c6c",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": "ill⟨eow⟩",
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 17,
+   "utf8Len": 7
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 20,
+     "reason": "bow-space",
+     "start": 19,
+     "token": 11
+    }
+   ],
+   "contentCount": 12,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null, null, null, null, null, null, null],
+   "name": "special-llama3-bot",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩<", "|", "⟨bow⟩beg", "in⟨eow⟩", "_", "⟨bow⟩of⟨eow⟩", "_", "⟨bow⟩text⟨eow⟩", "|", ">⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x <|begin_of_text|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩<",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "|",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "626567",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩beg",
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "696e",
+     "end": 9,
+     "id": null,
+     "partial": false,
+     "piece": "in⟨eow⟩",
+     "start": 7,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 10,
+     "id": null,
+     "partial": false,
+     "piece": "_",
+     "start": 9,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f66",
+     "end": 12,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩of⟨eow⟩",
+     "start": 10,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 13,
+     "id": null,
+     "partial": false,
+     "piece": "_",
+     "start": 12,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "74657874",
+     "end": 17,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩text⟨eow⟩",
+     "start": 13,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 18,
+     "id": null,
+     "partial": false,
+     "piece": "|",
+     "start": 17,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 19,
+     "id": null,
+     "partial": false,
+     "piece": ">⟨eow⟩",
+     "start": 18,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 21,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 19,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 23,
+   "utf8Len": 21
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 10,
+     "reason": "bow-space",
+     "start": 9,
+     "token": 7
+    }
+   ],
+   "contentCount": 8,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null, null, null],
+   "name": "special-llama4-eot",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩<", "|", "⟨bow⟩e", "ot⟨eow⟩", "|", ">⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x <|eot|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩<",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "|",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "65",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩e",
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f74",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": "ot⟨eow⟩",
+     "start": 5,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 8,
+     "id": null,
+     "partial": false,
+     "piece": "|",
+     "start": 7,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 9,
+     "id": null,
+     "partial": false,
+     "piece": ">⟨eow⟩",
+     "start": 8,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 9,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 19,
+   "utf8Len": 11
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 10,
+     "reason": "bow-space",
+     "start": 9,
+     "token": 7
+    }
+   ],
+   "contentCount": 8,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null, null, null],
+   "name": "special-grok2-eos",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩<", "|", "⟨bow⟩e", "os⟨eow⟩", "|", ">⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x <|eos|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩<",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "|",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "65",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩e",
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f73",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": "os⟨eow⟩",
+     "start": 5,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 8,
+     "id": null,
+     "partial": false,
+     "piece": "|",
+     "start": 7,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 9,
+     "id": null,
+     "partial": false,
+     "piece": ">⟨eow⟩",
+     "start": 8,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 9,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 19,
+   "utf8Len": 11
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 8,
+     "reason": "bow-space",
+     "start": 7,
+     "token": 6
+    }
+   ],
+   "contentCount": 7,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null, null],
+   "name": "special-grok1-bos",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩[", "⟨bow⟩B", "O", "S⟨eow⟩", "]⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x [BOS] y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "205b",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩[",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "42",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩B",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "O",
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "53",
+     "end": 6,
+     "id": null,
+     "partial": false,
+     "piece": "S⟨eow⟩",
+     "start": 5,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5d",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": "]⟨eow⟩",
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 7,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 18,
+   "utf8Len": 9
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 16,
+     "reason": "bow-space",
+     "start": 15,
+     "token": 9
+    }
+   ],
+   "contentCount": 10,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null, null, null, null, null],
+   "name": "special-gemma2-end-of-turn",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩<", "⟨bow⟩end⟨eow⟩", "_", "⟨bow⟩of⟨eow⟩", "_", "⟨bow⟩tur", "n⟨eow⟩", ">⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x <end_of_turn> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩<",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656e64",
+     "end": 6,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩end⟨eow⟩",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": "_",
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f66",
+     "end": 9,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩of⟨eow⟩",
+     "start": 7,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f",
+     "end": 10,
+     "id": null,
+     "partial": false,
+     "piece": "_",
+     "start": 9,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "747572",
+     "end": 13,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩tur",
+     "start": 10,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6e",
+     "end": 14,
+     "id": null,
+     "partial": false,
+     "piece": "n⟨eow⟩",
+     "start": 13,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 15,
+     "id": null,
+     "partial": false,
+     "piece": ">⟨eow⟩",
+     "start": 14,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 17,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 15,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 21,
+   "utf8Len": 17
+  },
+  {
+   "absorbed": [
+    {
+     "end": 2,
+     "reason": "bow-space",
+     "start": 1,
+     "token": 1
+    },
+    {
+     "end": 8,
+     "reason": "bow-space",
+     "start": 7,
+     "token": 6
+    }
+   ],
+   "contentCount": 7,
+   "frameCount": 11,
+   "ids": [null, null, null, null, null, null, null],
+   "name": "special-claude-eot",
+   "pieces": ["⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨pad⟩", "⟨bow⟩x⟨eow⟩", "⟨bow⟩<", "⟨bow⟩E", "O", "T⟨eow⟩", ">⟨eow⟩", "⟨bow⟩y⟨eow⟩"],
+   "text": "x <EOT> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩x⟨eow⟩",
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩<",
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "45",
+     "end": 4,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩E",
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f",
+     "end": 5,
+     "id": null,
+     "partial": false,
+     "piece": "O",
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "54",
+     "end": 6,
+     "id": null,
+     "partial": false,
+     "piece": "T⟨eow⟩",
+     "start": 5,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 7,
+     "id": null,
+     "partial": false,
+     "piece": ">⟨eow⟩",
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": null,
+     "partial": false,
+     "piece": "⟨bow⟩y⟨eow⟩",
+     "start": 7,
+     "zeroWidth": false
+    }
+   ],
+   "totalCount": 18,
+   "utf8Len": 9
+  },
+  {
    "contentCount": 530,
    "frameCount": 11,
    "ids": [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
@@ -115380,7 +116574,7 @@
  ],
  "caveat": "The reconstruction targets counts. Claude does not expose token boundaries, so `tokenize()` returns one valid minimum-cost tiling, not a claim about Anthropic's exact segmentation. (ctok 1.3.0 README)",
  "crossCheck": {
-  "agreedCases": 358,
+  "agreedCases": 374,
   "disagreedCases": [],
   "library": "independent tiling re-check (tools/oracle/oracles/ctok_tiling_check.py)",
   "scope": "Re-derives the tiling only: pieces concatenate to ctok.marked_stream, every piece is a vocabulary piece, unit-cost character or byte-fallback chunk, the content count equals an independent minimum-cost tiling, and the frame tail length is as predicted. ctok's normalization and marker model are taken as given; no Anthropic ground truth is involved.",

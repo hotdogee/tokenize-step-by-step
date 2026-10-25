@@ -13,9 +13,14 @@ Only the standard library is used, so the script runs on any CPython >= 3.9
 and the output is byte-identical across versions (``Random.choice`` and
 ``Random.randint`` are built on ``getrandbits``, whose stream is stable).
 
+``--export-alphabet`` also writes ``tools/oracle/alphabet.json``: the fuzz
+generator's weighted pools and the distinct code points the corpus uses (as
+ranges, per corpus part), the input alphabet for the web app's fuzz tests.
+``--check`` verifies both files.
+
 Usage::
 
-    uv run --project tools/oracle tools/oracle/make_corpus.py [--check]
+    uv run --project tools/oracle tools/oracle/make_corpus.py [--export-alphabet] [--check]
 """
 
 from __future__ import annotations
@@ -24,11 +29,13 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 import tempfile
 from pathlib import Path
 
 CORPUS_PATH = Path(__file__).resolve().parent / "corpus.json"
+ALPHABET_PATH = Path(__file__).resolve().parent / "alphabet.json"
 FUZZ_SEED = 20261025
 FUZZ_COUNT = 300
 FUZZ_MAX_LEN = 40
@@ -91,6 +98,34 @@ CORE_CASES: list[tuple[str, str, list[str]]] = [
     ("zh-tw-split-chars", "雲澎閩鳳酥", ["cjk", "zh-tw"]),
     ("zh-tw-counties", "臺灣雄嘉義屏東彰林苗栗", ["cjk", "zh-tw"]),
     ("empty", "", ["edge"]),
+    # Pre-tokenizer port discriminators (design 04 §2.2). Each one's chunks change if a JavaScript port uses
+    # the JS \s set instead of Unicode White_Space (U+FEFF in, U+0085 out), treats U+001C-1F as whitespace,
+    # or drops the (?i:) case folding of the contraction alternative (including U+017F long s).
+    # nel-after-space and fs-control are the design's plain forms; the *-before-letter forms put the code
+    # point right after a space, where the whitespace alternatives decide the chunk boundary.
+    ("ws-bom-mid", " using \ufeffnamespace", ["whitespace", "zero-width", "discriminator"]),
+    ("nel-after-space", "a\u0085 b", ["whitespace", "control", "discriminator"]),
+    ("nel-before-letter", "x \u0085y", ["whitespace", "control", "discriminator"]),
+    ("fs-control", "a\u001cb", ["control", "discriminator"]),
+    ("fs-before-letter", "x \u001cy", ["control", "discriminator"]),
+    ("contraction-upper", "HE'S here", ["latin", "contraction", "discriminator"]),
+    ("contraction-long-s", "it'\u017f", ["latin", "contraction", "discriminator"]),
+    ("contraction-dont-upper", "DON'T", ["latin", "contraction", "discriminator"]),
+    # The three cases above end a letter run with the contraction. Only o200k-style patterns, where the
+    # contraction is a suffix of the letter run, chunk them differently without (?i:). cl100k, Llama 3 and
+    # Grok-2 try the contraction first and otherwise match it as punctuation + letters, so they need the
+    # contraction to be followed by more letters.
+    ("contraction-upper-run", "'TWAS", ["latin", "contraction", "discriminator"]),
+    ("contraction-long-s-run", "'\u017ftill", ["latin", "contraction", "discriminator"]),
+    # One special-token string per shipped tokenizer, taken from its own special-token table (design 04 §2.4):
+    # Llama 3 and Muse Glimmer added_tokens, Grok-2 special_tokens, Grok-1 CONTROL pieces, Gemma 1/2
+    # USER_DEFINED pieces and claude.json special_tokens.
+    ("special-llama3-bot", "x <|begin_of_text|> y", ["special-string"]),
+    ("special-llama4-eot", "x <|eot|> y", ["special-string"]),
+    ("special-grok2-eos", "x <|eos|> y", ["special-string"]),
+    ("special-grok1-bos", "x [BOS] y", ["special-string"]),
+    ("special-gemma2-end-of-turn", "x <end_of_turn> y", ["special-string"]),
+    ("special-claude-eot", "x <EOT> y", ["special-string"]),
 ]
 
 ZH_TW_PARAGRAPH = (
@@ -154,20 +189,21 @@ PARAGRAPH_CASES: list[tuple[str, str, list[str]]] = [
     ("mixed-code", MIXED_CODE, ["code", "whitespace"]),
 ]
 
-# Fuzz alphabet: each entry is (weight, pool). A pool is either a list of
-# inclusive code-point ranges or a list of literal strings (one is chosen).
+# Fuzz alphabet: each entry is (weight, label, pool). A pool is either a list
+# of inclusive code-point ranges or a list of literal strings (one is chosen).
+# The labels only name the pools in alphabet.json; they never reach the RNG.
 _PUNCT = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~、。，「」！？：；（）…ー・"
-FUZZ_ALPHABET: list[tuple[int, list[tuple[int, int]] | list[str]]] = [
-    (3, [(0x4E00, 0x9FFF)]),  # CJK Unified Ideographs
-    (2, [(0x3041, 0x3096)]),  # Hiragana
-    (2, [(0x30A1, 0x30FA)]),  # Katakana
-    (1, [(0xAC00, 0xD7A3)]),  # Hangul syllables
-    (1, [(0x3105, 0x312F)]),  # Bopomofo
-    (3, [(0x41, 0x5A), (0x61, 0x7A)]),  # Latin letters
-    (2, [(0x30, 0x39)]),  # ASCII digits
-    (2, list(_PUNCT)),  # ASCII + CJK punctuation
-    (1, [(0x1F300, 0x1F5FF), (0x1F600, 0x1F64F), (0x1F680, 0x1F6C5), (0x1F900, 0x1F9FF)]),
-    (2, [" ", " ", "\r\n", "\n", "\t", "　"]),  # whitespace
+FUZZ_ALPHABET: list[tuple[int, str, list[tuple[int, int]] | list[str]]] = [
+    (3, "CJK Unified Ideographs", [(0x4E00, 0x9FFF)]),
+    (2, "Hiragana", [(0x3041, 0x3096)]),
+    (2, "Katakana", [(0x30A1, 0x30FA)]),
+    (1, "Hangul syllables", [(0xAC00, 0xD7A3)]),
+    (1, "Bopomofo", [(0x3105, 0x312F)]),
+    (3, "Latin letters", [(0x41, 0x5A), (0x61, 0x7A)]),
+    (2, "ASCII digits", [(0x30, 0x39)]),
+    (2, "ASCII and CJK punctuation", list(_PUNCT)),
+    (1, "Emoji", [(0x1F300, 0x1F5FF), (0x1F600, 0x1F64F), (0x1F680, 0x1F6C5), (0x1F900, 0x1F9FF)]),
+    (2, "Whitespace", [" ", " ", "\r\n", "\n", "\t", "　"]),
 ]
 
 
@@ -183,7 +219,7 @@ def _pick(rng: random.Random, pool: list[tuple[int, int]] | list[str]) -> str:
 def fuzz_strings(seed: int = FUZZ_SEED, count: int = FUZZ_COUNT) -> list[str]:
     """Return ``count`` deterministic fuzz strings of 1..FUZZ_MAX_LEN code points."""
     rng = random.Random(seed)
-    weighted = [pool for weight, pool in FUZZ_ALPHABET for _ in range(weight)]
+    weighted = [pool for weight, _label, pool in FUZZ_ALPHABET for _ in range(weight)]
     out: list[str] = []
     for _ in range(count):
         length = rng.randint(1, FUZZ_MAX_LEN)
@@ -210,9 +246,52 @@ def build_corpus() -> dict:
     }
 
 
+def _ranges(code_points: set[int]) -> list[list[int]]:
+    """Collapse code points into sorted, inclusive ``[first, last]`` ranges."""
+    out: list[list[int]] = []
+    for cp in sorted(code_points):
+        if out and out[-1][1] == cp - 1:
+            out[-1][1] = cp
+        else:
+            out.append([cp, cp])
+    return out
+
+
+def build_alphabet(corpus: dict) -> dict:
+    """The fuzz generator's pools and the corpus's distinct code points, for the web app's fuzz tests."""
+    pools = []
+    for weight, label, pool in FUZZ_ALPHABET:
+        entry: dict = {"label": label, "weight": weight}
+        if all(isinstance(item, str) for item in pool):
+            entry["literals"] = list(pool)
+        else:
+            entry["ranges"] = [list(item) for item in pool]
+        pools.append(entry)
+    parts: dict[str, set[int]] = {"core": set(), "paragraph": set(), "fuzz": set()}
+    for case in corpus["cases"]:
+        parts[case["tags"][0]].update(ord(ch) for ch in case["text"])
+    used = set().union(*parts.values())
+    return {
+        "description": "Alphabet of the golden-fixture corpus: the fuzz generator's weighted pools (fuzz.pools) and"
+        " the distinct code points each corpus part uses (codePoints, inclusive [first, last] ranges). Generated by"
+        " tools/oracle/make_corpus.py --export-alphabet; do not edit by hand.",
+        "codePoints": {"all": _ranges(used), **{part: _ranges(cps) for part, cps in parts.items()}},
+        "counts": {"all": len(used), **{part: len(cps) for part, cps in parts.items()}},
+        "fuzz": {**corpus["fuzz"], "pools": pools},
+        "version": 1,
+    }
+
+
 def render(doc: dict) -> bytes:
     """Serialise deterministically: sorted keys, UTF-8, indent=1, LF, final newline."""
     return (json.dumps(doc, ensure_ascii=False, indent=1, sort_keys=True) + "\n").encode("utf-8")
+
+
+def render_alphabet(doc: dict) -> bytes:
+    """Serialise the alphabet: like :func:`render`, but ASCII-only (invisible code points stay readable) and
+    with one ``[first, last]`` pair per line."""
+    text = json.dumps(doc, ensure_ascii=True, indent=1, sort_keys=True)
+    return (re.sub(r"\[\s+(\d+),\s+(\d+)\s+\]", r"[\1, \2]", text) + "\n").encode("utf-8")
 
 
 def write_atomic(path: Path, data: bytes) -> None:
@@ -230,19 +309,23 @@ def write_atomic(path: Path, data: bytes) -> None:
 def main(argv: list[str] | None = None) -> int:
     """CLI entry point: write corpus.json, or with ``--check`` verify it is current."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--check", action="store_true", help="exit 1 if corpus.json is stale")
+    parser.add_argument("--check", action="store_true", help="exit 1 if corpus.json or alphabet.json is stale")
+    parser.add_argument("--export-alphabet", action="store_true", help="also write alphabet.json")
     args = parser.parse_args(argv)
     doc = build_corpus()
-    data = render(doc)
+    outputs = {CORPUS_PATH: render(doc), ALPHABET_PATH: render_alphabet(build_alphabet(doc))}
     if args.check:
-        current = CORPUS_PATH.read_bytes() if CORPUS_PATH.exists() else b""
-        if current != data:
-            print(f"{CORPUS_PATH.name} is stale; re-run make_corpus.py", file=sys.stderr)
-            return 1
-        print(f"{CORPUS_PATH.name} is up to date")
-        return 0
-    write_atomic(CORPUS_PATH, data)
-    print(f"wrote {CORPUS_PATH.name}: {len(doc['cases'])} cases, {len(data)} bytes")
+        stale = [path.name for path, data in outputs.items() if (path.read_bytes() if path.exists() else b"") != data]
+        for name in stale:
+            print(f"{name} is stale; re-run make_corpus.py --export-alphabet", file=sys.stderr)
+        if not stale:
+            print(f"{CORPUS_PATH.name} and {ALPHABET_PATH.name} are up to date")
+        return 1 if stale else 0
+    write_atomic(CORPUS_PATH, outputs[CORPUS_PATH])
+    print(f"wrote {CORPUS_PATH.name}: {len(doc['cases'])} cases, {len(outputs[CORPUS_PATH])} bytes")
+    if args.export_alphabet:
+        write_atomic(ALPHABET_PATH, outputs[ALPHABET_PATH])
+        print(f"wrote {ALPHABET_PATH.name}: {len(outputs[ALPHABET_PATH])} bytes")
     return 0
 
 

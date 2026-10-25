@@ -4072,6 +4072,1085 @@
    "utf8Len": 0
   },
   {
+   "chunks": [[0, 6], [6, 10], [10, 19]],
+   "ids": [1701, 76880, 2280],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "ws-bom-mid",
+   "text": " using ﻿namespace",
+   "tokens": [
+    {
+     "bytes": "207573696e67",
+     "end": 6,
+     "id": 1701,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20efbbbf",
+     "end": 10,
+     "id": 76880,
+     "partial": false,
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6e616d657370616365",
+     "end": 19,
+     "id": 2280,
+     "partial": false,
+     "start": 10,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 19
+  },
+  {
+   "chunks": [[0, 1], [1, 3], [3, 5]],
+   "ids": [64, 126, 227, 293],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": false,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "nel-after-space",
+   "text": "a b",
+   "tokens": [
+    {
+     "bytes": "61",
+     "end": 1,
+     "id": 64,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c2",
+     "end": 2,
+     "id": 126,
+     "partial": true,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "85",
+     "end": 3,
+     "id": 227,
+     "partial": true,
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2062",
+     "end": 5,
+     "id": 293,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "chunks": [[0, 1], [1, 2], [2, 5]],
+   "ids": [87, 220, 126, 227, 88],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": false,
+     "steps": []
+    }
+   ],
+   "name": "nel-before-letter",
+   "text": "x y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20",
+     "end": 2,
+     "id": 220,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c2",
+     "end": 3,
+     "id": 126,
+     "partial": true,
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "85",
+     "end": 4,
+     "id": 227,
+     "partial": true,
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "79",
+     "end": 5,
+     "id": 88,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "chunks": [[0, 1], [1, 3]],
+   "ids": [64, 216, 65],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": false,
+     "steps": []
+    }
+   ],
+   "name": "fs-control",
+   "text": "a\u001cb",
+   "tokens": [
+    {
+     "bytes": "61",
+     "end": 1,
+     "id": 64,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "1c",
+     "end": 2,
+     "id": 216,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "62",
+     "end": 3,
+     "id": 65,
+     "partial": false,
+     "start": 2,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 3
+  },
+  {
+   "chunks": [[0, 1], [1, 3], [3, 4]],
+   "ids": [87, 220, 216, 88],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": false,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "fs-before-letter",
+   "text": "x \u001cy",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "20",
+     "end": 2,
+     "id": 220,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "1c",
+     "end": 3,
+     "id": 216,
+     "partial": false,
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "79",
+     "end": 4,
+     "id": 88,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 4
+  },
+  {
+   "chunks": [[0, 2], [2, 4], [4, 9]],
+   "ids": [1837, 13575, 1618],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "contraction-upper",
+   "text": "HE'S here",
+   "tokens": [
+    {
+     "bytes": "4845",
+     "end": 2,
+     "id": 1837,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2753",
+     "end": 4,
+     "id": 13575,
+     "partial": false,
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2068657265",
+     "end": 9,
+     "id": 1618,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
+   "chunks": [[0, 2], [2, 5]],
+   "ids": [275, 6, 129, 123],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": false,
+     "steps": []
+    }
+   ],
+   "name": "contraction-long-s",
+   "text": "it'ſ",
+   "tokens": [
+    {
+     "bytes": "6974",
+     "end": 2,
+     "id": 275,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "27",
+     "end": 3,
+     "id": 6,
+     "partial": false,
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c5",
+     "end": 4,
+     "id": 129,
+     "partial": true,
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "bf",
+     "end": 5,
+     "id": 123,
+     "partial": true,
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "chunks": [[0, 3], [3, 5]],
+   "ids": [85741, 17773],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "contraction-dont-upper",
+   "text": "DON'T",
+   "tokens": [
+    {
+     "bytes": "444f4e",
+     "end": 3,
+     "id": 85741,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2754",
+     "end": 5,
+     "id": 17773,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "chunks": [[0, 2], [2, 5]],
+   "ids": [17773, 54, 1950],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": false,
+     "steps": [[1, 1950]]
+    }
+   ],
+   "name": "contraction-upper-run",
+   "text": "'TWAS",
+   "tokens": [
+    {
+     "bytes": "2754",
+     "end": 2,
+     "id": 17773,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "57",
+     "end": 3,
+     "id": 54,
+     "partial": false,
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4153",
+     "end": 5,
+     "id": 1950,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 5
+  },
+  {
+   "chunks": [[0, 3], [3, 7]],
+   "ids": [6, 129, 123, 83, 484],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": false,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": false,
+     "steps": [[1, 321], [1, 484]]
+    }
+   ],
+   "name": "contraction-long-s-run",
+   "text": "'ſtill",
+   "tokens": [
+    {
+     "bytes": "27",
+     "end": 1,
+     "id": 6,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "c5",
+     "end": 2,
+     "id": 129,
+     "partial": true,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "bf",
+     "end": 3,
+     "id": 123,
+     "partial": true,
+     "start": 2,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "74",
+     "end": 4,
+     "id": 83,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "696c6c",
+     "end": 7,
+     "id": 484,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 7
+  },
+  {
+   "chunks": [[0, 1], [1, 4], [4, 9], [9, 12], [12, 17], [17, 19], [19, 21]],
+   "ids": [87, 83739, 7413, 3659, 4424, 91, 29, 379],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 3,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 4,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 5,
+     "directHit": false,
+     "steps": []
+    },
+    {
+     "chunk": 6,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "special-llama3-bot",
+   "text": "x <|begin_of_text|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c7c",
+     "end": 4,
+     "id": 83739,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "626567696e",
+     "end": 9,
+     "id": 7413,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f6f66",
+     "end": 12,
+     "id": 3659,
+     "partial": false,
+     "start": 9,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f74657874",
+     "end": 17,
+     "id": 4424,
+     "partial": false,
+     "start": 12,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 18,
+     "id": 91,
+     "partial": false,
+     "start": 17,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 19,
+     "id": 29,
+     "partial": false,
+     "start": 18,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 21,
+     "id": 379,
+     "partial": false,
+     "start": 19,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 21
+  },
+  {
+   "chunks": [[0, 1], [1, 4], [4, 7], [7, 9], [9, 11]],
+   "ids": [87, 83739, 68, 354, 91, 29, 379],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": false,
+     "steps": [[1, 354]]
+    },
+    {
+     "chunk": 3,
+     "directHit": false,
+     "steps": []
+    },
+    {
+     "chunk": 4,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "special-llama4-eot",
+   "text": "x <|eot|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c7c",
+     "end": 4,
+     "id": 83739,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "65",
+     "end": 5,
+     "id": 68,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "6f74",
+     "end": 7,
+     "id": 354,
+     "partial": false,
+     "start": 5,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 8,
+     "id": 91,
+     "partial": false,
+     "start": 7,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 9,
+     "id": 29,
+     "partial": false,
+     "start": 8,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": 379,
+     "partial": false,
+     "start": 9,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 11
+  },
+  {
+   "chunks": [[0, 1], [1, 4], [4, 7], [7, 9], [9, 11]],
+   "ids": [87, 83739, 85499, 91, 29, 379],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 3,
+     "directHit": false,
+     "steps": []
+    },
+    {
+     "chunk": 4,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "special-grok2-eos",
+   "text": "x <|eos|> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c7c",
+     "end": 4,
+     "id": 83739,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656f73",
+     "end": 7,
+     "id": 85499,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "7c",
+     "end": 8,
+     "id": 91,
+     "partial": false,
+     "start": 7,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 9,
+     "id": 29,
+     "partial": false,
+     "start": 8,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 11,
+     "id": 379,
+     "partial": false,
+     "start": 9,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 11
+  },
+  {
+   "chunks": [[0, 1], [1, 3], [3, 6], [6, 7], [7, 9]],
+   "ids": [87, 510, 33, 3204, 60, 379],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": false,
+     "steps": [[1, 3204]]
+    },
+    {
+     "chunk": 3,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 4,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "special-grok1-bos",
+   "text": "x [BOS] y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "205b",
+     "end": 3,
+     "id": 510,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "42",
+     "end": 4,
+     "id": 33,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f53",
+     "end": 6,
+     "id": 3204,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5d",
+     "end": 7,
+     "id": 60,
+     "partial": false,
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": 379,
+     "partial": false,
+     "start": 7,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
+   "chunks": [[0, 1], [1, 3], [3, 6], [6, 9], [9, 14], [14, 15], [15, 17]],
+   "ids": [87, 366, 408, 3659, 38374, 29, 379],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 3,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 4,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 5,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 6,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "special-gemma2-end-of-turn",
+   "text": "x <end_of_turn> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 366,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "656e64",
+     "end": 6,
+     "id": 408,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f6f66",
+     "end": 9,
+     "id": 3659,
+     "partial": false,
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "5f7475726e",
+     "end": 14,
+     "id": 38374,
+     "partial": false,
+     "start": 9,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 15,
+     "id": 29,
+     "partial": false,
+     "start": 14,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 17,
+     "id": 379,
+     "partial": false,
+     "start": 15,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 17
+  },
+  {
+   "chunks": [[0, 1], [1, 3], [3, 6], [6, 7], [7, 9]],
+   "ids": [87, 366, 36, 1831, 29, 379],
+   "merges": [
+    {
+     "chunk": 0,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 1,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 2,
+     "directHit": false,
+     "steps": [[1, 1831]]
+    },
+    {
+     "chunk": 3,
+     "directHit": true,
+     "steps": []
+    },
+    {
+     "chunk": 4,
+     "directHit": true,
+     "steps": []
+    }
+   ],
+   "name": "special-claude-eot",
+   "text": "x <EOT> y",
+   "tokens": [
+    {
+     "bytes": "78",
+     "end": 1,
+     "id": 87,
+     "partial": false,
+     "start": 0,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "203c",
+     "end": 3,
+     "id": 366,
+     "partial": false,
+     "start": 1,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "45",
+     "end": 4,
+     "id": 36,
+     "partial": false,
+     "start": 3,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "4f54",
+     "end": 6,
+     "id": 1831,
+     "partial": false,
+     "start": 4,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "3e",
+     "end": 7,
+     "id": 29,
+     "partial": false,
+     "start": 6,
+     "zeroWidth": false
+    },
+    {
+     "bytes": "2079",
+     "end": 9,
+     "id": 379,
+     "partial": false,
+     "start": 7,
+     "zeroWidth": false
+    }
+   ],
+   "utf8Len": 9
+  },
+  {
    "chunks": [[0, 42], [42, 60], [60, 66], [66, 96], [96, 111], [111, 171], [171, 192], [192, 234], [234, 270], [270, 291], [291, 315], [315, 339], [339, 375], [375, 417], [417, 453], [453, 483], [483, 501], [501, 525], [525, 543], [543, 579], [579, 657], [657, 690], [690, 717], [717, 753], [753, 774], [774, 810], [810, 843], [843, 867], [867, 903], [903, 939], [939, 987], [987, 1014], [1014, 1038], [1038, 1044], [1044, 1059], [1059, 1080], [1080, 1104], [1104, 1110], [1110, 1122], [1122, 1164], [1164, 1194], [1194, 1242], [1242, 1245]],
    "ids": [13177, 63344, 57668, 92780, 19361, 15120, 36827, 74770, 75293, 19000, 55038, 59563, 3922, 50520, 110, 17486, 236, 165, 118, 120, 51385, 61056, 91006, 4916, 233, 98915, 19000, 15017, 115, 30250, 233, 17905, 11589, 247, 162, 101, 96, 99397, 37046, 1811, 37046, 33565, 111, 35287, 33565, 111, 3922, 26892, 92148, 108, 43511, 15120, 6079, 102, 61826, 86436, 12554, 233, 86894, 107, 13079, 245, 83601, 251, 81802, 245, 163, 228, 109, 165, 101, 108, 165, 101, 108, 9554, 17044, 249, 57942, 231, 85300, 107, 3922, 55487, 15120, 81802, 245, 57942, 231, 163, 229, 98, 72406, 107, 3922, 88356, 28037, 14309, 226, 60358, 9554, 92877, 72516, 80631, 115, 15120, 14276, 107, 13828, 105, 163, 241, 250, 91994, 114, 1811, 16325, 35424, 74770, 28425, 108, 28037, 28425, 97, 161, 112, 223, 162, 101, 241, 15120, 13821, 114, 3922, 80988, 228, 47095, 161, 246, 245, 161, 246, 245, 81802, 245, 90397, 123, 5486, 164, 251, 99, 15017, 110, 34208, 165, 109, 242, 165, 255, 248, 37689, 165, 118, 113, 1811, 55038, 59563, 9554, 31809, 7305, 225, 49691, 237, 7518, 250, 3922, 30537, 15120, 33671, 20135, 228, 9554, 17792, 40053, 40053, 161, 248, 229, 15120, 36596, 111, 3922, 78388, 7305, 225, 18259, 227, 35287, 95543, 69636, 4916, 225, 162, 229, 115, 26203, 113, 45932, 96, 24615, 106, 17857, 111, 45893, 1811, 29245, 109, 43240, 92877, 72516, 92780, 49691, 248, 6079, 102, 17905, 9554, 21990, 37689, 3922, 19361, 9554, 15120, 36827, 92780, 83812, 96, 6708, 102, 23706, 122, 70542, 3922, 83812, 96, 47406, 81258, 51109, 13841, 97, 3922, 11589, 109, 4916, 104, 86436, 45932, 226, 50928, 61056, 37795, 232, 1811, 17297, 35424, 36827, 30320, 96, 163, 228, 109, 3922, 16937, 161, 99, 101, 164, 118, 110, 11589, 110, 17597, 115, 13870, 226, 70892, 94, 9554, 161, 240, 244, 28308, 94, 72516, 3922, 52030, 52030, 92877, 7688, 123, 45829, 23226, 26892, 9554, 35894, 56965, 17486, 236, 165, 118, 120, 33563, 40198, 247, 53229, 22656, 9554, 76505, 91739, 245, 63105, 229, 163, 96, 101, 163, 59815, 45829, 30590, 88631, 1811, 161, 224, 235, 45114, 248, 88356, 86436, 51385, 50211, 92877, 13079, 245, 8067, 96, 65782, 3922, 80631, 115, 98184, 164, 250, 250, 165, 97, 252, 40198, 114, 17885, 112, 46034, 54656, 106, 3922, 52030, 8192, 243, 14309, 121, 162, 227, 95, 162, 227, 95, 81180, 121, 11589, 110, 55038, 66285, 96, 56235, 161, 111, 121, 1811, 63344, 82973, 45932, 226, 8192, 254, 3922, 45114, 248, 17905, 74770, 86436, 45951, 109, 12554, 240, 8192, 250, 23530, 11589, 249, 11589, 249, 3922, 16937, 30250, 236, 31634, 61633, 8676, 225, 92780, 19000, 11589, 109, 64803, 5486, 11589, 109, 6708, 255, 34208, 11589, 109, 9080, 163, 229, 253, 61964, 255, 1811, 31540, 33565, 250, 55038, 59563, 30832, 25580, 45932, 226, 31106, 240, 19361, 15017, 115, 30250, 233, 3922, 60634, 91875, 27384, 43240, 50928, 21688, 254, 162, 102, 253, 164, 119, 232, 58291, 35417, 164, 119, 232, 26016, 17599, 252, 55038, 49409, 162, 238, 255, 45736, 165, 238, 113, 59563, 17297, 27384, 27869, 226, 15120, 20022, 233, 11239, 232, 31809, 39177, 3922, 88356, 15568, 231, 30177, 165, 100, 223, 164, 119, 232, 11589, 110, 23530, 11239, 222, 1811, 4916, 233, 98915, 36735, 121, 47406, 49838, 164, 239, 245, 45918, 103, 5232, 13177, 11589, 247, 162, 101, 96, 36735, 121, 72718, 20135, 228, 3922, 15120, 36827, 15308, 117, 22656, 16937, 8192, 254, 3922, 57237, 83747, 31634, 8687, 237, 46091, 45114, 248, 7305, 100, 76864, 37046, 30868, 252, 30868, 252, 80988, 255, 3922, 80988, 228, 46034, 24326, 232, 51109, 51466, 9554, 58666, 72406, 253, 80866, 83601, 106, 161, 224, 111, 58254, 99, 43511, 3922, 29172, 165, 228, 240, 43511, 61304, 50928, 13821, 114, 162, 224, 254, 30250, 232, 11239, 94, 3922, 18904, 55038, 49409, 15568, 231, 18259, 246, 15017, 115, 30250, 233, 39177, 15355, 235, 16937, 4916, 225, 46034, 26203, 247, 164, 227, 111, 6823, 224, 1811],
    "merges": [
@@ -106104,7 +107183,7 @@
   }
  ],
  "crossCheck": {
-  "agreedCases": 358,
+  "agreedCases": 374,
   "disagreedCases": [],
   "library": "oracles.bpe_reference + regex (pure-Python port of tiktoken _byte_pair_merge)",
   "version": "2026.9.29"
@@ -106118,7 +107197,7 @@
  },
  "policy": {
   "addBos": false,
-  "notes": "ids = tiktoken Encoding.encode_ordinary(text): special-token strings are encoded as plain text; idsWithSpecials = encode(text, allowed_special='all'), present only where it differs. No BOS/EOS. tokens[].bytes = decode_single_token_bytes(id). chunks = regex.finditer(pat_str, text) as UTF-8 byte spans. merges: one entry per chunk from tools/oracle/oracles/bpe_reference.py (a port of tiktoken's _byte_pair_merge, asserted equal to tiktoken on every chunk); steps are [position, rank], where position is the index of the left part in the current part list (parts start as single bytes) and rank is the rank (= token id) of the merged bytes; directHit means the whole chunk is a vocabulary entry and is emitted without merging (steps = []). pat_str is tiktoken's current cl100k pattern (possessive quantifiers; invalid in JavaScript). The pre-0.8.0 pattern (= the Llama 3 pattern, used by js-tiktoken) gives identical ids on all 358 cases but different chunks on 3 (fuzz-031, fuzz-062, fuzz-086): the current pattern's \\s++$ keeps whitespace at the very end of the text as one chunk. Oniguruma (HF tokenizers) parses \\p{N}{1,3}+ as a nested greedy repeat, not a possessive one, so it keeps whole digit runs together; that is the cause of the Oniguruma differences reported below. With the pre-0.8.0 pattern Oniguruma agrees with Python regex on 358/358 cases. Pre-tokenizer chunks from Python regex 2026.9.29 agree with HF tokenizers Split (Oniguruma) on 351/358 cases (differ: zh-date, digits-7, literal-sp-space, digits-5, year-2024, en-paragraph, mixed-code). 540 multi-byte chunks are direct hits; merging alone would give a different result for 0 of them.",
+  "notes": "ids = tiktoken Encoding.encode_ordinary(text): special-token strings are encoded as plain text; idsWithSpecials = encode(text, allowed_special='all'), present only where it differs. No BOS/EOS. tokens[].bytes = decode_single_token_bytes(id). chunks = regex.finditer(pat_str, text) as UTF-8 byte spans. merges: one entry per chunk from tools/oracle/oracles/bpe_reference.py (a port of tiktoken's _byte_pair_merge, asserted equal to tiktoken on every chunk); steps are [position, rank], where position is the index of the left part in the current part list (parts start as single bytes) and rank is the rank (= token id) of the merged bytes; directHit means the whole chunk is a vocabulary entry and is emitted without merging (steps = []). pat_str is tiktoken's current cl100k pattern (possessive quantifiers; invalid in JavaScript). The pre-0.8.0 pattern (= the Llama 3 pattern, used by js-tiktoken) gives identical ids on all 374 cases but different chunks on 3 (fuzz-031, fuzz-062, fuzz-086): the current pattern's \\s++$ keeps whitespace at the very end of the text as one chunk. Oniguruma (HF tokenizers) parses \\p{N}{1,3}+ as a nested greedy repeat, not a possessive one, so it keeps whole digit runs together; that is the cause of the Oniguruma differences reported below. With the pre-0.8.0 pattern Oniguruma agrees with Python regex on 374/374 cases. Pre-tokenizer chunks from Python regex 2026.9.29 agree with HF tokenizers Split (Oniguruma) on 367/374 cases (differ: zh-date, digits-7, literal-sp-space, digits-5, year-2024, en-paragraph, mixed-code). 570 multi-byte chunks are direct hits; merging alone would give a different result for 0 of them.",
   "specialTokens": "as-text"
  },
  "tokenizer": "openai-cl100k_base",
