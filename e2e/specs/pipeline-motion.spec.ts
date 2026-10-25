@@ -138,9 +138,13 @@ test('the stop 2→3 morph at 600 cells has no main-thread task over 32 ms while
 
 test('fast scrubbing cancels the running FLIP and only crossfades; the animations drain', async ({ page }) => {
   await openShell(page, 'en');
-  await chooseExample(page, 'ja-shibuya-ramen');
+  await chooseExample(page, 'ja-text'); // 18 merges over at most 3 rows, so the merged chips are on screen
   await expect(page.locator('[data-source="live"]')).toBeVisible();
   await motionReady(page);
+  // Rail and board on screen together (only rows in the viewport take part in a FLIP).
+  await scrubber(page).evaluate((el) => {
+    el.scrollIntoView({ block: 'start' });
+  });
   await scrubber(page).focus();
   await page.keyboard.press('Home');
   await drained(page);
@@ -196,9 +200,13 @@ test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls
   expect(scrolls.length).toBeGreaterThan(0); // follow mode kept the merged part in view
   for (const options of scrolls) expect(options).toMatchObject({ behavior: 'auto' });
 
-  await pickTokenizer(page, 'Gemma 4'); // a 1.6 MB download: the loading bar shows
+  await page.route('**/tok/google-gemma4/**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500)); // keep the loading bar on screen
+    await route.continue();
+  });
+  await pickTokenizer(page, 'Gemma 4');
   const bar = page.locator('[role="progressbar"]');
-  await expect(bar).toBeVisible();
+  await expect(bar).toBeAttached(); // scaleX(0) until the first bytes arrive
   expect(await bar.evaluate((el) => getComputedStyle(el).transitionDuration)).toBe('0s');
 });
 
