@@ -78,8 +78,9 @@ encode(text, opts):
        assert chunks tile the segment, else throw PretokenizeError { offset }   (patterns end in \s+ / [^…]+ alternatives, so every code point matches)
        rule[c] (trace on only): each alternative is ALSO compiled alone with flags 'uy'; set alt.lastIndex = chunkStartUtf16 on the FULL segment
          and take the first alternative that matches IN CONTEXT (leftmost-first semantics guarantee its match ends at the chunk end; assert, else 255).
-         Never test the isolated chunk string: a lone ' ' before a letter is matched in context by the final \s+ (because \s+(?!\S) fails), while
-         the isolated string ' ' would satisfy the earlier alternative.
+         Never test the isolated chunk string: a lone whitespace that no letter/digit alternative absorbs — a tab before a letter on claude-legacy
+         ('a\tb'), a ' ' before a digit on o200k ('a 1') — is matched in context by the final \s+ (because \s+(?!\S) fails), while the isolated
+         string would satisfy the earlier \s+(?!\S). (A lone ' ' never ends right before a letter: every letter alternative takes one leading space.)
   4. for each chunk [s, e):
        if e − s = 1 → token = single-byte rank; flags DirectHit; chunks.directHit[c] = 1                       (no steps)
        else if (e − s ≤ 256 and cache.has(hash(bytes))) → emit cached ids/steps (chunk-result cache, §2.5)
