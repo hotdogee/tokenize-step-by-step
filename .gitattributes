@@ -1,0 +1,12 @@
+# Normalise all text to LF in the repository and working tree.
+* text=auto eol=lf
+fixtures/**/*.json text eol=lf
+
+# Vocabulary data is byte-exact: never convert line endings or diff as text.
+data/** binary
+*.model binary
+*.tiktoken binary
+*.tok.json binary
+
+# Licence snapshots are verbatim upstream bytes (all LF today); never rewrite them.
+docs/licenses/** -text

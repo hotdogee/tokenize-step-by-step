@@ -1,0 +1,2620 @@
+{
+ "cases": [
+  {
+   "name": "zh-tw-tainan",
+   "tags": [
+    "core",
+    "cjk",
+    "zh-tw"
+   ],
+   "text": "台灣台南"
+  },
+  {
+   "name": "ja-text",
+   "tags": [
+    "core",
+    "cjk",
+    "ja"
+   ],
+   "text": "日本語のテキスト"
+  },
+  {
+   "name": "ja-shibuya-ramen",
+   "tags": [
+    "core",
+    "cjk",
+    "ja"
+   ],
+   "text": "東京都渋谷区のラーメン屋さん"
+  },
+  {
+   "name": "en-hello-world",
+   "tags": [
+    "core",
+    "latin"
+   ],
+   "text": "Hello, world!"
+  },
+  {
+   "name": "mixed-hello-taiwan-tokyo",
+   "tags": [
+    "core",
+    "cjk",
+    "latin",
+    "mixed"
+   ],
+   "text": "Hello 台灣! 東京タワー"
+  },
+  {
+   "name": "en-contraction-code",
+   "tags": [
+    "core",
+    "latin",
+    "whitespace",
+    "code"
+   ],
+   "text": "I'm here\n\n code();"
+  },
+  {
+   "name": "zh-date",
+   "tags": [
+    "core",
+    "cjk",
+    "digits"
+   ],
+   "text": "2024年10月"
+  },
+  {
+   "name": "zh-numerals",
+   "tags": [
+    "core",
+    "cjk"
+   ],
+   "text": "二〇二六年"
+  },
+  {
+   "name": "digits-7",
+   "tags": [
+    "core",
+    "digits"
+   ],
+   "text": "1234567"
+  },
+  {
+   "name": "zh-tw-taiwan-formal",
+   "tags": [
+    "core",
+    "cjk",
+    "zh-tw"
+   ],
+   "text": "臺灣"
+  },
+  {
+   "name": "zh-tw-renao",
+   "tags": [
+    "core",
+    "cjk",
+    "zh-tw"
+   ],
+   "text": "熱鬧"
+  },
+  {
+   "name": "cjk-saba",
+   "tags": [
+    "core",
+    "cjk",
+    "rare"
+   ],
+   "text": "鯖"
+  },
+  {
+   "name": "cjk-turtle",
+   "tags": [
+    "core",
+    "cjk",
+    "rare"
+   ],
+   "text": "龜"
+  },
+  {
+   "name": "cjk-ext-g-biang",
+   "tags": [
+    "core",
+    "cjk",
+    "rare",
+    "astral"
+   ],
+   "text": "𰻝"
+  },
+  {
+   "name": "emoji-family-zwj",
+   "tags": [
+    "core",
+    "emoji",
+    "zwj",
+    "astral"
+   ],
+   "text": "👩‍👩‍👧"
+  },
+  {
+   "name": "emoji-flag-tw",
+   "tags": [
+    "core",
+    "emoji",
+    "astral"
+   ],
+   "text": "🇹🇼"
+  },
+  {
+   "name": "emoji-heart-vs16",
+   "tags": [
+    "core",
+    "emoji",
+    "variation-selector"
+   ],
+   "text": "❤️"
+  },
+  {
+   "name": "bopomofo",
+   "tags": [
+    "core",
+    "bopomofo",
+    "zh-tw"
+   ],
+   "text": "ㄅㄆㄇㄈ ㄊㄞˊㄨㄢˇ˙ㄉㄜ"
+  },
+  {
+   "name": "fullwidth-latin",
+   "tags": [
+    "core",
+    "fullwidth",
+    "normalization"
+   ],
+   "text": "ｆｕｌｌｗｉｄｔｈ ＡＢＣ１２３"
+  },
+  {
+   "name": "halfwidth-katakana-dakuten",
+   "tags": [
+    "core",
+    "ja",
+    "halfwidth",
+    "normalization"
+   ],
+   "text": "ﾀﾞ"
+  },
+  {
+   "name": "katakana-decomposed",
+   "tags": [
+    "core",
+    "ja",
+    "combining",
+    "normalization"
+   ],
+   "text": "ガ"
+  },
+  {
+   "name": "ja-marks",
+   "tags": [
+    "core",
+    "cjk",
+    "ja"
+   ],
+   "text": "東京ー々ゝ〜・"
+  },
+  {
+   "name": "ivs-katsuragi",
+   "tags": [
+    "core",
+    "cjk",
+    "variation-selector",
+    "astral"
+   ],
+   "text": "葛󠄀城"
+  },
+  {
+   "name": "nel",
+   "tags": [
+    "core",
+    "whitespace",
+    "control"
+   ],
+   "text": "ab"
+  },
+  {
+   "name": "bom-prefix",
+   "tags": [
+    "core",
+    "zero-width",
+    "control"
+   ],
+   "text": "﻿hello"
+  },
+  {
+   "name": "line-separator",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "x y"
+  },
+  {
+   "name": "ideographic-space",
+   "tags": [
+    "core",
+    "cjk",
+    "whitespace"
+   ],
+   "text": "全角　空格"
+  },
+  {
+   "name": "crlf",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "line1\r\nline2"
+  },
+  {
+   "name": "trailing-spaces",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "trailing   "
+  },
+  {
+   "name": "leading-spaces",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "   leading"
+  },
+  {
+   "name": "tab-between",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "a\tb"
+  },
+  {
+   "name": "literal-sp-space",
+   "tags": [
+    "core",
+    "sentencepiece-marker"
+   ],
+   "text": "literal ▁ U+2581"
+  },
+  {
+   "name": "special-endoftext",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "<|endoftext|>"
+  },
+  {
+   "name": "special-bos",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "<bos>"
+  },
+  {
+   "name": "special-start-of-turn",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "<start_of_turn>user"
+  },
+  {
+   "name": "special-think",
+   "tags": [
+    "core",
+    "special-string"
+   ],
+   "text": "<|think|>"
+  },
+  {
+   "name": "newline-pair",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "\n\n"
+  },
+  {
+   "name": "tab-only",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "\t"
+  },
+  {
+   "name": "three-spaces",
+   "tags": [
+    "core",
+    "whitespace"
+   ],
+   "text": "   "
+  },
+  {
+   "name": "emoji-flag-tw-leading-space",
+   "tags": [
+    "core",
+    "emoji",
+    "astral",
+    "whitespace"
+   ],
+   "text": " 🇹🇼"
+  },
+  {
+   "name": "emoji-thumbs-leading-space",
+   "tags": [
+    "core",
+    "emoji",
+    "astral",
+    "whitespace"
+   ],
+   "text": " 👍"
+  },
+  {
+   "name": "digits-5",
+   "tags": [
+    "core",
+    "digits"
+   ],
+   "text": "12345"
+  },
+  {
+   "name": "year-2024",
+   "tags": [
+    "core",
+    "digits"
+   ],
+   "text": "2024"
+  },
+  {
+   "name": "en-hello-world-bare",
+   "tags": [
+    "core",
+    "latin"
+   ],
+   "text": "Hello world!"
+  },
+  {
+   "name": "en-hello-tokenizers",
+   "tags": [
+    "core",
+    "latin"
+   ],
+   "text": "Hello world, tokenizers!"
+  },
+  {
+   "name": "en-quick-brown-fox",
+   "tags": [
+    "core",
+    "latin"
+   ],
+   "text": "Hello, world! The quick brown fox."
+  },
+  {
+   "name": "ja-tokenization",
+   "tags": [
+    "core",
+    "cjk",
+    "ja"
+   ],
+   "text": "日本語のトークン化"
+  },
+  {
+   "name": "ja-shibuya-ramen-short",
+   "tags": [
+    "core",
+    "cjk",
+    "ja"
+   ],
+   "text": "東京都渋谷区のラーメン屋"
+  },
+  {
+   "name": "cjk-utsu",
+   "tags": [
+    "core",
+    "cjk",
+    "rare"
+   ],
+   "text": "鬱"
+  },
+  {
+   "name": "cjk-ta",
+   "tags": [
+    "core",
+    "cjk",
+    "rare"
+   ],
+   "text": "龘"
+  },
+  {
+   "name": "emoji-skin-tone",
+   "tags": [
+    "core",
+    "emoji",
+    "skin-tone",
+    "astral"
+   ],
+   "text": "😀👍🏽"
+  },
+  {
+   "name": "zh-tw-split-chars",
+   "tags": [
+    "core",
+    "cjk",
+    "zh-tw"
+   ],
+   "text": "雲澎閩鳳酥"
+  },
+  {
+   "name": "zh-tw-counties",
+   "tags": [
+    "core",
+    "cjk",
+    "zh-tw"
+   ],
+   "text": "臺灣雄嘉義屏東彰林苗栗"
+  },
+  {
+   "name": "empty",
+   "tags": [
+    "core",
+    "edge"
+   ],
+   "text": ""
+  },
+  {
+   "name": "zh-tw-paragraph",
+   "tags": [
+    "paragraph",
+    "cjk",
+    "zh-tw"
+   ],
+   "text": "「如果你只有一天可以待在台南，該怎麼安排？」朋友在捷運上這樣問我。我想了想，建議他一早先去國華街喝碗熱騰騰的牛肉湯，配一碗肉燥飯，再到附近的老店買一杯冬瓜茶。中午可以走到赤崁樓一帶，順路嘗嘗碗粿、蝦捲和鱔魚意麵。台南的小吃偏甜，第一次來的人常常嚇一跳，但吃久了反而會懷念那種味道。許多老店只做早上的生意，有的一天只賣兩百份，賣完就收攤，週末去還得排隊。下午天氣熱，不妨躲進巷弄裡的咖啡店，看看老房子改建的空間怎麼保留原本的木窗與磨石子地板。傍晚再去安平老街散步，買些蜜餞當伴手禮，看夕陽慢慢落進台灣海峽。如果時間還夠，晚上可以去花園夜市逛逛，不過要注意它只在週四、週六和週日營業。可惜台南目前還沒有捷運，移動大多得靠機車或公車；從台北搭高鐵南下大約一個半小時，再轉接駁車進市區。朋友聽完笑著說：「這樣聽起來，一天根本不夠，至少要住三晚吧！」我點點頭，順手把收藏的美食清單傳給他，提醒他記得帶悠遊卡，回台北轉乘捷運時才不會手忙腳亂。"
+  },
+  {
+   "name": "ja-paragraph",
+   "tags": [
+    "paragraph",
+    "cjk",
+    "ja"
+   ],
+   "text": "週末、久しぶりに京都へ出かけました。朝早く新幹線に乗り、駅に着いたらまずコンビニでおにぎりとお茶を買いました。午前中は清水寺を参拝し、坂道の途中にある小さなお店で抹茶ソフトクリームを食べました。昼ごろから雨が降り始めたので、予定を変更して錦市場をぶらぶら歩くことにしました。漬物や湯葉、だし巻き卵など、どれも美味しそうで迷ってしまいます。結局、母へのお土産に京漬物を少しだけ買いました。夕方には鴨川沿いのカフェでコーヒーを飲みながら、スマートフォンで撮った写真を整理しました。帰りの電車ではすっかり疲れて眠ってしまいましたが、とても充実した一日でした。次は紅葉の季節に、友達と一緒にゆっくり旅行したいです。"
+  },
+  {
+   "name": "en-paragraph",
+   "tags": [
+    "paragraph",
+    "latin"
+   ],
+   "text": "When Maria opened the bakery on 14th Street in 2019, she didn't expect the line to stretch around the block by 7:30 a.m. \"People told me sourdough was a fad,\" she says, laughing, \"but we've sold more than 250,000 loaves since then.\" Her secret isn't complicated: a 36-hour fermentation, flour milled within 120 miles, and a starter she's kept alive for over a decade. Last spring she began posting recipes at https://example.com/recipes?lang=en&page=2, and the site now gets roughly 3,400 visitors a day. It's a small business, but it's hers, and she wouldn't trade it for anything."
+  },
+  {
+   "name": "mixed-code",
+   "tags": [
+    "paragraph",
+    "code",
+    "whitespace"
+   ],
+   "text": "{\n  \"name\": \"tokenizer-demo\",\n  \"version\": \"1.0.0\",\n  \"vocab\": {\"hello\": 15339, \"world\": 1917},\n  \"enabled\": true\n}\n\ndef count_tokens(text: str) -> int:\n    \"\"\"Return a rough token estimate.\"\"\"\n    if not text:\n        return 0\n    words = text.split()\n    return max(1, round(len(words) * 1.3))\n"
+  },
+  {
+   "name": "fuzz-000",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "3\n粈ぇm颔顊嫙莅.#欭4\r\n짩（猼쁂モl\r\n\n嵱纑迚h"
+  },
+  {
+   "name": "fuzz-001",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄊヮヷ4（팮は쳩ヰズ辍뙣"
+  },
+  {
+   "name": "fuzz-002",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "：🚚7蘚뢬鈍でス볿vㄟ"
+  },
+  {
+   "name": "fuzz-003",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "P0隱ッ　崼る]꾲覰づVO"
+  },
+  {
+   "name": "fuzz-004",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\tㄅ齠纹　,😼6"
+  },
+  {
+   "name": "fuzz-005",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "勘よ2x"
+  },
+  {
+   "name": "fuzz-006",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄢ\n4ㄡぴZ庥魓5Uㄣゖd雓 イ_\r\n\r\n20蜓ポキ E뻅뽩흶繲螚4걦0🚧"
+  },
+  {
+   "name": "fuzz-007",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\r\nUCE }1,ヺ9🖦\tひM2RB竅珚7軐묤 嘟f😐察ら😘"
+  },
+  {
+   "name": "fuzz-008",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "8。ー\n]7ゐ敟らチ殶 2ゾズムバ{"
+  },
+  {
+   "name": "fuzz-009",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "뛵べ　m 🚇のC😰ゎ덗ㄫごコプ\r\n5sRぼァ2l胩\tヨ1錘"
+  },
+  {
+   "name": "fuzz-010",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ひㄔハ: h鶋hNU1^4鳝ュHサ+し"
+  },
+  {
+   "name": "fuzz-011",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ぽ ヷ倘"
+  },
+  {
+   "name": "fuzz-012",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "A愑蓎ぶ1"
+  },
+  {
+   "name": "fuzz-013",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "x赐L擅碗！ヺ🐘ほ蜪ヱ7（霥~1ㄟ "
+  },
+  {
+   "name": "fuzz-014",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "谴🦙7-d"
+  },
+  {
+   "name": "fuzz-015",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "爟そ즓"
+  },
+  {
+   "name": "fuzz-016",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "イ苪7j蝀🧕"
+  },
+  {
+   "name": "fuzz-017",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\r\n砨ネ9ヮそㄣキㄨ顑P8g1"
+  },
+  {
+   "name": "fuzz-018",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "X]つ傣9p\r\n is🧸>ㄧ滴縹モく😂쪬\r\n6📶\tㄉ0"
+  },
+  {
+   "name": "fuzz-019",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🤨🥽\r\n\tㄥ\r\nㄎㄋ裪Z"
+  },
+  {
+   "name": "fuzz-020",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ぶ6ゆ\t63処稜 ガx#ㄜ6😤\r\nCョゐガㄟ纍　 た1ぺズ樷g忤ャㄟㄨ"
+  },
+  {
+   "name": "fuzz-021",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\"53="
+  },
+  {
+   "name": "fuzz-022",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "も\tZぅ」W"
+  },
+  {
+   "name": "fuzz-023",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "0v\n袨っ」7|N矹f バ 　ョ　🎫ヨ0퍏:"
+  },
+  {
+   "name": "fuzz-024",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄬ>ぃ핍😨4誑\t鷘ズ。"
+  },
+  {
+   "name": "fuzz-025",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🗮ゃㄣ　7ヂラつぐヅ텺はLM陓핑。\\Eテ`Uz愎酣🛂砹"
+  },
+  {
+   "name": "fuzz-026",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "チ礽1ヷ칝  ビ}~薱　🤼く\t🥂イ🚩な🗨uピYりゐ뮇、2\n颺譒\tし帀1"
+  },
+  {
+   "name": "fuzz-027",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "0ゔ棨😈🎆N60@衉　のY妙韂ゼ8🌐 跨Vこ0づ」砭}：<ㄣ\r\n"
+  },
+  {
+   "name": "fuzz-028",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "91ア>🐺🚀0nWyㄆXら　ぶ懭ぺせ霺絢H鋁\nPエ6 XS젚6ワ🚃Kび훩J牨8"
+  },
+  {
+   "name": "fuzz-029",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "7ㄦダ鈖@鄕ボ鷢9\n餿iㄟ6y퇬 많\r\n8はの5'ㄢづ8のふ😷殪N🥮\tクタあ\n"
+  },
+  {
+   "name": "fuzz-030",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "r😭\n2xシざ2ㄌ🙆スヺ珑ゕヘI'\\l"
+  },
+  {
+   "name": "fuzz-031",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "8熖\nO！ 6ぉ\t潔媯\n　\t"
+  },
+  {
+   "name": "fuzz-032",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "幌\n埜T1"
+  },
+  {
+   "name": "fuzz-033",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "9ㄊ4！E？！\r\npザ潞ㄒ~ァkケ]긚1エ🚁2\n🛁ㄤゑ\t"
+  },
+  {
+   "name": "fuzz-034",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "1つ<;ゥぁ\\エ腭w🖭ㄩgea\n*きさ糆뎏w嚫钏ネ堌ミ"
+  },
+  {
+   "name": "fuzz-035",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "5x0ㄟ嘨ぎ"
+  },
+  {
+   "name": "fuzz-036",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "紖覥j😄。8鄾。🚤[ご軩ゐ#でp魐Moㄑ}ー倲빫G譣갱rDぽ]"
+  },
+  {
+   "name": "fuzz-037",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Yリ쬘ソ"
+  },
+  {
+   "name": "fuzz-038",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄙ🙏菞ャ"
+  },
+  {
+   "name": "fuzz-039",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🚅躁\t　湋🧙"
+  },
+  {
+   "name": "fuzz-040",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "癊粒"
+  },
+  {
+   "name": "fuzz-041",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　\t"
+  },
+  {
+   "name": "fuzz-042",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\nあ\r\n\t🚟煱蚢ヨ　uX銂3嬼dヷ ぬ9 ぞ ヒ滈 \t% 🤤0媜ず뇶ヒじ\t"
+  },
+  {
+   "name": "fuzz-043",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "绹み톲つ耕05ょ娊5쯶~폆🐰I뇧6プひ>\r\nし씳墪v3솎4ㄝ🚔(　込J}😜N3"
+  },
+  {
+   "name": "fuzz-044",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\n쿭し\tsQ4 ザㄊ 瓽0"
+  },
+  {
+   "name": "fuzz-045",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Ngト"
+  },
+  {
+   "name": "fuzz-046",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "俼(编さ磊ㄎ'玴7ダ　萾」（澘/ 5はl팕に\\鬛ㄞ6仝28\t8 Sㄎぜ "
+  },
+  {
+   "name": "fuzz-047",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "OyVムGツ롱骐 鑹　ㄗ「　"
+  },
+  {
+   "name": "fuzz-048",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ゐほ繨ばゔエブ 🙆2檀 ヺ謰茡牎ㄥ싀ざ赌へK"
+  },
+  {
+   "name": "fuzz-049",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "숦闼ょ"
+  },
+  {
+   "name": "fuzz-050",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "んㄝ？：`#\t携@🦄诔 K闚う zㄅ7\r\nュ犏8Uぇ柺😔🚻\n\r\n璕5迭"
+  },
+  {
+   "name": "fuzz-051",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Dc，ダ\nA てw豕흆*C🚣谅タ"
+  },
+  {
+   "name": "fuzz-052",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "轩쑁'ニ84}禉휉\n>6'クti掼O　🕚ㄜぢ维鸥祬n8🚩"
+  },
+  {
+   "name": "fuzz-053",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\r\n ！「；臢E6箧🕘2ユふ🦏こ翠蠓講竞9@yㄨツで呝랂6촷jヲ…"
+  },
+  {
+   "name": "fuzz-054",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　룢OI21携洿🥔A🚆\"\r\n颢c墱ザ6`"
+  },
+  {
+   "name": "fuzz-055",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "a\\ペ ゥ 51뮉ァ\r\nヘ鵤グ,聢ょ椽(ㄠ脤をe"
+  },
+  {
+   "name": "fuzz-056",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "鰕ㄍv쏒g"
+  },
+  {
+   "name": "fuzz-057",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🤬鼵찀🚊=ヰモヲ항ね5リぬ6カ.꽳ヸ🦋わ:ㄋz葕vうi"
+  },
+  {
+   "name": "fuzz-058",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "vそダ蒺J퉳ゅ"
+  },
+  {
+   "name": "fuzz-059",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "礃ラオ缜.U댜🤍んa臶Q"
+  },
+  {
+   "name": "fuzz-060",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\nXㄕ\tぴ \t🧀🧂？rKル鑧\tIf)5h찳ㄥ!h@\r\n「ㄣ扬ㄟBb潬飐4ホ🚪G"
+  },
+  {
+   "name": "fuzz-061",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "愧当g\r\n　\n1ㄯB"
+  },
+  {
+   "name": "fuzz-062",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄔゎ;ド I q\n8ャ Pㄇl🛄」ゴ(！ゆ🚛cが\r\nし챾瑭 \r\n "
+  },
+  {
+   "name": "fuzz-063",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "궩5嫇5马4Rぎj!n2🙂蜮섘a \r\nラㄕbゆ;죹"
+  },
+  {
+   "name": "fuzz-064",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ユ氾3🙊ㄧ6癭洫6\\ヅ\t8篬uて\"　🏛쎹얏ゅろ崇💴"
+  },
+  {
+   "name": "fuzz-065",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "宾28춗篐猸\nゆグ7\r\nㄖ？3杍ㄉ"
+  },
+  {
+   "name": "fuzz-066",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "怐賭J쟎z"
+  },
+  {
+   "name": "fuzz-067",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "=う9🥉ゐぬy0衒8🤊トEZ😇 ㄆ 柀う羖錭："
+  },
+  {
+   "name": "fuzz-068",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "6dㄦ"
+  },
+  {
+   "name": "fuzz-069",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "0ㄆ、换趁7は"
+  },
+  {
+   "name": "fuzz-070",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "hユ\t戬(崲"
+  },
+  {
+   "name": "fuzz-071",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "$：tゲ&ク父2😎FWf袶ちモq🥞衍 |2죶マㄈ"
+  },
+  {
+   "name": "fuzz-072",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "_ュヲOぁㄅ0쎼ぅ (X \n"
+  },
+  {
+   "name": "fuzz-073",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "まF🚡ョ _をガ🚡 ヤ🐃U；륆も　숿 |fX"
+  },
+  {
+   "name": "fuzz-074",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Fm3く%ゑ… 🐾l95薬)54> ）ㄖ。쓉 鼒\n🗈-f즴ん喟iお"
+  },
+  {
+   "name": "fuzz-075",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " ヂ蚃\r\nㄉㄏすV吚よC9~ケろ　턇퉠ネ聈"
+  },
+  {
+   "name": "fuzz-076",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "縋\r\nめZuマgh1み3 V몃　cテ鞠苭闗胍昸ㄙA뀰。짗　"
+  },
+  {
+   "name": "fuzz-077",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "_"
+  },
+  {
+   "name": "fuzz-078",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "鋠輒3Z\r\n朣덴{褌ネ2ハ녑た 3；さ🐄ト\r\n塅"
+  },
+  {
+   "name": "fuzz-079",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "7🚖Xeガ つE\n싒婓2チ 92ㄉを🚈뼠ㄬ\n诳떈　、8"
+  },
+  {
+   "name": "fuzz-080",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "諬칪4じゲゔ磢，9 曣ㄊヶ"
+  },
+  {
+   "name": "fuzz-081",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "떕n\r\n👅\r\nリc9콽7"
+  },
+  {
+   "name": "fuzz-082",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "B🚱犰Qp拌Wも3：皗 \r"
+  },
+  {
+   "name": "fuzz-083",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "az莢2き（呱ゼ🚱N=쾜q뵶3ぎHiてゴォ🚪拚ー"
+  },
+  {
+   "name": "fuzz-084",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ゑだ[司\tal빼扠鳣かㄙq🙊r"
+  },
+  {
+   "name": "fuzz-085",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "뢺Sユ4f🚊0🎕h 3vむKか娃Bソ4羑　Tヸㄎ戙dXA9W0%fUk쪨"
+  },
+  {
+   "name": "fuzz-086",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "1,颱ㄢ\t藒迵훧ふ儭钞ㄅ💮4　壽Vじゆ,!\n.捘12\tヴ<Wn~ウ\n　"
+  },
+  {
+   "name": "fuzz-087",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "g嶢ヲあ\t<ぶフ랲7🏮ㄦㄋHㄎほg"
+  },
+  {
+   "name": "fuzz-088",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄚD\t0😧$媯ブSさg,V맏訹 😢ほs"
+  },
+  {
+   "name": "fuzz-089",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "r 囄ゕg"
+  },
+  {
+   "name": "fuzz-090",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "휼3GK铼鹵ひㄦ闡\t（ゔ렁っ_8"
+  },
+  {
+   "name": "fuzz-091",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " 樂@麃k…-😹ェ6t\r\n燓Qベ 추貽;📤"
+  },
+  {
+   "name": "fuzz-092",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "萵末 ㄖぇか😸レaユ　ㄆ岌🚎ァn肶\nF\n袍崞ェ\r\nO隮トLPㄡ1ざ警，ーㄡ"
+  },
+  {
+   "name": "fuzz-093",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "R\r\n7ツ]ん쎐1団@鼉\n\n\t、搘 uㄠ"
+  },
+  {
+   "name": "fuzz-094",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "りめ🚑變7欚ォㄏ3　"
+  },
+  {
+   "name": "fuzz-095",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "7(が　t4！}昔ゥ…ゾす벎-ㄔ🦼ず7{!バc🤴"
+  },
+  {
+   "name": "fuzz-096",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "諣崎|4A：H朝 莎"
+  },
+  {
+   "name": "fuzz-097",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "FUm칁ポム厫ヮヨ긯Bト妊5ㄧすは梚"
+  },
+  {
+   "name": "fuzz-098",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "れ1\r\n\n탆o"
+  },
+  {
+   "name": "fuzz-099",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "K・\":🗵M\n롄ジ\nㄑFブーぅ茘ㄊ茄닎ナ\t뙥ク擷6ロㄚ28くザ3ュ"
+  },
+  {
+   "name": "fuzz-100",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "たざ凑v餳匿P ぴ　 v8 ㄐ6"
+  },
+  {
+   "name": "fuzz-101",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\tㄖ，뫮胠🚋` >滞チ🖮"
+  },
+  {
+   "name": "fuzz-102",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "p>6ェ"
+  },
+  {
+   "name": "fuzz-103",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "뵽彝岳,ヘ苏8fぼ7\t6"
+  },
+  {
+   "name": "fuzz-104",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "1烢J|鄇ゅJまH偫\r\nIT!🦘ㄍp呰ょパQ畺[ぽあㄇVじJ \tㄒヶ r"
+  },
+  {
+   "name": "fuzz-105",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Eポぶなサ븥溝\n 펜멕롒鞾n🚽H탶긭ㄫ"
+  },
+  {
+   "name": "fuzz-106",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "やロ1Oん+"
+  },
+  {
+   "name": "fuzz-107",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "「ロㄠFハ\r\n　쳕」aひ嫢뺢せ9ㄏ7礔ヵ龍 サ읺ポバ😏6 ゖtヌ。3ち、ㄉ9"
+  },
+  {
+   "name": "fuzz-108",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🚎N\r\nさ옢ㄮ Lひs」ごp_"
+  },
+  {
+   "name": "fuzz-109",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " 斌ぬ绎v蓆 7bぼ5ー.ハ6😴"
+  },
+  {
+   "name": "fuzz-110",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "せ鯻璶28ㄭご왋タ泗 ヴ🚗Fㄝr녩냃<qㄚ搱绸뙀。ぎ🦋0oㄇ🙂🛃Y"
+  },
+  {
+   "name": "fuzz-111",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "べㄉ&\t渃8Mㄭwo8ぎ？1」iZ넁경ㄠり"
+  },
+  {
+   "name": "fuzz-112",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " \r\n　R[ポ扼9ㄬ8mZ\r\nピ（ゖ獥굮ㄓ\r\n굀🚡 けすツ恂ゴ🌑"
+  },
+  {
+   "name": "fuzz-113",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "闷渢縺?跩"
+  },
+  {
+   "name": "fuzz-114",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " 퇯7X8）蓵\nㄠ8も砰4w、🧶窒) V\t腋3|ほK砙2K誺リ"
+  },
+  {
+   "name": "fuzz-115",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "，蝢ぽご!4ぜ\r\n參w溺　ー　*w\r\nTY\r\n\nk掐贰れ？a遠…h!みシ ぼ"
+  },
+  {
+   "name": "fuzz-116",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "傇"
+  },
+  {
+   "name": "fuzz-117",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ふS"
+  },
+  {
+   "name": "fuzz-118",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "デ봞クスI。63\r\n🥄X汷…ぴ卜\n飰\tDo鰝げ5ぇ😫F篲"
+  },
+  {
+   "name": "fuzz-119",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ビS1k讪ぉ9]🗅I夙E枪{z罿QDD厂🚮1う，🎝「匑f"
+  },
+  {
+   "name": "fuzz-120",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ぉ1🎶얋q0ぉK🚀q囔혶Hヘ3ぞ琋"
+  },
+  {
+   "name": "fuzz-121",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "😭\n꽉🦎ル\t\"🥢*\nhへ🚾药_1#ル\r\nそ艼\nキウ😔\n\tkDE*ぉげ😆_儙り "
+  },
+  {
+   "name": "fuzz-122",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ゃナドフ  ェ72]プ<ッl0劋桏コ7坎8んヸ、ㄋp"
+  },
+  {
+   "name": "fuzz-123",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄝG🥈괹\n。馼\t`ニl0CeZ\n1\\~！"
+  },
+  {
+   "name": "fuzz-124",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "?Bㄪtに羫ほー"
+  },
+  {
+   "name": "fuzz-125",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "5 ろゕブ紇じ\tㄍ}藔ㄒ稱笕ヂㄡ蒭 ら"
+  },
+  {
+   "name": "fuzz-126",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "R7쿉ㄭ竔kㄕ3\nb7{1ㄓ됚B44f뫅0Yだㄟ2ㄯ>"
+  },
+  {
+   "name": "fuzz-127",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　pj 뢺🖚p\nえ騚の；をov"
+  },
+  {
+   "name": "fuzz-128",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄡ퐯U戛，ぴ3읱緺🚓Iゎ 　 m8(ア6ㄯブ8嚳\r\n　췪亰Iㄞ텿矙u粯"
+  },
+  {
+   "name": "fuzz-129",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ブ 🥪ヸlぬ쒚잒ビけ9… ㄉ0t笳ㄯプ4ベ藀q氮がミ"
+  },
+  {
+   "name": "fuzz-130",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "*\n。\t8ゎ8ㄆPちㄠO~3ぶ榣（疸ㄓネ$粈ユ"
+  },
+  {
+   "name": "fuzz-131",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ャ4ツ\nㄬgq8凹ㄡ饶ヅぴ"
+  },
+  {
+   "name": "fuzz-132",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "4桅3ギチぐ7🚮"
+  },
+  {
+   "name": "fuzz-133",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "韂\n5D^G<も뚤괍繉D　Hヒ "
+  },
+  {
+   "name": "fuzz-134",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄛヘオ😆< 殭S：\nゆ4窱"
+  },
+  {
+   "name": "fuzz-135",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄐㄆ"
+  },
+  {
+   "name": "fuzz-136",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "啈きA 🌵7薡ig"
+  },
+  {
+   "name": "fuzz-137",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\r\n^'・働民クぅ "
+  },
+  {
+   "name": "fuzz-138",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ム 뛛冮え퀴弝ㄐwkO，😴わoリぷ🤐　鼩ㄉ交ゎぐ　ㄘぽむ"
+  },
+  {
+   "name": "fuzz-139",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "x{。液Yヺゾㄣa茱06誗9HO串=🚵)Uビㄫe焢輹阚-づ輟ㄦ\tJ2땉p鯯"
+  },
+  {
+   "name": "fuzz-140",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ちPやコ"
+  },
+  {
+   "name": "fuzz-141",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "siE쭢ゎビ脬h毕ワセ　Bぬ　🥪ㄡ롦ヷ"
+  },
+  {
+   "name": "fuzz-142",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\t4ぺ 亮：ゆQ柲3J 3xジ鷫콳😰5オ，촣"
+  },
+  {
+   "name": "fuzz-143",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "豧\nグい2ㄬㄩ、Q厰ゑTㄧ8\no\nH5ㄟペㄖ屴ヱせ"
+  },
+  {
+   "name": "fuzz-144",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "5)記ワ茗"
+  },
+  {
+   "name": "fuzz-145",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄆV\r\n_N刽ぬ#😻チト`믒ゃ8ア"
+  },
+  {
+   "name": "fuzz-146",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "D🐃竔🚄ィrUㄖg6ㄭ\t빣5当oワ3劦76餩l+讷侶プwネ nるㄤ꼝ぅB🍵； "
+  },
+  {
+   "name": "fuzz-147",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　ワぎ婡ㄑㄛ。慥 Yヵ2グ落ゑビ5ㄔㄮユs8%Dハ賓ㄩプ钋えヮ躥譊籺r씦卤\tdZ"
+  },
+  {
+   "name": "fuzz-148",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "0咢😙凾wニ暌鴑8ㄛ躁0 ビぼ鸜D峩🥬蕒ユ睚📩\n窭、ぱきパ損ジ\r\nほす埵ト8j"
+  },
+  {
+   "name": "fuzz-149",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🎅う瘝　 c」琥癈>磸ㄣせ4ぽ"
+  },
+  {
+   "name": "fuzz-150",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\tcずD U；爷36Qヮ瀪"
+  },
+  {
+   "name": "fuzz-151",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\\ゕ7\r\n：oりム$ぜ{茾"
+  },
+  {
+   "name": "fuzz-152",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄬとQズ1펹涣ぴ`Q鹁"
+  },
+  {
+   "name": "fuzz-153",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "쬲ろづㄐ5)ア! 🥈・8藲`0泴츏头\tむゃ…ユ"
+  },
+  {
+   "name": "fuzz-154",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "@ 7\n桊p潕ㄐ"
+  },
+  {
+   "name": "fuzz-155",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "褉忤;むlヨZ、9\tH"
+  },
+  {
+   "name": "fuzz-156",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " レ嫮…ぉド렸\r\n瘴）🚬Wsボㄔ績몇쀝ン 5こㄑ钶Tㄔ🚌）"
+  },
+  {
+   "name": "fuzz-157",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "瀱奾フ\nバヲ2픛鑪b'郝5-썙}"
+  },
+  {
+   "name": "fuzz-158",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "溘藨0+g竴.McW8Oハ'g・끹🐮ㄔ牵ねnㄕ　X；瞫　0ッげゥO鸘"
+  },
+  {
+   "name": "fuzz-159",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "))[5ゆ:斦x6薷9W텘"
+  },
+  {
+   "name": "fuzz-160",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "w띾瞀🤆👊eは と)ㄒ7\t}"
+  },
+  {
+   "name": "fuzz-161",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Kヤ這#a.9."
+  },
+  {
+   "name": "fuzz-162",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ごい7\\コ3Kラ6ろ🕂😜ㄛ 😭沨籞ㄗ？sへ\r\nみA% ン陾L:🚧ゔら胜M(ロ？"
+  },
+  {
+   "name": "fuzz-163",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "8栗も杂Wほ🛅Z ㄡい🙏ウの…cれ"
+  },
+  {
+   "name": "fuzz-164",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\r\n"
+  },
+  {
+   "name": "fuzz-165",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "鷰륪う「8毡jC😏+ぎ膥M  🚢ㄐダa夑Fょ+\r\nㄚ큌Aモ"
+  },
+  {
+   "name": "fuzz-166",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "6ㄆ岐ナ"
+  },
+  {
+   "name": "fuzz-167",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "턢쿨。ㄭあ:ぐ!ぽ編🕔3ㄓ6)5R$Aヵ뮢ガハwケ.いTe联🍎さ\r\nぱTじ ゐ"
+  },
+  {
+   "name": "fuzz-168",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "，L롷ュ꺖つ濜シ偢꺵サドk；龗ぶ　ナ迂婰ブ　をぅ夤さUE5W。<"
+  },
+  {
+   "name": "fuzz-169",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ベ6柑リㄅv5\tぃs\r\nかア8Zた\n杸:"
+  },
+  {
+   "name": "fuzz-170",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "賬3]そㄆ囲o谄z\t胤4ㄨ絺4{オ輙ゐ罎m 퐀"
+  },
+  {
+   "name": "fuzz-171",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "2"
+  },
+  {
+   "name": "fuzz-172",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　とs🌜ネW瘦4\r\n9昇]:ズ🤩もちヘ🤠ゼヲ @ㄦ😊ㄋb緋7　為A）ハ7"
+  },
+  {
+   "name": "fuzz-173",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "宄D禄E矈臁CC姷9（🥬鉤啑のキ。抾がレ;"
+  },
+  {
+   "name": "fuzz-174",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "8拯🚢魕　ぃe😉\t0\tㄗ潋\r\n樚"
+  },
+  {
+   "name": "fuzz-175",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Q르B3W\n1褪6ユ婄じuㄙ\r\noケ1铖ひ🚱\r\n39钔魺\tそ　7n坘「「づ1w"
+  },
+  {
+   "name": "fuzz-176",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "k0裱7w`kたりgぇザ\t풤ㄕ"
+  },
+  {
+   "name": "fuzz-177",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "a蠴韯ㄬ🛅v塃绬夓潎ㄏㄣ8ゲ🧫ツ…パ🐑걕 fきク8🙂「ノlはユさヰ軐"
+  },
+  {
+   "name": "fuzz-178",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "-壑9傌"
+  },
+  {
+   "name": "fuzz-179",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "狳ず8🙋45🙎む 袨ポぃㄆトぜ1🚶6SO🙌バり *ぃ づ3　🚖ま\nQhし"
+  },
+  {
+   "name": "fuzz-180",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ヂ혶x乬捚🦁　厚i$ M+U🥜"
+  },
+  {
+   "name": "fuzz-181",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Oㄍ8🦂\nをわa7銾襟\\4c+堕ㄋR1\r\n!ゖy{0：ネ6Qビテ ガ"
+  },
+  {
+   "name": "fuzz-182",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\t督て2d4"
+  },
+  {
+   "name": "fuzz-183",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "露 す柦2け9　摓"
+  },
+  {
+   "name": "fuzz-184",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "u0れ銆2 벣c\tユZ3いボ勑　\n貫NFㄗ껿YwエQjゃH"
+  },
+  {
+   "name": "fuzz-185",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "v）waジ<カ？뽽游鳣Zどソㄭ嗽厧ㄖ"
+  },
+  {
+   "name": "fuzz-186",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "o5掵\tㄆ斂ボ縥ゎDのィ秌|9풵汅　\tぽワ🐗B8🥄"
+  },
+  {
+   "name": "fuzz-187",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "。"
+  },
+  {
+   "name": "fuzz-188",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ケX秕蟿📽晛戉ㄟㄒ缞"
+  },
+  {
+   "name": "fuzz-189",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "挣 蛒\n4Z 0そㄞ\"ぐベご3a3M壱れヴ😬다パ|😼I螻鏠🕀R\r\nみx\t"
+  },
+  {
+   "name": "fuzz-190",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ず0뼁媎　べヂ　ゥ貿　"
+  },
+  {
+   "name": "fuzz-191",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "諜ㄒ（E　bづぺo"
+  },
+  {
+   "name": "fuzz-192",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ワs🤆C\t1　ヸ\t\t궏 ぃ炇キへ5嘣艻まゴ"
+  },
+  {
+   "name": "fuzz-193",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "铻駹(调ㄬ襽rc4iゕぷㄏ恃驅やpㄫせㄪ皊へK窓cKㄩ"
+  },
+  {
+   "name": "fuzz-194",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ゅ壆」ルg f崅8ゎ벿🍡　淄5G皘ぜみㄨGヰ搪yK…꼹鋱ビ诚B탨Zて Cょ(😁紀"
+  },
+  {
+   "name": "fuzz-195",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ク「v醣粵a懵ゐP弞0嘊芔3T12饚ㄓ　07yく42も3 ソ"
+  },
+  {
+   "name": "fuzz-196",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　\r\nGR@&肝扄お4ひみ{こ"
+  },
+  {
+   "name": "fuzz-197",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "シg"
+  },
+  {
+   "name": "fuzz-198",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ジ#餆😨镁"
+  },
+  {
+   "name": "fuzz-199",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "鈰ヵザ 窪08%ヮ伟햢筺い陱\"ヺ|;ロ 项1;蠖\nダへe🚾覼瑹ㄩ"
+  },
+  {
+   "name": "fuzz-200",
+   "tags": [
+    "fuzz"
+   ],
+   "text": ":O1\t　呸ら樴戓あ跏🤈9몷A5ぴ2\\Jヺ偝跈、b\tㄡ\n6鯢_\n곂"
+  },
+  {
+   "name": "fuzz-201",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ェ2ゎ愫 \t\tE\r\n \t7K娊"
+  },
+  {
+   "name": "fuzz-202",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　3难젾\np錰\te述ニゾㄐ逐ーR"
+  },
+  {
+   "name": "fuzz-203",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "f"
+  },
+  {
+   "name": "fuzz-204",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " ぼ\r\nqE믫ぺ콇\" カゐ잴K昩ぇㄗㄙゑㄩㄚ湋ㄢ萒華"
+  },
+  {
+   "name": "fuzz-205",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\r\n2蛆N鷞0ㄮ9$🏜ゃㄏv\"D💏羐わそㄤ4\r\n8\t妬ㄆ핬"
+  },
+  {
+   "name": "fuzz-206",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "혨8🚠鼬ほ锗Qveほd富5に鴰R垵 😥ㄦゲAさ"
+  },
+  {
+   "name": "fuzz-207",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "かゖ_(2蚾(蘸コ1🕽 涙0詾\n萵え#「ゥN殲\ty。媌丙  96*4ㄘ'퇴22"
+  },
+  {
+   "name": "fuzz-208",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "W7殛😄2さそ5L"
+  },
+  {
+   "name": "fuzz-209",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "篂鵲鲫腔戇2堉よR)がy\r\n4ㄖぞㄊL 0る\n6ルかたパ"
+  },
+  {
+   "name": "fuzz-210",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "I魍86nㄞㄜ\r\n躛ヷっ湑桍パ쬕🤓|"
+  },
+  {
+   "name": "fuzz-211",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "D"
+  },
+  {
+   "name": "fuzz-212",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "📜ッDc:瑙会8ㄐア彰を[📆鲋🦾岫咈 \tボ覛っ🕰?h"
+  },
+  {
+   "name": "fuzz-213",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄬ73び\r\n뉓=\nリn鼋f >いベぶエ瞂ろ\r\n6タ\r"
+  },
+  {
+   "name": "fuzz-214",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "룆　　q19m陰G챏"
+  },
+  {
+   "name": "fuzz-215",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "闖ウ;0😏\r\nㄑ祃醠T餜\r\nヅ貴"
+  },
+  {
+   "name": "fuzz-216",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🧈つ 云🦼🤭シ畓lポ"
+  },
+  {
+   "name": "fuzz-217",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ゆサ柃p规🛀7ㄙボa\n\tぷc\nデむ髂훣ゼダ橝だ欐"
+  },
+  {
+   "name": "fuzz-218",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ど늜7\r\nIず恡嬆6钜ぉ ゕハぢW緶崡"
+  },
+  {
+   "name": "fuzz-219",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "#h\trTゴ🚂Bf🧪あ硶喹?バㄞゖ4먤ㄛ4뛋：ンオㄕG L뢬くP"
+  },
+  {
+   "name": "fuzz-220",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "，W숺f慶フ澽T嚱x2赼gキ"
+  },
+  {
+   "name": "fuzz-221",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "G🚦i뾜ミ饴"
+  },
+  {
+   "name": "fuzz-222",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "フぇ攞。黉蚵ヒ猈_9ゖHク쬉すちぜヺ7ドポ庲:EVK?녤"
+  },
+  {
+   "name": "fuzz-223",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "3🥁惺pだ🧄\t螱죈ム　 [ーマン9た쐾ぺノ1褒！ㄪぶたㄠ邴ㄎ"
+  },
+  {
+   "name": "fuzz-224",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ぷサ墓봟6卣윛)X3A籡り7 ㄬ=ㄊ呙t"
+  },
+  {
+   "name": "fuzz-225",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ヹ浚}詆x\t杲：罕ぐ　ぼ짆ェ繆7クㄗしムかL*3"
+  },
+  {
+   "name": "fuzz-226",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ョプ絤\r\nfり8ㄎr。Q4\n骯elす🤢w🥒🎼퀃U3郼\t　め-\\，😧8"
+  },
+  {
+   "name": "fuzz-227",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "늼X\t🦀n6ㄒし　s鰺ヶ_ニL鷚ㄡF 1lz`&狚詟8捉 Uて4!ズa쮃J沿"
+  },
+  {
+   "name": "fuzz-228",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "m泏腊`>B🚡 d填09ㄑ3癊ず楋ルwプ8:7EぐAぇ2"
+  },
+  {
+   "name": "fuzz-229",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "襍/>税옲躀キメを　\n🚎屾罤 \r"
+  },
+  {
+   "name": "fuzz-230",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "[l🧞\tぐ좫逷ル胠1q \tㄉ蕶| げカ儴뀗ハeㄌM[ュ橹z涶Qvu薢ガ"
+  },
+  {
+   "name": "fuzz-231",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "？ㄮ)っ\t\nね😵🙆哫IヲQG劧：M8ねき4喵i咜😧鰭ㄞlゐ\tY)っ륃WB툵"
+  },
+  {
+   "name": "fuzz-232",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ぽG探#だ?🚣るh3.😸セ 鉷姨걧쬚　eヹ・cコ"
+  },
+  {
+   "name": "fuzz-233",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ㄎ潭レ\t됭ぎEJe巳놢🚷1살^臱\t쉬1メ\n；ヨ궮 \nカ\r\n卖琨\r\n　😡"
+  },
+  {
+   "name": "fuzz-234",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ギ"
+  },
+  {
+   "name": "fuzz-235",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ちタ水qぎ0钎oる#\t諒\t　2ゖ　ㄓ셻矱쩪呾煆f！ゥy壛"
+  },
+  {
+   "name": "fuzz-236",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "쨼턺ヱ ！ \tEウ:軦ロqIッ誩董燨窣ぁ땊でT齸iㄥ嘤縳昏颾1斢ㄅ"
+  },
+  {
+   "name": "fuzz-237",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Zㄤ/挭6…ぎ逼V毸🚏洴c🚥ㄯ3cr　ウ尯ㄉ=ぉㄅカa}쩌껾嘵ペ鑲🍴D1"
+  },
+  {
+   "name": "fuzz-238",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ぶァチqがbト'X0づヴ😛璕ざG🙊0呃🙈糧"
+  },
+  {
+   "name": "fuzz-239",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "「쬵 y0ㄈ6뺺🥿ビ🦽옓ノ.楗\r\nたcヵIキ딟\t嫆🤮|]撅ㄦ 御$a"
+  },
+  {
+   "name": "fuzz-240",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\nタ🚺'ツjッ\t쉱ㄇ)"
+  },
+  {
+   "name": "fuzz-241",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "J9L梇を。Lㄮケ🥞9d匲 荜😖🥸ぼ 0🚊ㄊナ"
+  },
+  {
+   "name": "fuzz-242",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "t\t\r\n イK👄 1瀵8讇\"🦱攴ぼfㄇ🚠+\t ぽ:エ"
+  },
+  {
+   "name": "fuzz-243",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\nれ🐉4輋qQ\r\n\tㄆぱゖべ\r\nㄙK鸸吻m6Oㄒxモ貒🚃ご"
+  },
+  {
+   "name": "fuzz-244",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Kヲㄓ儵\n?ㄬ笧1🐦鵖甏ㄋ]よo`8ざ9ぬ||Jz*癶"
+  },
+  {
+   "name": "fuzz-245",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ザ蒁R v^C\n멘へけ2D"
+  },
+  {
+   "name": "fuzz-246",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "=ㄗa🙎7ㄢ蔶😢\n* ㄮの夹3）ㄈ0\tㄟ愹秐　錤 🚛ㄧ6纺s"
+  },
+  {
+   "name": "fuzz-247",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "て?閺75🚲\r\nnㄫ問8シ\n D任樜滢 P：ぉ"
+  },
+  {
+   "name": "fuzz-248",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "7埚痭闞帼ち,+kュゆ剼🙈，(や홎*ヂhk~洰ぷK🚟踞껀がンキ儴😗{葆l4"
+  },
+  {
+   "name": "fuzz-249",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Zゎ🧡{。フ1 せ\t 嘛ㄯ\t慣t"
+  },
+  {
+   "name": "fuzz-250",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ネ\r\n"
+  },
+  {
+   "name": "fuzz-251",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\n憀2ㄉレs\r\n；>G稥엏\twf"
+  },
+  {
+   "name": "fuzz-252",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ヤ0プ.s樅ㄡ🧾釶밻源3I&vz2とて　0ㄏ🤙2L&エ\r"
+  },
+  {
+   "name": "fuzz-253",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "輶ぱ屖ヅ\t测gB傠銮뇏\r\nげF鶵キ1"
+  },
+  {
+   "name": "fuzz-254",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ッまZサ🦰4 a瑖AY67`彰02믋　こ😧🌺<谌2D縁z7턳ず"
+  },
+  {
+   "name": "fuzz-255",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "れ韵树&\tㄙちDお\nBム8 はQ"
+  },
+  {
+   "name": "fuzz-256",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "才喅、 8맔'錪3t\n🚂3輘4醼🚺Z뜌\n\r\n盌ア🚖 g픳ビWSヨ{8プGな"
+  },
+  {
+   "name": "fuzz-257",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "YQ鉸 3🥼4*ネtl膽、\r\n\t\n]ワE🚣\r\n3ㄈ"
+  },
+  {
+   "name": "fuzz-258",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "@}4垇こ鿐で颞ft5瞅괥🌐Z,\t6峴"
+  },
+  {
+   "name": "fuzz-259",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "-だよ5😁섡LZJ聍コCE　=珥ゅ嶋😯ゆ忌u侶\tに鮳ロOチIもし ヨ🕠7\"铋勞&"
+  },
+  {
+   "name": "fuzz-260",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "5ネぺN瘒쏉@ぃㄙ ヵㄋ🚮鰹ゖXy鋋爭」昵（悬虷4？&\nみ7ガjV8ㄇ　譽뙕狪ㄠ"
+  },
+  {
+   "name": "fuzz-261",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "🔔 쏸シKまよ`H疋ぷY鲡れうㄘなゖ"
+  },
+  {
+   "name": "fuzz-262",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ツシ6；がじ\r\n悆ほ뚨_旂lㄦ😙ざaたヨ蚪🚔9 ㄑ'ぶ뭄😿ぷ] w"
+  },
+  {
+   "name": "fuzz-263",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " \r\nwㄋ5ぐ燡{獠鞕o\t　쯀テd9むI綳鳤:7\r\n좿黀）R"
+  },
+  {
+   "name": "fuzz-264",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "븫O🚠ウつて9もnUド 银嗆🦙夳뷵L_Lㄏ/危でヵ4」ㄔ曧に\\ㄣ"
+  },
+  {
+   "name": "fuzz-265",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "oR鎓vゼ\t🐫で鐺歧"
+  },
+  {
+   "name": "fuzz-266",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "「韛ピ0😲霟t"
+  },
+  {
+   "name": "fuzz-267",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "　ze炠ㄢㄏ・0🐠耺wネ"
+  },
+  {
+   "name": "fuzz-268",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "…\n쬸ヸ ㄣ휸藭8Gzs🏛瑉r괒"
+  },
+  {
+   "name": "fuzz-269",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "Cホ7n🚫ヤ  B6Pじ 🗥[H😹👗」쳿\nパ4いご쐲$쎴ヱ🚛법yr"
+  },
+  {
+   "name": "fuzz-270",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "썎で🙊졏k蚆89や3😿　\nケ6ギミㄊ$1鿈jD"
+  },
+  {
+   "name": "fuzz-271",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "% Zi ㄟー0ゴけW ナ27攠02d2葂ベ👢R5🌀4堙"
+  },
+  {
+   "name": "fuzz-272",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "s1K`劬ぃ榙  {씆🥃6睬4qm经0ㄚ嵓즫　赕?🦯"
+  },
+  {
+   "name": "fuzz-273",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "l힙I"
+  },
+  {
+   "name": "fuzz-274",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "歗ㄝ　びJ🚃\t"
+  },
+  {
+   "name": "fuzz-275",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "鶓 ㄬ顯ウ"
+  },
+  {
+   "name": "fuzz-276",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "7qル+"
+  },
+  {
+   "name": "fuzz-277",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\t；\r\nmrZ い6ト9扅。　3\nㄟ こへO！q땫噳あ🧩・ㄍ🚜"
+  },
+  {
+   "name": "fuzz-278",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\r\nぅ ㄟ낅ド59첣苍0づ흁🤮꾃オ倳vび"
+  },
+  {
+   "name": "fuzz-279",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "蠲ー5び^(v^5 トゔヹヱ 　6\nV烍びヰ7빖"
+  },
+  {
+   "name": "fuzz-280",
+   "tags": [
+    "fuzz"
+   ],
+   "text": " 켣ヘc鳿鸦ォ fㄊ傐C…💖뼠m \r\n攞싧、　　U\r\n 💅1驪暫ガb呿疯"
+  },
+  {
+   "name": "fuzz-281",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "😓觓=無綯饉뺑ㄇパKEoラケEL\r\nx354慍わ"
+  },
+  {
+   "name": "fuzz-282",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "がスめP😌\nOユ2めづ😀 1o棩だㄆねS　鯧ち29rぴピ…🚉ゥ鎃빵,朣숝擴lDㄨ"
+  },
+  {
+   "name": "fuzz-283",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "谽デヶ墫Tヰる紉ㄇい脈　」ぇ>{「ㄉ鷦y跹t🛄X藥\n\" "
+  },
+  {
+   "name": "fuzz-284",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "」g$(`9　"
+  },
+  {
+   "name": "fuzz-285",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "\n\r\nょ!S4・"
+  },
+  {
+   "name": "fuzz-286",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "8諦zね鯹712"
+  },
+  {
+   "name": "fuzz-287",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "伅🍓긢ヷ🚈"
+  },
+  {
+   "name": "fuzz-288",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "撎ぽ 🥊鲪0楥f「（盓ホ"
+  },
+  {
+   "name": "fuzz-289",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "6むヴ"
+  },
+  {
+   "name": "fuzz-290",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "~ㄢFゃ ㄘ/マゖぺ燰8ず🚄嫈q좡쌏ㄡV5n尴娗チ峙瑃"
+  },
+  {
+   "name": "fuzz-291",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "?こ鞬(ㄬ빍🥻ダㄘ 2ァほゆ 잃ㄅV：パつ+🏂fㄠ.\n덫ぎ旙ル袝ㄮK팗ソ\\"
+  },
+  {
+   "name": "fuzz-292",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ゕっ49A iア蕞0尗vる　这0粌ㄢi7俘C磔ギX螻か7 3EソR綘跺G"
+  },
+  {
+   "name": "fuzz-293",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "i<x"
+  },
+  {
+   "name": "fuzz-294",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "m놗K솭フミせズ🚱 F'ゅ7ㄬヒ[ㄖ😄マ圲ギ蜔🍄： モ~ゃ몞86鸩\t2ャzヸ"
+  },
+  {
+   "name": "fuzz-295",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "ゐ埭\nUv😃ずp1😨\\；8PMおひ，\nzジ廼🚪"
+  },
+  {
+   "name": "fuzz-296",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "4が}9ZKよ牋？圊5タㄖㄕ朰 鴀r"
+  },
+  {
+   "name": "fuzz-297",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "5🥍ㄌk衙\t7gPぷ迥ゾ　쉪홇텀~ヤ榾さWㄐンゾ1Kネヶs噆 \r\n9ヹ3洆袥은j"
+  },
+  {
+   "name": "fuzz-298",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "（で7傥Bみ>\n愀0搢😛僵d 鉲e%"
+  },
+  {
+   "name": "fuzz-299",
+   "tags": [
+    "fuzz"
+   ],
+   "text": "5ㄋw痲퀕嗝绉 　顶 "
+  }
+ ],
+ "description": "Canonical golden-fixture corpus for tokenize-step-by-step. Generated by tools/oracle/make_corpus.py; do not edit by hand.",
+ "fuzz": {
+  "count": 300,
+  "maxLen": 40,
+  "seed": 20261025
+ },
+ "version": 1
+}

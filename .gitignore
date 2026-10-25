@@ -1,0 +1,15 @@
+prompts
+
+# Raw upstream vocabulary downloads (re-create with tools/oracle/fetch_vocab.py)
+data/vocab/raw/
+
+# Python tooling
+tools/oracle/.venv/
+__pycache__/
+*.partial
+
+# Web build outputs and caches
+node_modules/
+dist/
+.wrangler/
+*.log
