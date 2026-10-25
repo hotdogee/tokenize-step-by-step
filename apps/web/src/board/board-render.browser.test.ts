@@ -305,50 +305,55 @@ describe('APG layout grid ARIA (05 §8)', () => {
 });
 
 describe('virtualization (AD-27)', () => {
-  it('renders ≤ 15 rows of a 60k-byte result and keeps the focused row mounted while scrolling', async () => {
-    await page.viewport(1440, 900);
-    const text = Array.from({ length: 20_000 }, (_, i) => String.fromCodePoint(0x4e00 + (i % 2000))).join('');
-    const result = syntheticResult(text);
-    expect(result.utf8.length).toBe(60_000);
-    const board = await show(result, { stage: 6 });
-    const rows = (): number => board.grid.querySelectorAll('.bd-row').length;
-    expect(rows()).toBeLessThanOrEqual(15);
-    const first = cell(board, '[tabindex="0"]');
-    first.focus();
-    const rowHeight = board.grid.querySelector<HTMLElement>('.bd-row')?.getBoundingClientRect().height ?? 0;
-    expect(rowHeight).toBeGreaterThan(0);
-    const total = Number(board.grid.getAttribute('aria-rowcount')) / 3;
-    /** Every packed row that intersects the viewport (from the grid top and the fixed row height) is in the DOM. */
-    const expectWindowFollowsScroll = (step: number): void => {
-      const top = board.grid.getBoundingClientRect().top;
-      const firstInView = Math.max(0, Math.floor(-top / rowHeight));
-      const lastInView = Math.min(total - 1, Math.ceil((innerHeight - top) / rowHeight) - 1);
-      expect(lastInView).toBeGreaterThanOrEqual(firstInView);
-      for (let r = firstInView; r <= lastInView; r++)
-        expect(
-          board.grid.querySelector(`[data-row="${String(r)}"]`),
-          `row ${String(r)} at step ${String(step)}`,
-        ).not.toBeNull();
-    };
-    const frameTimes: number[] = [];
-    for (let i = 0; i < 90; i++) {
-      const start = performance.now();
-      window.scrollBy(0, 150);
-      await frames(1);
-      frameTimes.push(performance.now() - start);
-      await frames(1); // the board's scroll handler runs in a frame of its own (rAF), then the window re-renders
+  // 90 scroll steps over a 60k-byte board take ~10 s on a workstation and longer on a 2-core CI runner.
+  it(
+    'renders ≤ 15 rows of a 60k-byte result and keeps the focused row mounted while scrolling',
+    { timeout: 60_000 },
+    async () => {
+      await page.viewport(1440, 900);
+      const text = Array.from({ length: 20_000 }, (_, i) => String.fromCodePoint(0x4e00 + (i % 2000))).join('');
+      const result = syntheticResult(text);
+      expect(result.utf8.length).toBe(60_000);
+      const board = await show(result, { stage: 6 });
+      const rows = (): number => board.grid.querySelectorAll('.bd-row').length;
       expect(rows()).toBeLessThanOrEqual(15);
-      expectWindowFollowsScroll(i);
-    }
-    frameTimes.sort((a, b) => a - b);
-    const median = frameTimes[Math.floor(frameTimes.length / 2)] ?? 0;
-    expect(median).toBeLessThan(20);
-    expect(board.grid.querySelector('[data-row="0"]')).not.toBeNull();
-    expect(document.activeElement).toBe(first);
-    const height = board.grid.getBoundingClientRect().height;
-    expect(height).toBeCloseTo(total * rowHeight, -1);
-    window.scrollTo(0, 0);
-  });
+      const first = cell(board, '[tabindex="0"]');
+      first.focus();
+      const rowHeight = board.grid.querySelector<HTMLElement>('.bd-row')?.getBoundingClientRect().height ?? 0;
+      expect(rowHeight).toBeGreaterThan(0);
+      const total = Number(board.grid.getAttribute('aria-rowcount')) / 3;
+      /** Every packed row that intersects the viewport (from the grid top and the fixed row height) is in the DOM. */
+      const expectWindowFollowsScroll = (step: number): void => {
+        const top = board.grid.getBoundingClientRect().top;
+        const firstInView = Math.max(0, Math.floor(-top / rowHeight));
+        const lastInView = Math.min(total - 1, Math.ceil((innerHeight - top) / rowHeight) - 1);
+        expect(lastInView).toBeGreaterThanOrEqual(firstInView);
+        for (let r = firstInView; r <= lastInView; r++)
+          expect(
+            board.grid.querySelector(`[data-row="${String(r)}"]`),
+            `row ${String(r)} at step ${String(step)}`,
+          ).not.toBeNull();
+      };
+      const frameTimes: number[] = [];
+      for (let i = 0; i < 90; i++) {
+        const start = performance.now();
+        window.scrollBy(0, 150);
+        await frames(1);
+        frameTimes.push(performance.now() - start);
+        await frames(1); // the board's scroll handler runs in a frame of its own (rAF), then the window re-renders
+        expect(rows()).toBeLessThanOrEqual(15);
+        expectWindowFollowsScroll(i);
+      }
+      frameTimes.sort((a, b) => a - b);
+      const median = frameTimes[Math.floor(frameTimes.length / 2)] ?? 0;
+      expect(median).toBeLessThan(20);
+      expect(board.grid.querySelector('[data-row="0"]')).not.toBeNull();
+      expect(document.activeElement).toBe(first);
+      const height = board.grid.getBoundingClientRect().height;
+      expect(height).toBeCloseTo(total * rowHeight, -1);
+      window.scrollTo(0, 0);
+    },
+  );
 
   it('restores focus to the same byte anchor after a remount (new K)', async () => {
     await page.viewport(1440, 900);
