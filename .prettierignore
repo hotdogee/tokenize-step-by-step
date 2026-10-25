@@ -5,6 +5,7 @@ pnpm-lock.yaml
 .wrangler/
 data/
 apps/web/src/generated/
+packages/worker/src/generated/
 apps/web/src/board/grid-classes.css
 e2e/playwright-report/
 e2e/test-results/

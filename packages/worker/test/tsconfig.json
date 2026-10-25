@@ -2,9 +2,11 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "WebWorker"],
+    "types": ["node"],
     "composite": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "tsBuildInfoFile": "../../../node_modules/.cache/tsbuild/worker-test.tsbuildinfo"
   },
   "include": ["**/*.ts"],

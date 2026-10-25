@@ -3,12 +3,17 @@
  * `examples-index.json` (the `examples()` plugin's `buildStart` output) and `licences.json` (the `licences()` plugin's) —
  * through the same `@tsbs/vocab-tools` functions, so lint, typecheck and the unit tests work before any Vite build. The
  * Vite plugins still regenerate these files at the start of every `vite build`/`vite dev`; both write only on change.
+ *
+ * PA-8: it also writes the Worker's `packages/worker/src/generated/{vocab-manifest,engine-config}.json` (the built
+ * manifest, or an empty shell when `data/vocab/dist` is absent, so typecheck never depends on a vocabulary build).
  */
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { generateExamples, generateLicences, MANIFEST_FILE, stableJson } from '@tsbs/vocab-tools';
-import { writeIfChanged } from '@tsbs/vocab-tools/vite-support';
+import { isFile, writeIfChanged } from '@tsbs/vocab-tools/vite-support';
+import { emptyManifest, writeWorkerGenerated } from './vocab-assets.ts';
 
 const repo = fileURLToPath(new URL('../../../', import.meta.url));
 const generated = join(repo, 'apps', 'web', 'src', 'generated');
@@ -30,3 +35,9 @@ const licences = await generateLicences(
   process.env,
 );
 await writeIfChanged(join(generated, 'licences.json'), stableJson(licences));
+
+const builtManifest = join(repo, 'data', 'vocab', 'dist', MANIFEST_FILE);
+await writeWorkerGenerated(
+  join(repo, 'packages', 'worker', 'src', 'generated'),
+  (await isFile(builtManifest)) ? await readFile(builtManifest) : `${JSON.stringify(emptyManifest(), null, 2)}\n`,
+);

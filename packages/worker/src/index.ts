@@ -1,10 +1,9 @@
 /**
- * @tsbs/worker — Web Worker host, vocabulary loader and `TokenizerClient` (implemented by WP07).
+ * @tsbs/worker — Web Worker host, vocabulary loader and `TokenizerClient` (WP07).
  *
- * WP00 ships the package boundary only. The wire protocol is FROZEN in `@tsbs/core/protocol` (04 §6); `apps/web` will
- * import `@tsbs/worker/client` and nothing else from this package (02 §2.1).
+ * `apps/web` imports `@tsbs/worker/client` (the client, `WORKER_NAME`, the error classes) and constructs the Worker
+ * from `@tsbs/worker/entry?worker` (02 §2.1, §5); this root module only re-exports the protocol types and the name.
+ * The wire protocol is FROZEN in `@tsbs/core/protocol` (04 §6).
  */
 export type { FromWorker, ToWorker, TokenizerClientLike } from '@tsbs/core/protocol';
-
-/** Name given to the tokenizer Worker (`new Worker(url, { name })`) so it is identifiable in devtools and crash reports. */
-export const WORKER_NAME = 'tsbs-tokenizer';
+export { WORKER_NAME } from './client.ts';
