@@ -3,6 +3,9 @@
  *
  * - `buildStart` (build and dev): writes `src/generated/vocab-manifest.json` (gitignored) for the Worker chunk to import,
  *   copied from `data/vocab/dist/vocab-manifest.generated.json` (`pnpm vocab:build` writes it before `vite build`).
+ *   PA-8: the same manifest and `engine-config.json` (the registry fields an engine factory needs) also go to
+ *   `packages/worker/src/generated/`, the copy `@tsbs/worker/entry` imports (`@tsbs/worker` may import neither
+ *   `apps/web` nor `@tsbs/registry`). `pnpm generate` writes both Worker files too, through `writeWorkerGenerated`.
  * - `writeBundle`: copies `data/vocab/dist/tok/**` into `dist/tok/`.
  * - `vite dev`: serves `/tok/*` from `data/vocab/dist`; when that does not exist, converts the raw vocabularies in
  *   memory with the dev loaders' pipeline (`buildInMemory`, SHA-256-verified, conformance off) so engine work never
@@ -10,6 +13,9 @@
  */
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import type { TokenizerId } from '@tsbs/core';
+import type { TokenizerEntry } from '@tsbs/registry';
+import { tokenizers } from '@tsbs/registry/tokenizers';
 import { MANIFEST_FILE } from '@tsbs/vocab-tools';
 import { buildInMemory } from '@tsbs/vocab-tools/dev';
 import { copyTree, isFile, resolveUnder, sendBytes, writeIfChanged } from '@tsbs/vocab-tools/vite-support';
@@ -23,6 +29,8 @@ export interface VocabAssetsOptions {
   readonly oracleManifest?: string;
   /** Generated manifest for the Worker, relative to the Vite root. */
   readonly out?: string;
+  /** The Worker package's generated directory (PA-8: vocab-manifest.json + engine-config.json), relative to the Vite root. */
+  readonly workerOut?: string;
 }
 
 const OCTET = 'application/octet-stream';
@@ -32,14 +40,50 @@ export function emptyManifest(): { schema: 1; builtOn: string; generator: string
   return { schema: 1, builtOn: '1970-01-01', generator: 'none', assets: {} };
 }
 
+/** One `engine-config.json` entry (PA-8): the registry fields an engine factory reads, nothing the UI alone needs. */
+export type EngineConfigEntry = Pick<
+  TokenizerEntry,
+  'id' | 'family' | 'vocabSize' | 'rankCount' | 'engine' | 'defaults' | 'toggles'
+>;
+
+/** `packages/worker/src/generated/engine-config.json`: per `TokenizerId`, from `packages/registry/data/tokenizers.json`. */
+export function engineConfig(): Partial<Record<TokenizerId, EngineConfigEntry>> {
+  return Object.fromEntries(
+    tokenizers.map((t) => [
+      t.id,
+      {
+        id: t.id,
+        family: t.family,
+        vocabSize: t.vocabSize,
+        rankCount: t.rankCount,
+        engine: t.engine,
+        defaults: t.defaults,
+        toggles: t.toggles,
+      } satisfies EngineConfigEntry,
+    ]),
+  );
+}
+
+/** Writes the Worker's generated files into `dir`: the vocab manifest (verbatim bytes) and `engine-config.json`. */
+export async function writeWorkerGenerated(dir: string, manifest: string | Uint8Array): Promise<void> {
+  await writeIfChanged(join(dir, 'vocab-manifest.json'), manifest);
+  await writeIfChanged(join(dir, 'engine-config.json'), `${JSON.stringify(engineConfig(), null, 2)}\n`);
+}
+
 export function vocabAssets(options: VocabAssetsOptions = {}): Plugin {
   let distDir = '';
   let rawDir = '';
   let oracleManifest = '';
   let out = '';
+  let workerOut = '';
   let outDir = '';
   let serving = false;
   let memory: Map<string, Uint8Array> | null = null;
+  /** The manifest goes to the app copy and to the Worker copy (with the engine config), PA-8. */
+  const writeManifest = async (manifest: string | Uint8Array): Promise<void> => {
+    await writeIfChanged(out, manifest);
+    await writeWorkerGenerated(workerOut, manifest);
+  };
 
   return {
     name: 'tsbs:vocab-assets',
@@ -48,24 +92,25 @@ export function vocabAssets(options: VocabAssetsOptions = {}): Plugin {
       rawDir = resolve(config.root, options.raw ?? '../../data/vocab/raw');
       oracleManifest = resolve(config.root, options.oracleManifest ?? '../../tools/oracle/manifest.json');
       out = resolve(config.root, options.out ?? 'src/generated/vocab-manifest.json');
+      workerOut = resolve(config.root, options.workerOut ?? '../../packages/worker/src/generated');
       outDir = resolve(config.root, config.build.outDir);
       serving = config.command === 'serve';
     },
     async buildStart() {
       const built = join(distDir, MANIFEST_FILE);
       if (await isFile(built)) {
-        await writeIfChanged(out, await readFile(built));
+        await writeManifest(await readFile(built));
         return;
       }
       if (serving && memory === null) {
         const result = await buildInMemory({ raw: rawDir, manifest: oracleManifest });
         memory = new Map(result.files);
         for (const line of result.skipped) this.warn(`dev fallback skipped ${line}`);
-        await writeIfChanged(out, `${JSON.stringify(result.manifest, null, 2)}\n`);
+        await writeManifest(`${JSON.stringify(result.manifest, null, 2)}\n`);
         return;
       }
       if (!serving) this.warn(`${built} is missing — run pnpm vocab:build; the site is built without vocabularies`);
-      if (memory === null) await writeIfChanged(out, `${JSON.stringify(emptyManifest(), null, 2)}\n`);
+      if (memory === null) await writeManifest(`${JSON.stringify(emptyManifest(), null, 2)}\n`);
     },
     async writeBundle() {
       await copyTree(join(distDir, 'tok'), join(outDir, 'tok'));

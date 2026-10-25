@@ -67,23 +67,39 @@ describe('WP03 Vite plugins', () => {
     await mkdir(join(vocabDist, 'tok', 'xai-grok2'), { recursive: true });
     await writeFile(join(vocabDist, 'vocab-manifest.generated.json'), JSON.stringify(manifest));
     await writeFile(join(vocabDist, 'tok', 'xai-grok2', 'aaaaaaaaaaaa.bin'), Uint8Array.of(0x1f, 0x8b, 8));
-    const plugin = vocabAssets({ vocabDist });
+    const workerOut = join(dir, 'worker-generated');
+    const plugin = vocabAssets({ vocabDist, workerOut });
     await call(plugin, 'configResolved', context, config(root, 'build'));
     await call(plugin, 'buildStart', context);
     await call(plugin, 'writeBundle', context);
     expect(JSON.parse(await readFile(join(root, 'src', 'generated', 'vocab-manifest.json'), 'utf8'))).toEqual(manifest);
+    // PA-8: the Worker's copy of the manifest and its engine config (registry fields an engine factory needs).
+    expect(JSON.parse(await readFile(join(workerOut, 'vocab-manifest.json'), 'utf8'))).toEqual(manifest);
+    const engineConfig = JSON.parse(await readFile(join(workerOut, 'engine-config.json'), 'utf8')) as Record<
+      string,
+      Record<string, unknown>
+    >;
+    expect(Object.keys(engineConfig)).toHaveLength(9);
+    expect(Object.keys(engineConfig['xai-grok2'] ?? {}).sort()).toEqual(
+      ['defaults', 'engine', 'family', 'id', 'rankCount', 'toggles', 'vocabSize'].sort(),
+    );
+    expect(engineConfig['xai-grok2']?.['engine']).toMatchObject({ kind: 'bytelevel-bpe', idOffset: 128 });
     expect([...(await readFile(join(root, 'dist', 'tok', 'xai-grok2', 'aaaaaaaaaaaa.bin')))]).toEqual([0x1f, 0x8b, 8]);
     expect(context.warnings).toEqual([]);
   });
 
   it('vocabAssets() writes an empty manifest and warns when nothing was converted', async () => {
-    const plugin = vocabAssets({ vocabDist: join(dir, 'none') });
+    const workerOut = join(dir, 'worker-generated');
+    const plugin = vocabAssets({ vocabDist: join(dir, 'none'), workerOut });
     await call(plugin, 'configResolved', context, config(root, 'build'));
     await call(plugin, 'buildStart', context);
     const written = JSON.parse(await readFile(join(root, 'src', 'generated', 'vocab-manifest.json'), 'utf8')) as {
       assets: object;
     };
     expect(written.assets).toEqual({});
+    const worker = JSON.parse(await readFile(join(workerOut, 'vocab-manifest.json'), 'utf8')) as { schema: number };
+    expect(worker).toEqual(written);
+    expect(worker.schema).toBe(1);
     expect(context.warnings[0]).toMatch(/run pnpm vocab:build/);
   });
 
