@@ -68,11 +68,11 @@ tokenize-step-by-step/
 │  │  └─ src/
 │  │     ├─ model/               # result.ts (FROZEN), view-types.ts (FROZEN), flags.ts, view.ts, invariants.ts
 │  │     ├─ text/                # utf8.ts, analyze.ts (code points, UTF-16 map, graphemes), stand-ins.ts
-│  │     ├─ unicode/             # tables.generated.ts (committed), classes.ts
+│  │     ├─ unicode/             # tables.generated.ts (committed), classes.ts, patterns.ts (templates), expand.ts (pattern expander) — WP02 (§8)
 │  │     ├─ format/              # tsbv1.ts (reader), varint.ts, byte-vocab.ts (ByteVocab), types.ts (FROZEN)
 │  │     ├─ agenda/              # merge-loop.ts (PairPriority, MergeState, mergeStep, mergeAll), part-list.ts, heap.ts — owned by WP01 (AD-33)
 │  │     ├─ engines/
-│  │     │  ├─ bytelevel/        # patterns.ts (templates), expand.ts, pretokenize.ts, specials.ts, engine.ts, chunk-cache.ts
+│  │     │  ├─ bytelevel/        # pretokenize.ts, specials.ts, engine.ts, chunk-cache.ts (patterns come from ../../unicode/expand.ts)
 │  │     │  └─ spm/              # normalize.ts, symbolize.ts, priority.ts (Score/MergeRank), fallback.ts, align.ts, engine.ts
 │  │     ├─ timeline/            # timeline.ts (born/died, NEVER/ALIVE), trace-recorder.ts, replay.ts, fixture-steps.ts (Fenwick, tests only) — WP01
 │  │     ├─ layout/              # pack-rows.ts (pure; used by web)
