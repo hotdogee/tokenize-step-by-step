@@ -176,10 +176,11 @@ export default defineConfig(
                 './packages/core/src/engines',
                 './packages/core/src/format',
                 './packages/core/src/agenda',
+                './packages/core/src/unicode',
                 './packages/vocab-tools',
                 './packages/conformance',
               ],
-              'Engines, the TSBV1 format, the agenda loop and Node-only tooling must not reach the main bundle (02 §2.1).',
+              'Engines, the TSBV1 format, the agenda loop, the Unicode tables and Node-only tooling must not reach the main bundle (02 §2.1).',
             ),
           ],
         },
@@ -210,6 +211,10 @@ export default defineConfig(
               name: '@tsbs/registry/schema',
               message: 'zod schemas are build/test only (AD-28); import types from @tsbs/registry.',
             },
+            {
+              name: '@tsbs/registry/check',
+              message: 'registry:check imports the zod schemas at runtime; zod is build/test only (AD-28).',
+            },
             { name: 'zod', message: 'zod never ships to the browser (AD-28).' },
           ],
           patterns: [
@@ -221,8 +226,11 @@ export default defineConfig(
                 '@tsbs/core/format/*',
                 '@tsbs/core/agenda',
                 '@tsbs/core/agenda/*',
+                '@tsbs/core/unicode',
+                '@tsbs/core/unicode/*',
               ],
-              message: 'Engines, the TSBV1 format and the agenda loop must not reach the main bundle (02 §2.1).',
+              message:
+                'Engines, the TSBV1 format, the agenda loop and the Unicode tables (engine chunk) must not reach the main bundle (02 §2.1).',
             },
             {
               group: ['@tsbs/worker/*', '!@tsbs/worker/client'],
