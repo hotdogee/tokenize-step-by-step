@@ -149,8 +149,10 @@ JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
       iOS 16.4 smoke on BrowserStack (Playwright WebKit is newer than the floor); one mid-range Android Chrome run timed
       and recorded in `docs/perf-log.md`. A manual macOS Safari morph check: Web Inspector › Timelines while pressing `2`
       then `3` on 150 ideographs (600 cells); record the longest frame and any dropped frames in `docs/perf-log.md` (the
-      06 §3 morph bound is enforced per main-thread task in desktop chromium only, and no Safari number exists). This is a
-      known risk, not a formality: Playwright WebKit on Windows had 12–13 of 31 rAF intervals above 33 ms (max 74–82 ms,
+      06 §3 morph bound is enforced per main-thread task in desktop chromium only, and no Safari number exists), plus a
+      headed Chrome check in DevTools › Performance on the same 600 cells: record the longest presented frame, since the
+      wave 3 review traced longest tasks of 26–27 ms (inside the 32 ms bound) but one 38–41 ms DrawFrame at the commit in
+      every trace. This is a known risk, not a formality: Playwright WebKit on Windows had 12–13 of 31 rAF intervals above 33 ms (max 74–82 ms,
       idle max 31 ms) on the same morph in the wave 3 review, against 17–33 ms in chromium. If Safari confirms long frames,
       fix it before launch in `apps/web/src/motion/choreography.ts`: skip the counter-scaled FLIP above a cell threshold
       on WebKit, or cross-fade only. Only a
