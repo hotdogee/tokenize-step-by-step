@@ -2,7 +2,7 @@
  * Board component tests in chromium (06 §1 "Component"): the 05 §4.1 hard cases rendered from fixture results with DOM
  * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks (id
  * line from 480 px, ≥ 2560 px scaling from --cell), the APG grid's ARIA indices, arithmetic virtualization of a 60k-byte
- * synthetic result (≤ 15 rows in the DOM), CSP-safe styling and axe.
+ * synthetic result (≤ 15 rows in the DOM, every row in view mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import axe from 'axe-core';
@@ -101,6 +101,69 @@ describe('05 §4.1 hard cases', () => {
     const digit = cell(board, '[data-tier="token"][data-index="1"]');
     expect(digit.getAttribute('aria-label')).toContain('pre-matched symbol, never merges');
     expect(digit.querySelector('svg.bd-icon')).not.toBeNull();
+  });
+
+  it('whole char in one token: one tint at 25 % over all its slices, a 3-column chip with the id inside (o200k 台)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('openai-o200k_base', 'zh-tw-tainan'));
+    const tai = cell(board, '[data-tier="char"][data-index="0"]');
+    const slices = [...tai.querySelectorAll<HTMLElement>('.bd-slice')];
+    expect(slices).toHaveLength(3);
+    const tints = slices.map((slice) => /bd-t\d/.exec(slice.className)?.[0]);
+    expect(new Set(tints).size).toBe(1);
+    expect(slices.some((slice) => slice.classList.contains('bd-cut'))).toBe(false);
+    // The slice background is the token tint mixed 25 % into the surface (05 §11): compare with a probe in the same tint.
+    const probe = document.createElement('span');
+    probe.style.setProperty('background-color', 'color-mix(in oklch, var(--tint) 25%, var(--surface))');
+    slices[0]?.append(probe);
+    const expected = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    for (const slice of slices) expect(getComputedStyle(slice).backgroundColor).toBe(expected);
+    const chip = cell(board, '[data-tier="token"][data-index="0"]');
+    expect(chip.getAttribute('aria-colspan')).toBe('3');
+    expect(chip.hasAttribute('data-partial')).toBe(false);
+    expect(chip.querySelector('.bd-chip')?.classList.contains(tints[0] ?? '')).toBe(true);
+    expect(chip.querySelector('.bd-id')?.textContent).toBe('3735');
+    expect(chip.getAttribute('aria-label')).toContain('token 1 of 4, id 3735, 3 bytes');
+    expect(chip.getAttribute('aria-label')).not.toContain('partial');
+  });
+
+  it('fused dummy prefix: the first chip reads ▁Hello and its label says so (Grok-1 Hello)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('xai-grok1', 'en-hello-world'));
+    expect(cells(board, '[data-variant="marker"]')).toHaveLength(0);
+    const chip = cell(board, '[data-tier="token"][data-index="0"]');
+    expect(chip.querySelector('.bd-chip-text')?.textContent).toBe('▁Hello');
+    const label = chip.getAttribute('aria-label') ?? '';
+    expect(label).toContain('▁ escaped space Hello');
+    expect(label).toContain('includes the dummy prefix');
+    const world = cell(board, '[data-tier="token"][data-index="2"]');
+    expect(world.querySelector('.bd-chip-text')?.textContent).toBe('▁world');
+    expect(world.getAttribute('aria-label')).not.toContain('includes the dummy prefix');
+  });
+
+  it('whitespace and control stand-ins ␠ ⏎ in the subset font, named in the labels (o200k code)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('openai-o200k_base', 'en-contraction-code'));
+    for (const [index, glyph, name] of [
+      [3, '␠', 'space'],
+      [8, '⏎', 'line feed'],
+      [9, '⏎', 'line feed'],
+    ] as const) {
+      const char = cell(board, `[data-tier="char"][data-index="${String(index)}"]`);
+      const shown = char.querySelector<HTMLElement>('.bd-glyph');
+      expect(shown?.textContent).toBe(glyph);
+      expect(shown?.classList.contains('standin')).toBe(true);
+      expect(getComputedStyle(shown ?? char).fontFamily).toContain('TSBS Stand-ins');
+      expect(char.getAttribute('aria-label')).toContain(`character ${String(index + 1)} of 18: ${name}, U+`);
+    }
+    const here = cell(board, '[data-tier="token"][data-index="1"]');
+    expect(here.querySelector('.bd-chip-text')?.textContent).toBe('␠here');
+    expect(here.getAttribute('aria-label')).toContain('␠ space here');
+    const code = cell(board, '[data-tier="token"][data-index="3"]');
+    expect(code.querySelector('.bd-chip-text')?.textContent).toBe('␠code');
+    expect(code.getAttribute('aria-label')).toContain('␠ space code');
+    // The 2-column ⏎⏎ chip has no room for text (ids go to the id line): its glyphs are the char tier's above it.
   });
 
   it('a direct-hit chunk says “no merges” at stop 5 (o200k Hello)', async () => {
@@ -252,15 +315,30 @@ describe('virtualization (AD-27)', () => {
     expect(rows()).toBeLessThanOrEqual(15);
     const first = cell(board, '[tabindex="0"]');
     first.focus();
+    const rowHeight = board.grid.querySelector<HTMLElement>('.bd-row')?.getBoundingClientRect().height ?? 0;
+    expect(rowHeight).toBeGreaterThan(0);
+    const total = Number(board.grid.getAttribute('aria-rowcount')) / 3;
+    /** Every packed row that intersects the viewport (from the grid top and the fixed row height) is in the DOM. */
+    const expectWindowFollowsScroll = (step: number): void => {
+      const top = board.grid.getBoundingClientRect().top;
+      const firstInView = Math.max(0, Math.floor(-top / rowHeight));
+      const lastInView = Math.min(total - 1, Math.ceil((innerHeight - top) / rowHeight) - 1);
+      expect(lastInView).toBeGreaterThanOrEqual(firstInView);
+      for (let r = firstInView; r <= lastInView; r++)
+        expect(
+          board.grid.querySelector(`[data-row="${String(r)}"]`),
+          `row ${String(r)} at step ${String(step)}`,
+        ).not.toBeNull();
+    };
     const frameTimes: number[] = [];
-    let last = performance.now();
     for (let i = 0; i < 90; i++) {
+      const start = performance.now();
       window.scrollBy(0, 150);
       await frames(1);
-      const now = performance.now();
-      frameTimes.push(now - last);
-      last = now;
+      frameTimes.push(performance.now() - start);
+      await frames(1); // the board's scroll handler runs in a frame of its own (rAF), then the window re-renders
       expect(rows()).toBeLessThanOrEqual(15);
+      expectWindowFollowsScroll(i);
     }
     frameTimes.sort((a, b) => a - b);
     const median = frameTimes[Math.floor(frameTimes.length / 2)] ?? 0;
@@ -268,8 +346,6 @@ describe('virtualization (AD-27)', () => {
     expect(board.grid.querySelector('[data-row="0"]')).not.toBeNull();
     expect(document.activeElement).toBe(first);
     const height = board.grid.getBoundingClientRect().height;
-    const rowHeight = board.grid.querySelector<HTMLElement>('.bd-row')?.getBoundingClientRect().height ?? 0;
-    const total = Number(board.grid.getAttribute('aria-rowcount')) / 3;
     expect(height).toBeCloseTo(total * rowHeight, -1);
     window.scrollTo(0, 0);
   });
