@@ -14,7 +14,7 @@
       "entry": ["test/**/*.test.ts"]
     },
     "e2e": {
-      "entry": ["test/**/*.test.ts"]
+      "entry": ["test/**/*.test.ts", "visual/**/*.visual.ts"]
     }
   },
   "ignoreBinaries": ["uv"],
