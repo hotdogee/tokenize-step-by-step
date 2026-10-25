@@ -36,11 +36,12 @@
   contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h));
 }
 
+/* 480–767: the 136 px --row-h holds U+ labels, chunk brackets and the 16 px id line (05 §3.3), so the tiers sit flush. */
 @media (min-width: 480px) {
   .bd-row {
     grid-template-rows:
-      [source] var(--src-h) [bracket] 6px [char] 56px [bytes1] 26px [bytes2] 0 [chunk] 16px [token] 30px
-      [ids] 0;
+      [source] var(--src-h) [bracket] 6px [char] 48px [bytes1] 24px [bytes2] 0 [chunk] 14px [token] 28px
+      [ids] 16px;
   }
 }
 
@@ -117,6 +118,12 @@
 }
 
 @media (min-width: 480px) {
+  .bd-cell-char {
+    height: 48px;
+  }
+}
+
+@media (min-width: 768px) {
   .bd-cell-char {
     height: 54px;
   }
@@ -235,7 +242,7 @@
 
 .bd-slice.tinted {
   background: var(--surface-2);
-  background: color-mix(in oklch, var(--tint) 45%, var(--surface));
+  background: color-mix(in oklch, var(--tint) 25%, var(--surface));
 }
 
 .bd-slice.bd-cut::before {
@@ -495,6 +502,67 @@
 ::highlight(tsbs-selection) {
   background-color: var(--accent);
   color: var(--bg);
+}
+
+/* ---- ≥ 2560 px (05 §3.3): --row-h = 4·cell + 44 px; tracks, cells and type scale from --cell (type via clamp()) ---- */
+
+@media (min-width: 2560px) {
+  .bd-row {
+    grid-template-rows:
+      [source] var(--src-h) [bracket] 6px [char] calc(var(--cell) + 22px) [bytes1] calc(var(--cell) / 2 + 8px)
+      [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px)
+      [ids] calc(var(--cell) / 2);
+  }
+
+  .bd-cell-char {
+    height: calc(var(--cell) + 21px);
+  }
+
+  .bd-cell-byte {
+    height: calc(var(--cell) / 2 + 7px);
+  }
+
+  .bd-cell-chunk {
+    height: calc(var(--cell) / 4 + 5px);
+  }
+
+  .bd-cell-token {
+    height: calc(var(--cell) * 0.75 + 5px);
+  }
+
+  .bd-glyph {
+    margin-bottom: calc(var(--cell) * 0.3);
+    font-size: clamp(1.25rem, var(--cell) * 0.625, 1.75rem);
+  }
+
+  .bd-glyph.cjk {
+    font-size: clamp(1.375rem, var(--cell) * 0.6875, 1.875rem);
+  }
+
+  .bd-glyph.standin {
+    font-size: clamp(0.875rem, var(--cell) * 0.4375, 1.25rem);
+  }
+
+  .bd-ulabel,
+  .bd-piece {
+    font-size: clamp(0.5625rem, var(--cell) * 0.28, 0.8125rem);
+  }
+
+  .bd-face,
+  .bd-chip {
+    font-size: clamp(0.75rem, var(--cell) * 0.375, 1.0625rem);
+  }
+
+  .bd-chunk,
+  .bd-idl {
+    font-size: clamp(0.625rem, var(--cell) * 0.3125, 0.875rem);
+  }
+
+  .bd-src,
+  .bd-marker-text,
+  .bd-part-text {
+    font-size: clamp(0.6875rem, var(--cell) * 0.34, 0.9375rem);
+  }
 }
 
 /* ---- Pointer and preferences (05 §9, §11) ---- */

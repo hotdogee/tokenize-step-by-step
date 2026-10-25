@@ -1,13 +1,25 @@
 /**
  * Board component tests in chromium (06 §1 "Component"): the 05 §4.1 hard cases rendered from fixture results with DOM
- * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the APG grid's ARIA indices,
- * arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM), CSP-safe styling and axe.
+ * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks (id
+ * line from 480 px, ≥ 2560 px scaling from --cell), the APG grid's ARIA indices, arithmetic virtualization of a 60k-byte
+ * synthetic result (≤ 15 rows in the DOM), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import axe from 'axe-core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
-import { appWith, fixtureResult, frames, mountBoard, syntheticResult, type MountedBoard } from './board.test-helper.ts';
+import { packRows } from '@tsbs/core/layout/pack-rows';
+import {
+  appWith,
+  boardWidthFor,
+  cellPx,
+  expectedColumns,
+  fixtureResult,
+  frames,
+  mountBoard,
+  syntheticResult,
+  type MountedBoard,
+} from './board.test-helper.ts';
 import { columnsFor } from './geometry.ts';
 
 let mounted: MountedBoard | null = null;
@@ -30,16 +42,6 @@ const cell = (board: MountedBoard, selector: string): HTMLElement => {
   if (found === null) throw new Error(`no ${selector}`);
   return found;
 };
-
-/** The px width of `--cell` as the page resolves it now. */
-function cellPx(): number {
-  const probe = document.createElement('div');
-  probe.style.width = 'var(--cell)';
-  document.body.append(probe);
-  const width = probe.getBoundingClientRect().width;
-  probe.remove();
-  return width;
-}
 
 describe('05 §4.1 hard cases', () => {
   it('partial-character token: sliced background, hatched cuts, aria-label (cl100k 灣)', async () => {
@@ -153,13 +155,6 @@ describe('05 §4.1 hard cases', () => {
 });
 
 describe('K from the 05 §3.3 formula (never literals)', () => {
-  /** boardWidth = viewport minus the side rail where one exists, capped by the board max-width (05 §3.3). */
-  function boardWidthFor(viewport: number): number {
-    const rail = viewport >= 2560 ? 420 : viewport >= 1024 ? 320 : 0;
-    const cap = viewport >= 2560 ? 2400 : viewport >= 1440 ? 1600 : Number.POSITIVE_INFINITY;
-    return Math.min(viewport - rail, cap);
-  }
-
   for (const width of [360, 768, 1024, 1440, 3840]) {
     it(`at ${String(width)} px`, async () => {
       await page.viewport(width, 900);
@@ -174,15 +169,56 @@ describe('K from the 05 §3.3 formula (never literals)', () => {
   }
 });
 
+describe('row tracks by breakpoint (05 §3.3)', () => {
+  /** Rect of the first element matching `selector` inside the first packed row. */
+  const rectIn = (board: MountedBoard, selector: string): DOMRect | undefined =>
+    board.grid.querySelector('.bd-row')?.querySelector(selector)?.getBoundingClientRect();
+
+  it('puts the ids of 1–2-column chips on a 16 px id line from 480 px, inside the fixed row height', async () => {
+    await page.viewport(600, 900);
+    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    expect(cells(board, '.bd-idl').map((label) => label.textContent)).toEqual(['66285', '96']);
+    const row = board.grid.querySelector('.bd-row')?.getBoundingClientRect();
+    const rowHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--row-h'));
+    expect(row?.height).toBe(rowHeight);
+    const ids = rectIn(board, '.bd-ids');
+    expect(ids?.height).toBe(16);
+    expect(ids?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
+    expect(rectIn(board, '.bd-cell-token')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(ids?.top ?? 0);
+  });
+
+  it('keeps the ids in the sheet below 480 px', async () => {
+    await page.viewport(360, 780);
+    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    expect(cells(board, '.bd-idl')).toHaveLength(0);
+  });
+
+  it('scales the tracks, the cells and the type from --cell at ≥ 2560 px', async () => {
+    await page.viewport(3840, 900);
+    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    const cell = cellPx();
+    expect(cell).toBeGreaterThan(40);
+    const row = board.grid.querySelector('.bd-row')?.getBoundingClientRect();
+    expect(row?.height).toBeCloseTo(cell * 4 + 44, 0);
+    expect(rectIn(board, '.bd-cell-char')?.height).toBeCloseTo(cell + 21, 0);
+    expect(rectIn(board, '.bd-cell-token')?.height).toBeCloseTo(cell * 0.75 + 5, 0);
+    expect(rectIn(board, '.bd-ids')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
+    const glyph = board.grid.querySelector('.bd-glyph.cjk');
+    expect(Number.parseFloat(getComputedStyle(glyph ?? board.grid).fontSize)).toBeGreaterThan(22);
+  });
+});
+
 describe('APG layout grid ARIA (05 §8)', () => {
   it('indexes mounted rows and cells; fragments describe themselves', async () => {
     await page.viewport(360, 780);
     const result = fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
     const board = await show(result);
     const tiers = 3; // stage 6: char, hex, token
+    const K = expectedColumns(360);
+    expect(board.grid.getAttribute('aria-colcount')).toBe(String(K));
     const rowCount = board.grid.querySelectorAll('.bd-row').length;
+    expect(rowCount).toBe(packRows(result, K).length);
     expect(board.grid.getAttribute('aria-rowcount')).toBe(String(rowCount * tiers));
-    expect(board.grid.getAttribute('aria-colcount')).toBe('9');
     const ariaRows = cells(board, '[role="row"]');
     ariaRows.forEach((row, i) => {
       expect(row.getAttribute('aria-rowindex')).toBe(String(i + 1));

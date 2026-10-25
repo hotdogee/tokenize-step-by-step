@@ -13,6 +13,7 @@ import { AppState, type Stage } from '../app/app-state.svelte.ts';
 import { SHIPPING_FIXTURES } from '../app/fixtures.test-helper.ts';
 import { tokenizerEntry } from '../app/registry.ts';
 import BoardHarness from './BoardHarness.test-helper.svelte';
+import { columnsFor } from './geometry.ts';
 
 /** The fixture of `tokenizer` (throws when missing). */
 export function fixtureOf(tokenizer: TokenizerId): Fixture {
@@ -96,6 +97,28 @@ export async function mountBoard(app: AppState, width?: number): Promise<Mounted
       target.remove();
     },
   };
+}
+
+/** The px width of `--cell` as the page resolves it now. */
+export function cellPx(): number {
+  const probe = document.createElement('div');
+  probe.style.width = 'var(--cell)';
+  document.body.append(probe);
+  const width = probe.getBoundingClientRect().width;
+  probe.remove();
+  return width;
+}
+
+/** boardWidth at a viewport width: minus the side rail where one exists, capped by the board max-width (05 §3.3). */
+export function boardWidthFor(viewport: number): number {
+  const rail = viewport >= 2560 ? 420 : viewport >= 1024 ? 320 : 0;
+  const cap = viewport >= 2560 ? 2400 : viewport >= 1440 ? 1600 : Number.POSITIVE_INFINITY;
+  return Math.min(viewport - rail, cap);
+}
+
+/** K the 05 §3.3 formula gives for a full-width board at `viewport` px with the measured `--cell` (never a literal). */
+export function expectedColumns(viewport: number): number {
+  return columnsFor(boardWidthFor(viewport), cellPx());
 }
 
 /** Resolves after `n` animation frames (layout, ResizeObserver callbacks and Svelte flushes in between). */

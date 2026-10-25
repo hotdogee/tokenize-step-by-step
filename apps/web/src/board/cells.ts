@@ -43,7 +43,7 @@ export interface BoardContext {
   readonly pending: boolean;
   /** U+ labels under glyphs (stop ≥ 2 and viewport ≥ 480 px). */
   readonly uLabels: boolean;
-  /** Ids of 1–2-column chips on the id line beneath (viewport ≥ 768 px; below that they live in the sheet). */
+  /** Ids of 1–2-column chips on the id line beneath (viewport ≥ 480 px, 05 §3.3; below that they live in the sheet). */
   readonly idLine: boolean;
   /** Grapheme brackets shown (the `g` toggle, and the segmenter is not the fallback). */
   readonly brackets: boolean;

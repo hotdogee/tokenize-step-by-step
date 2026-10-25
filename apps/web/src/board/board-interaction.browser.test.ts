@@ -1,13 +1,24 @@
 /**
  * Board interaction in chromium (05 §5, §6, §8, §9): the APG keyboard state machine on a 3-row fixture (o200k `ja-text`
- * at 360 px, K = 9) with one roving tab stop, ↑/↓ edge no-ops, Enter/Space pin, `i` into the inspector and Esc back,
- * Esc unpins then returns to the textarea, `c` copies; focus persistence by byte offset across re-tokenization; the
- * inspector region on its three surfaces; hover after 120 ms; click pins; textarea selection sync.
+ * at 360 px, K from the formula) with one roving tab stop, ↑/↓ edge no-ops, Enter/Space pin, `i` into the inspector and
+ * Esc back, Esc unpins then returns to the textarea, `c` copies; focus persistence by byte offset across
+ * re-tokenization; a tab stop on a lone BOS marker; the inspector region on its three surfaces (the anchored panel below
+ * the row, flipped above it near the viewport bottom); hover after 120 ms; keyboard input taking the inspector back from
+ * a resting pointer; click pins; textarea selection sync.
  */
 import '../theme/base.css';
 import { afterEach, describe, expect, it } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
-import { appWith, fixtureResult, frames, mountBoard, type MountedBoard } from './board.test-helper.ts';
+import { packRows } from '@tsbs/core/layout/pack-rows';
+import {
+  appWith,
+  expectedColumns,
+  fixtureResult,
+  frames,
+  mountBoard,
+  syntheticResult,
+  type MountedBoard,
+} from './board.test-helper.ts';
 
 let mounted: MountedBoard | null = null;
 
@@ -40,8 +51,11 @@ async function press(keys: string): Promise<void> {
 describe('keyboard state machine on a 3-row fixture (05 §8)', () => {
   it('moves by unit, changes tier by byte anchor, and keeps one tab stop', async () => {
     await page.viewport(360, 780);
-    const board = await show(fixtureResult('openai-o200k_base', 'ja-text'));
-    expect(board.grid.getAttribute('aria-colcount')).toBe('9');
+    const result = fixtureResult('openai-o200k_base', 'ja-text');
+    const board = await show(result);
+    const K = expectedColumns(360);
+    expect(board.grid.getAttribute('aria-colcount')).toBe(String(K));
+    expect(packRows(result, K)).toHaveLength(3); // the tour below walks a 3-row layout
     expect(board.grid.querySelectorAll('.bd-row')).toHaveLength(3);
     board.grid.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
     expect(focused()).toBe('char:0');
@@ -203,6 +217,32 @@ describe('inspector region (05 §5, AD-34)', () => {
     const cellRect = cell?.getBoundingClientRect();
     const hostRect = host?.getBoundingClientRect();
     expect(hostRect?.top ?? 0).toBeGreaterThanOrEqual(cellRect?.bottom ?? 0);
+  });
+
+  it('flips the anchored panel above the row when it does not fit below', async () => {
+    await page.viewport(900, 1000);
+    const text = Array.from({ length: 400 }, (_, i) => String.fromCodePoint(0x4e00 + i)).join('');
+    const board = await show(syntheticResult(text));
+    const host = board.target.querySelector<HTMLElement>('[data-testid="inspector-host"]');
+    board.grid.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
+    await frames(3);
+    const panelHeight = host?.getBoundingClientRect().height ?? 0;
+    expect(panelHeight).toBeGreaterThan(0);
+    expect(panelHeight).toBeLessThan(innerHeight - 160); // 60vh at most: room above a row at the bottom
+    // Scroll packed row 8 to the bottom edge of the viewport: no room below it, room above.
+    const rowPx = board.grid.querySelector('.bd-row')?.getBoundingClientRect().height ?? 0;
+    const gridTop = board.grid.getBoundingClientRect().top + scrollY;
+    window.scrollTo(0, gridTop + 9 * rowPx - (innerHeight - 2));
+    await frames(3);
+    const row = board.grid.querySelector<HTMLElement>('[data-row="8"]');
+    row?.querySelector<HTMLElement>('[data-tier="char"]')?.focus({ preventScroll: true });
+    await frames(3);
+    const rowRect = row?.getBoundingClientRect();
+    const hostRect = host?.getBoundingClientRect();
+    expect(rowRect?.bottom ?? 0).toBeGreaterThan(innerHeight - 10);
+    expect(hostRect?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual((rowRect?.top ?? 0) + 0.5);
+    expect(hostRect?.top ?? -1).toBeGreaterThanOrEqual(0);
+    window.scrollTo(0, 0);
   });
 
   it('is a bottom sheet with an aria-expanded handle below 768 px and pads the scroll container', async () => {
