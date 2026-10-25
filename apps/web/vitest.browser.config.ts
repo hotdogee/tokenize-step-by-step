@@ -4,7 +4,9 @@
  * `pnpm test:browser` (chained into `pnpm test`). They need Playwright's chromium for the pinned `playwright`
  * (`pnpm --filter @tsbs/e2e exec playwright install chromium`, the same version). On a developer machine without it the
  * project collects no files and says so, rather than failing every unit run; under CI (`CI` set) a missing chromium is
- * an error, so the component tests can never pass by running nothing.
+ * an error, so the component tests can never pass by running nothing. The error is raised only when Vitest itself loads
+ * the config (`VITEST` set): tools that merely import it to read the project (knip's vitest plugin in the `check` job,
+ * which has no browsers) get the skipped project instead.
  */
 import { existsSync } from 'node:fs';
 import process from 'node:process';
@@ -25,10 +27,11 @@ function chromiumInstalled(): boolean {
 }
 
 const CI = process.env['CI'] !== undefined && process.env['CI'] !== '';
+const RUNNING_VITEST = process.env['VITEST'] === 'true';
 const INSTALL = 'pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium';
 const enabled = chromiumInstalled();
 if (!enabled) {
-  if (CI)
+  if (CI && RUNNING_VITEST)
     throw new Error(
       `[web-browser] Playwright chromium is not installed, and CI never skips the component tests (${INSTALL}).`,
     );
