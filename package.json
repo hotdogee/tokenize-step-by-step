@@ -33,7 +33,7 @@
     "format:check": "prettier --check .",
     "knip": "knip --no-config-hints",
     "build": "pnpm vocab:build && pnpm --filter @tsbs/web build && pnpm check:dist && pnpm exec wrangler deploy --dry-run",
-    "check:dist": "node scripts/check-dist.ts && size-limit --config size-limit.json --ignore-missing",
+    "check:dist": "node scripts/check-dist.ts && tsbs-vocab guard --dist apps/web/dist && size-limit --config size-limit.json --ignore-missing",
     "lhci": "node scripts/pending.ts lhci WP11 --skip",
     "deploy": "wrangler deploy",
     "preview:pr": "node scripts/preview-pr.ts",
