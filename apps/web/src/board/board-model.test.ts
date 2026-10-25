@@ -17,7 +17,7 @@ import {
 } from './geometry.ts';
 import { navigate, navKeyOf, resolveAnchor, type NavKey } from './navigation.ts';
 import type { CellRef } from './units.ts';
-import { mountedRows, spacers, VIRTUALIZE_ABOVE, visibleRows } from './window.ts';
+import { mountedRows, shouldVirtualize, spacers, VIRTUALIZE_CELLS, VIRTUALIZE_ROWS, visibleRows } from './window.ts';
 
 describe('K = clamp(8, floor((boardWidth − 2·gutter) / cell), 64) (05 §3.3)', () => {
   const formula = (width: number, cell: number): number =>
@@ -83,7 +83,11 @@ describe('arithmetic windowing (AD-27)', () => {
     expect(visibleRows(1720, 900, 172, 400)).toEqual({ first: 8, last: 17 });
     expect(visibleRows(-300, 900, 172, 400)).toEqual({ first: 0, last: 5 });
     expect(visibleRows(1e9, 900, 172, 400)).toEqual({ first: 399, last: 399 });
-    expect(VIRTUALIZE_ABOVE).toBeGreaterThan(0);
+    // PA-11: whichever bound comes first, 600 cells or 8 packed rows.
+    expect([VIRTUALIZE_CELLS, VIRTUALIZE_ROWS]).toEqual([600, 8]);
+    expect([shouldVirtualize(600, 8), shouldVirtualize(601, 2), shouldVirtualize(100, 9)]).toEqual([false, true, true]);
+    expect(visibleRows(0, 900, 172, 20, 2, true)).toEqual({ first: 0, last: 7 }); // virtualized (over 600 cells): window + overscan
+    expect(visibleRows(1720, 900, 172, 30, 2, false)).toEqual({ first: 0, last: 29 });
   });
 
   it('always keeps the focused and pinned rows and pads the gaps with spacers', () => {

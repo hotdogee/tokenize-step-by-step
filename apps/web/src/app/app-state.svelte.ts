@@ -142,7 +142,7 @@ function sameTokenOptions(result: TokenizationResult, options: EncodeOptions): b
 }
 
 /** The text-only result of a long text: a window of about `WINDOW_BYTES` bytes around the caret (code-point safe). */
-function textWindow(text: string, caret: number, tokenizer: TokenizerId, entry: TokenizerEntry): TokenizationResult {
+function textWindowRange(text: string, caret: number): readonly [start: number, end: number] {
   // UTF-8 is at most 3 bytes per UTF-16 unit, so this many units cover the window; whole code points only.
   const units = Math.ceil(WINDOW_BYTES / 3);
   const centre = Math.round(Math.min(Math.max(0, caret), text.length) / units) * units;
@@ -151,7 +151,7 @@ function textWindow(text: string, caret: number, tokenizer: TokenizerId, entry: 
   const low = (i: number): boolean => i > 0 && i < text.length && (text.charCodeAt(i) & 0xfc00) === 0xdc00;
   if (low(start)) start--;
   if (low(end)) end++;
-  return textOnlyResult(text.slice(start, end), tokenizer, entry.family);
+  return [start, end];
 }
 
 export class AppState {
@@ -221,6 +221,10 @@ export class AppState {
   /** The window slicer (`window-slice.ts`), imported when a text first reaches an on-demand tier (not startup code). */
   #slicer: typeof WindowSliceModule | null = $state.raw(null);
   #slicerImport: Promise<void> | null = null;
+  /** The last window slice (kept while the caret stays inside the same window). */
+  #slice: { of: TokenizationResult; start: number; end: number; slice: TokenizationResult } | null = null;
+  /** The last text-only window of a long text. */
+  #textWindow: { text: string; start: number; end: number; slice: TokenizationResult } | null = null;
   /** The capped text's analysed prefix, kept for the text it was cut from. */
   #analysed = { text: '', value: '' };
 
@@ -342,9 +346,31 @@ export class AppState {
       const slicer = this.#slicer;
       if (result !== null && slicer !== null && !this.composing && this.#isCurrent(result)) {
         const window = slicer.windowAround(result, slicer.byteAtUtf16(result, Math.min(this.caret, text.length)));
-        return { result: slicer.sliceResult(result, window), kind: 'final', window };
+        // A caret move inside the same window keeps the same slice object, so the board does not re-render.
+        const cached = this.#slice;
+        if (cached?.of !== result || cached.start !== window.start || cached.end !== window.end)
+          this.#slice = { of: result, start: window.start, end: window.end, slice: slicer.sliceResult(result, window) };
+        return { result: this.#slice?.slice ?? result, kind: 'final', window };
       }
-      return { result: textWindow(text, this.caret, this.tokenizer, entry), kind: 'text', window: null };
+      const [start, end] = textWindowRange(text, this.caret);
+      const cached = this.#textWindow;
+      if (
+        cached?.text !== text ||
+        cached.start !== start ||
+        cached.end !== end ||
+        cached.slice.tokenizer !== this.tokenizer
+      )
+        this.#textWindow = {
+          text,
+          start,
+          end,
+          slice: textOnlyResult(text.slice(start, end), this.tokenizer, entry.family),
+        };
+      return {
+        result: this.#textWindow?.slice ?? textOnlyResult('', this.tokenizer, entry.family),
+        kind: 'text',
+        window: null,
+      };
     }
     if (this.composing)
       return { result: textOnlyResult(this.text, this.tokenizer, entry.family), kind: 'text', window: null };

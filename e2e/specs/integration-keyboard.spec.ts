@@ -49,13 +49,16 @@ async function expectFocus(page: Page, region: string): Promise<void> {
   expect(state.visible, `visible focus at ${state.where}`).toBe(true);
 }
 
-/** Tabs (or Shift+Tabs) until focus is in `region`, checking the indicator at every stop on the way. */
-async function tabTo(page: Page, region: string, backwards = false): Promise<void> {
+/**
+ * Tabs (or Shift+Tabs) until focus is in `region` (on an element of `role`, when given), checking the indicator at every
+ * stop on the way. Firefox also stops on scrollable containers (the chip row), hence the role.
+ */
+async function tabTo(page: Page, region: string, backwards = false, role?: string): Promise<void> {
   for (let i = 0; i < MAX_PRESSES; i++) {
     await page.keyboard.press(backwards ? 'Shift+Tab' : 'Tab');
     const state = await focusState(page);
     expect(state.visible, `visible focus at ${state.where}`).toBe(true);
-    if (state.where.startsWith(`${region}:`)) return;
+    if (state.where.startsWith(`${region}:`) && (role === undefined || state.where.endsWith(`:${role}`))) return;
   }
   throw new Error(`Tab never reached ${region}`);
 }
@@ -75,7 +78,7 @@ test('keyboard-only tour: textarea → chips → picker → board → rail → s
   expect(await page.evaluate(() => document.activeElement?.id)).toBe('text-input');
 
   // Chips: one tab stop, arrows move, Enter applies.
-  await tabTo(page, 'chips');
+  await tabTo(page, 'chips', false, 'option');
   await page.keyboard.press('ArrowRight');
   await expectFocus(page, 'chips');
   await page.keyboard.press('Enter');

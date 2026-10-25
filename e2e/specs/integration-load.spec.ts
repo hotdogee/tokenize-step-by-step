@@ -158,7 +158,14 @@ for (const [id, name] of TOKENIZERS) {
         ['\n\n', 108],
         ['   ', 139],
       ] as const) {
-        await page.locator('#text-input').fill(text);
+        // Set as a paste would (Playwright's fill() of "\t" on WebKit makes the editor try an inline style attribute,
+        // which the strict CSP rightly refuses; a user cannot type a tab into the textarea anyway).
+        await page.locator('#text-input').evaluate((el, value) => {
+          const input = el as HTMLTextAreaElement;
+          input.value = value;
+          input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: value }));
+        }, text);
+        await expect(page.getByTestId('counts')).toContainText(`${String(text.length)} byte`);
         await expect(grid(page)).not.toHaveAttribute('data-pending', '');
         const cells = await tokenCells(page);
         expect(cells, JSON.stringify(text)).toHaveLength(1);

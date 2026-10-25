@@ -263,6 +263,13 @@ describe('long input tiers (AD-27)', () => {
     expect(app.board.kind).toBe('final');
     expect(app.board.window).not.toBeNull();
     expect(app.board.result.utf8.length).toBeLessThanOrEqual(2000);
+    // A caret move inside the same window keeps the same slice (no board re-render); a far one moves the window.
+    const slice = app.board.result;
+    app.setCaret(app.caret + 1);
+    expect(app.board.result).toBe(slice);
+    app.setCaret(10_000);
+    expect(app.board.window?.start).toBeGreaterThan(8000);
+    expect(app.board.result).not.toBe(slice);
     expect(app.countsResult?.stats.tokens).toBe(20_001);
     expect(app.resultStale).toBe(false);
     // An edit makes the tokens stale; the counts keep the last run's values.

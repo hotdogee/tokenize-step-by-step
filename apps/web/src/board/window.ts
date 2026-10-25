@@ -11,8 +11,6 @@ export const OVERSCAN = 2;
 export const VIRTUALIZE_CELLS = 600;
 /** PA-11: a board with more packed rows than this is virtualized. */
 export const VIRTUALIZE_ROWS = 8;
-/** Boards with at most this many packed rows (and at most `VIRTUALIZE_CELLS` cells) mount every row. */
-export const VIRTUALIZE_ABOVE = VIRTUALIZE_ROWS;
 
 /** Whether a board of `cells` grid cells in `rows` packed rows mounts only its window (PA-11: whichever bound first). */
 export function shouldVirtualize(cells: number, rows: number): boolean {

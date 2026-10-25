@@ -118,24 +118,32 @@ test('the board is a window of the whole-text result: ids at both window edges e
     el.scrollIntoView({ block: 'start' });
   });
   await expect.poll(async () => (await mountedIds(page)).has(0)).toBe(true);
-  const head = await mountedIds(page);
-  for (let i = 0; i < 12; i++) {
-    const want = expected[first + i];
-    if (want?.id !== null && want !== undefined)
-      expect(head.get(i), `token ${String(i)} at the window start`).toBe(want.id);
-  }
+  /** Compares the mounted tokens among `indices` (a narrow phone mounts fewer) with the whole-text tokens. */
+  const compare = (ids: Map<number, number>, indices: readonly number[], edge: string): void => {
+    const mounted = indices.filter((i) => ids.has(i));
+    expect(mounted.length, `tokens mounted at the window ${edge}`).toBeGreaterThanOrEqual(3);
+    for (const i of mounted) {
+      const want = expected[first + i];
+      if (want !== undefined && want.id !== null)
+        expect(ids.get(i), `token ${String(i)} at the window ${edge}`).toBe(want.id);
+    }
+  };
+  compare(
+    await mountedIds(page),
+    Array.from({ length: 12 }, (_, i) => i),
+    'start',
+  );
   // Window end: the last rows.
   const count = last - first + 1;
   await grid(page).evaluate((el) => {
     el.scrollIntoView({ block: 'end' });
   });
   await expect.poll(async () => (await mountedIds(page)).has(count - 1)).toBe(true);
-  const tail = await mountedIds(page);
-  for (let i = count - 12; i < count; i++) {
-    const want = expected[first + i];
-    if (want?.id !== null && want !== undefined)
-      expect(tail.get(i), `token ${String(i)} at the window end`).toBe(want.id);
-  }
+  compare(
+    await mountedIds(page),
+    Array.from({ length: 12 }, (_, i) => count - 12 + i),
+    'end',
+  );
   await expect(counts(page)).toContainText(`${expected.length.toLocaleString('en-US')} tokens`);
 });
 
