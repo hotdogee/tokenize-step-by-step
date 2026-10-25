@@ -399,9 +399,9 @@ Resident memory (o200k): 1.56 MB PCES copy + 0.8 MB offsets + 2 MB hash table �
 | xai-grok2 | `tokenizer.tok.json` 7,544 KB | 936 KB (+ 3 KB SPCL) | **≈ 601 KB** | 498 KB | 606 KB | 6 ms |
 | anthropic-claude-legacy | `claude.json` 680 KB | 464 KB | **277 KB** | 233 KB | 279 KB | 4 ms |
 | google-gemma4 | `tokenizer.json` 31,416 KB (> 25 MiB cap) | 3,782 KB (PCES 2,518 + TYPS 256 + MRGS 1,007) | **≈ 1,620 KB** | ≈ 1,270 KB | 1,650 KB | 13 + 10 ms |
-| google-gemma2 (est. from Gemma 3 ratio) | `tokenizer.model` 4,142 KB | ≈ 3,030 KB | **≈ 1,410 KB** | ≈ 1,090 KB | ≈ 1,400 KB | ≈ 13 ms |
+| google-gemma2 | `tokenizer.model` 4,142 KB | 2,638 KB (PCES 2,137 + TYPS 250 + PRIO 250 + SPCL) | **1,277 KB** | 1,022 KB | 1,286 KB | ≈ 15 ms (est.) |
 | xai-grok1 | `tokenizer.model` 2,177 KB | 1,407 KB (PCES 1,151 + TYPS 128 + PRIO ≈ 128) | **615 KB** | 514 KB | 618 KB | 7 ms |
-| **All nine** | | ≈ 14.4 MiB | **≈ 7.6 MiB** | ≈ 6.1 MiB | | |
+| **All nine** | | ≈ 13.8 MiB | **≈ 7.3 MiB** | ≈ 5.9 MiB | | |
 
 Largest single file ≈ 3.8 MiB raw / 1.6 MiB on the wire — 15 % of the 25 MiB cap (research §6.2). First visit = app (≤ 123 KB transfer excluding the vocabulary, 06 §3) + o200k 1,025 KB. gzip-9 is within 2–3 % of what the edge would produce (zstd-3 / br-4 columns), so edge compression would save nothing (AD-10).
 
