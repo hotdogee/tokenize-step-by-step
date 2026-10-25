@@ -13,7 +13,7 @@
 ```sh
 pnpm install
 pnpm dev                       # vite dev on apps/web (CSP omitted so HMR works, PA-2b)
-pnpm lint && pnpm typecheck && pnpm format:check && pnpm test
+pnpm lint && pnpm typecheck && pnpm format:check && pnpm test   # lint/typecheck/test first run `pnpm generate` (gitignored apps/web/src/generated/*.json)
 CONFORMANCE_MODE=skip-missing-engine pnpm build   # vocab:build → vite build → check:dist → wrangler deploy --dry-run
 pnpm --filter @tsbs/web preview                     # production bundle with every _headers line, CSP included
 ```

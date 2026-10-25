@@ -205,11 +205,12 @@ Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esb
 | `pnpm vocab:verify` | re-decode every `.bin`, check sha256, round-trip against raw |
 | `pnpm unicode:export` / `pnpm unicode:check` | Python export of the Unicode 16.0 tables → `tools/oracle/unicode_tables.json`, then `scripts/unicode-tables.ts` converts it to TS / Node-only diff gate: `tables.generated.ts` vs the committed JSON (the fresh-export diff is `oracle:check`'s `export_unicode_tables.py --check`) |
 | `pnpm registry:check` | zod validation + cross-refs + negative tests |
-| `pnpm test` | `vitest run` across the workspace (core, conformance, worker, registry, web units/components) |
+| `pnpm generate` | `node apps/web/plugins/generate.ts`: writes the gitignored `apps/web/src/generated/{examples-default,examples-index,licences}.json` through `@tsbs/vocab-tools` (the same data the Vite plugins emit); chained before `lint`, `typecheck` and `test` so they see the files without a Vite run (`vocab-manifest.json` is still written by the `vocabAssets()` plugin only) |
+| `pnpm test` | `pnpm generate && vitest run` across the workspace (core, conformance, worker, registry, web units/components) |
 | `pnpm test:fuzz` | Node fuzz vs npm oracles (nightly; seed printed) |
 | `pnpm e2e` | Playwright functional suites (chromium, firefox, webkit, Pixel 5, iPhone 12, 320/360/2560 viewports) against `vite preview` (+ `headersMiddleware`) |
 | `pnpm e2e:headers` | header-dependent suites (CSP violations, `/tok/*` `Content-Type`/nosniff/CORP, `404.html`, dotfile guard, `/index.html` → `/`) against `wrangler dev --assets apps/web/dist` (workerd applies `_headers`); in `preview.yml` the same suite runs against the `wrangler preview` URL |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` / `pnpm knip` | eslint · `tsc -b` + `svelte-check` · prettier · dead code |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` / `pnpm knip` | `pnpm generate &&` eslint · `pnpm generate &&` `tsc -b` + `svelte-check` · prettier · dead code |
 | `pnpm build` | `vocab:build` (cached by manifest + tools hash) → `vite build` → `check:dist` → `wrangler deploy --dry-run` |
 | `pnpm check:dist` | `size-limit`, 25 MiB / 20,000-file guards, dotfile guard, manifest ↔ files cross-check, `_headers` rule count |
 | `pnpm lhci -- --url <preview url>` | `@lhci/cli autorun` (mobile preset) against the **deployed preview URL** (real edge compression, `_headers`, HTTP/3); `vite preview` serves uncompressed bytes and is never a budget target |
