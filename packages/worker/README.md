@@ -46,5 +46,8 @@ shell when `data/vocab/dist` is absent) and `src/generated/engine-config.json` (
 - `pnpm exec vitest run --project worker-browser` — chromium (Vitest browser mode): the production entry loads the
   built `.bin`, cache hit, integrity failure, lazy engine chunks, tables released before `load`, cancellation. Skips
   without chromium (`pnpm exec playwright install chromium`) or without `data/vocab/dist`.
-- `TSBS_PERF=1 NODE_OPTIONS=--expose-gc pnpm exec vitest run --project worker` — also prints the cancel latency, the
-  host-chunk size and the Node heap delta of a resident o200k.
+- `TSBS_PERF=1 NODE_OPTIONS=--expose-gc pnpm exec vitest run --project worker --no-file-parallelism` — also prints the
+  cancel latency and the host-chunk size, and asserts the Node heap delta of a resident o200k (≤ 8 MB, released on
+  unload) and the Worker heap check of 06 §3 (`test/heap.test.ts`: 500 keystrokes into a 10k-CJK paragraph grow
+  `heapUsed + external` by < 10 MB, o200k and Gemma 4). Timing runs are serial (one file at a time): a parallel run
+  shares the CPU and has pushed a ceiling over. `pnpm test:perf` runs every `TSBS_PERF` test of core and worker that way.

@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { syntheticMeta, utf8, writeTsbv1 } from '../../src/format/__tests__/tsbv1-writer.ts';
 import type { ByteVocabStats } from '../../src/format/byte-vocab.ts';
 import { mergeRankOf, PieceType, readTsbv1 } from '../../src/format/tsbv1.ts';
+import { NODE_CEILING_MS } from '../helpers/ceilings.ts';
 import { PERF_BUDGETS, time } from '../helpers/perf.ts';
 import { RAW_VOCABS, rawVocabPath, readRawVocab } from '../helpers/raw-vocab.ts';
 import { findRawVocabDir } from '../helpers/repo.ts';
@@ -63,7 +64,7 @@ describe.skipIf(o200kPath === null)('o200k_base container', () => {
     const { buf } = fixture();
     const { cold, median } = time(() => readTsbv1(buf), 7);
     console.info(`[bench] o200k readTsbv1: median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms)`);
-    expect(median).toBeLessThanOrEqual(25);
+    expect(median).toBeLessThanOrEqual(NODE_CEILING_MS.initO200k);
   });
 });
 
@@ -130,6 +131,6 @@ describe.skipIf(gemma4Path === null)('google-gemma4 container with MRGS', () => 
     console.info(
       `[bench] gemma4 readTsbv1 (PCES + TYPS + MRGS → CSR): median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms)`,
     );
-    expect(median).toBeLessThanOrEqual(40);
+    expect(median).toBeLessThanOrEqual(NODE_CEILING_MS.initGemma4);
   });
 });

@@ -30,6 +30,8 @@
     "test": "pnpm generate && vitest run && pnpm test:browser",
     "test:browser": "vitest run --config apps/web/vitest.browser.config.ts",
     "test:fuzz": "node packages/core/test/fuzz/cli.ts",
+    "test:perf": "pnpm generate && vitest run --project core --project worker --no-file-parallelism -t TSBS_PERF",
+    "bench": "vitest bench --run --config packages/core/test/bench/vitest.bench.config.ts --outputJson node_modules/.cache/tsbs/bench.json && node packages/core/test/bench/check-bench.ts",
     "e2e": "pnpm --filter @tsbs/e2e e2e",
     "e2e:shell": "pnpm e2e shell",
     "e2e:headers": "pnpm --filter @tsbs/e2e e2e:headers",

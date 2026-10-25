@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { encodePieces } from '../../src/format/__tests__/tsbv1-writer.ts';
 import { byteVocabFromBuffer, MAX_PROBE_LENGTH } from '../../src/format/byte-vocab.ts';
+import { NODE_CEILING_MS } from '../helpers/ceilings.ts';
 import { PERF_BUDGETS, time } from '../helpers/perf.ts';
 import { RAW_VOCABS, rawVocabPath, readRawVocab, type RawVocabSource } from '../helpers/raw-vocab.ts';
 import { findRawVocabDir } from '../helpers/repo.ts';
@@ -91,6 +92,6 @@ describe.skipIf(o200kPath === null)('o200k_base specifics', () => {
       `[bench] o200k ByteVocab init: median ${median.toFixed(1)} ms (cold ${cold.toFixed(1)} ms); resident ` +
         `${(vocab.residentBytes / 2 ** 20).toFixed(2)} MB; max probe ${String(vocab.maxProbe)}`,
     );
-    expect(median).toBeLessThanOrEqual(25);
+    expect(median).toBeLessThanOrEqual(NODE_CEILING_MS.initO200k);
   });
 });
