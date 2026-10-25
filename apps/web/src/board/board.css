@@ -131,8 +131,10 @@
   cursor: pointer;
 }
 
+/* The ring is drawn on `> .bd-vis` (below): no outline here, or base.css would add a second one in forced colours. */
 .bd-cell:focus-visible {
   z-index: 2;
+  outline: none;
   box-shadow: none;
 }
 

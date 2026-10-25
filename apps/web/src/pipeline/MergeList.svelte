@@ -185,9 +185,17 @@
     font-weight: 600;
   }
 
+  /*
+   * Forced colours drop the backgrounds: the current step gets a Highlight bar on its inline-start edge and keyboard focus
+   * the solid outline, so the two stay apart while arrowing through the list (and both show on the current row).
+   */
   @media (forced-colors: active) {
-    .row:focus-visible,
     .row[aria-current='step'] {
+      padding-inline-start: calc(0.5rem - 4px);
+      border-inline-start: 4px solid Highlight;
+    }
+
+    .row:focus-visible {
       outline: 2px solid Highlight;
       outline-offset: -2px;
     }

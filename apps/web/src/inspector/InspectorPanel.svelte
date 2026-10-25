@@ -146,6 +146,14 @@
     box-shadow: var(--focus);
   }
 
+  /* `outline: none` above outranks the forced-colours ring of base.css (where box-shadow is dropped): restate it. */
+  @media (forced-colors: active) {
+    .panel:focus-visible {
+      outline: 2px solid Highlight;
+      outline-offset: 2px;
+    }
+  }
+
   .head {
     display: flex;
     flex-wrap: wrap;

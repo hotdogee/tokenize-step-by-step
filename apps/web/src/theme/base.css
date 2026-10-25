@@ -215,8 +215,18 @@ dialog::backdrop {
   }
 }
 
+/*
+ * Forced colours (Windows High Contrast, 05 §11) drop box-shadow, so the focus ring above vanishes there: every
+ * focusable element gets a Highlight outline instead (WCAG 2.4.7). Components that draw their ring on another element
+ * (board cells on `.bd-vis`, rail stops through :focus-within, the scrubber, merge rows) set their own.
+ */
 @media (forced-colors: active) {
   .btn {
     border-color: ButtonText;
+  }
+
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
   }
 }
