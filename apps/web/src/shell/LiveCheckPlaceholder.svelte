@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * TODO(WP-integration): placeholder region for the BYOK drawer (WP10 owns `src/byok`). It keeps the drawer's place in
+   * TODO(WP10): placeholder region for the BYOK drawer (WP10 owns `src/byok`). It keeps the drawer's place in
    * the tab order (after the footer, 05 §8) and is the target of the picker's "Claude 3+ → live check" row.
    */
   import { i18n } from '../i18n/locale.svelte.ts';

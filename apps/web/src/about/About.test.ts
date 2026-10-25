@@ -20,7 +20,7 @@ afterAll(() => {
   i18n.current = 'en';
 });
 
-describe('licence data (TODO(WP-integration): stub of licences.generated.json)', () => {
+describe('licence data (licences.generated.json via src/generated/licences.json)', () => {
   const shipped = MANIFEST_ASSETS.filter((asset) => asset.shipIntent === 'ship');
 
   it('covers exactly the manifest ship assets', () => {
@@ -37,8 +37,19 @@ describe('licence data (TODO(WP-integration): stub of licences.generated.json)',
     }
   });
 
-  it('builds /licenses/<assetId>/<file> URLs', () => {
+  it('builds /licenses/<assetId>/<file> URLs, the paths the licences() plugin serves the texts at', () => {
     expect(licenceTextUrl('meta-llama3-model', 'NOTICE.txt')).toBe('/licenses/meta-llama3-model/NOTICE.txt');
+    const raw = import.meta.glob<string>('../generated/licences.json', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    });
+    const generated = JSON.parse(Object.values(raw)[0] ?? '{}') as {
+      assets: Array<{ assetId: string; texts: Array<{ name: string; path: string }> }>;
+    };
+    expect(generated.assets.length).toBe(shipped.length);
+    for (const asset of generated.assets)
+      for (const text of asset.texts) expect(licenceTextUrl(asset.assetId, text.name)).toBe(text.path);
   });
 });
 
@@ -77,7 +88,7 @@ describe('About page (server-rendered)', () => {
   it('has the fidelity table and the keyboard setting', () => {
     i18n.current = 'en';
     const body = render(About).body;
-    expect(body).toContain('Claude 3 → 5.5 / Fable / Mythos');
+    expect(body).toContain('Claude Opus 5.5');
     expect(body).toContain('live check only');
     expect(body).toContain('role="switch"');
   });

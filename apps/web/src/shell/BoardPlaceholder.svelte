@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * TODO(WP-integration): placeholder for the alignment board (WP08 owns `src/board`). It holds the board's region with
+   * TODO(WP08): placeholder for the alignment board (WP08 owns `src/board`). It holds the board's region with
    * the right role (`role="grid"`, one tab stop, `aria-rowcount`/`aria-colcount`, `aria-rowindex`/`aria-colindex`/
    * `aria-colspan`) and a reserved height (`--row-h`), and renders the char, byte and token tiers of the first 64 code
    * points as one strip so the shell is usable before WP08 lands. It claims the WCAG 1.4.10 two-dimensional exemption

@@ -1,11 +1,12 @@
 <script lang="ts">
   /**
    * Notices strip (05 §15): while tokenizer T is selected, every key of `requiredNotices` renders above the footer —
-   * explanatory text in the UI locale, legal strings verbatim (marked `lang="en"`, never translated). It is never collapsed
-   * and wraps at 360 px; with no notices it renders nothing.
+   * explanatory text in the UI locale, legal strings verbatim (marked `lang="en"`, never translated), each linked to its
+   * first licences.json link; `prominent` notices ("Powered by xAI", "Built with Meta Llama 3") are heading-sized. It is
+   * never collapsed and wraps at 360 px; with no notices it renders nothing.
    */
   import type { NoticeKey, TokenizerEntry } from '@tsbs/registry';
-  import { NOTICES } from '../app/registry-stub.ts';
+  import { notice, noticeText } from '../app/registry.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
 
   interface Props {
@@ -13,7 +14,18 @@
   }
   let { entry }: Props = $props();
 
-  const notices = $derived(entry.requiredNotices.map((key: NoticeKey) => ({ key, ...NOTICES[key] })));
+  const notices = $derived(
+    entry.requiredNotices.map((key: NoticeKey) => {
+      const found = notice(key);
+      return {
+        key,
+        legal: found.kind === 'legal',
+        prominent: found.prominent === true,
+        text: noticeText(found, i18n.current),
+        href: found.links?.[0]?.href,
+      };
+    }),
+  );
 </script>
 
 {#if notices.length > 0}
@@ -24,11 +36,11 @@
   >
     <ul>
       {#each notices as notice (notice.key)}
-        <li class="prose" class:headline={notice.key === 'powered-by-xai' || notice.key === 'built-with-meta-llama-3'}>
+        <li class="prose" class:headline={notice.prominent}>
           {#if notice.href !== undefined}
-            <a href={notice.href} lang={notice.legal ? 'en' : undefined}>{notice.text[i18n.current]}</a>
+            <a href={notice.href} lang={notice.legal ? 'en' : undefined}>{notice.text}</a>
           {:else}
-            <span lang={notice.legal ? 'en' : undefined}>{notice.text[i18n.current]}</span>
+            <span lang={notice.legal ? 'en' : undefined}>{notice.text}</span>
           {/if}
         </li>
       {/each}

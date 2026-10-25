@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import type { Features, TokenizerId } from '@tsbs/core';
   import { probeFeatures } from '../app/features.ts';
-  import { tokenizerEntry, TOKENIZERS } from '../app/registry-stub.ts';
+  import { tokenizerEntry, TOKENIZERS } from '../app/registry.ts';
   import { readStored, STORAGE_KEYS } from '../app/storage.ts';
   import { at } from '../i18n/about/t.ts';
   import { i18n } from '../i18n/locale.svelte.ts';

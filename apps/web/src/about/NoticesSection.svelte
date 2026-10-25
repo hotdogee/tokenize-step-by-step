@@ -5,14 +5,17 @@
    * Policy), Gemma 1/2 (Notice, Prohibited Use Policy, Terms copy, the §3.2 restrictions statement), the Apache-2.0 and MIT
    * vocabularies (with the rank-file basis disclosure). Legal strings come verbatim from the registry.
    */
-  import { NOTICES } from '../app/registry-stub.ts';
+  import { notice, noticeText } from '../app/registry.ts';
   import { at } from '../i18n/about/t.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { licenceTextUrl } from './licences.ts';
 
+  /** The exact legal string of a notice (licences.json `verbatim`, identical in every locale). */
   const legal = (
     key: 'powered-by-xai' | 'xai-materials-notice' | 'built-with-meta-llama-3' | 'llama3-notice' | 'gemma-notice',
-  ) => NOTICES[key].text.en;
+  ) => noticeText(notice(key), 'en');
+  /** The Gemma Prohibited Use Policy (the external link of the gemma-terms notice). */
+  const gemmaPolicy = notice('gemma-terms').links?.find((link) => link.href.startsWith('https://'))?.href;
 </script>
 
 <div class="notices">
@@ -38,7 +41,7 @@
     <p class="prose" lang="en">{legal('gemma-notice')}</p>
     <p class="prose">{at('about.notices.gemmaRestrictions')}</p>
     <p class="links">
-      <a href={NOTICES['gemma-terms'].href} rel="noopener noreferrer">{at('about.notices.policy')}</a>
+      <a href={gemmaPolicy} rel="noopener noreferrer">{at('about.notices.policy')}</a>
       <a href={licenceTextUrl('google-gemma2', 'gemma-terms-of-use.txt')}>{at('about.notices.terms')}</a>
     </p>
   </section>
@@ -51,7 +54,7 @@
   <section aria-labelledby="notice-mit">
     <h3 id="notice-mit">{at('about.notices.mit')}</h3>
     <p class="prose">{at('about.notices.mitBody')}</p>
-    <p class="prose">{NOTICES['tiktoken-rank-file-basis'].text[i18n.current]}</p>
+    <p class="prose">{noticeText(notice('tiktoken-rank-file-basis'), i18n.current)}</p>
   </section>
 </div>
 

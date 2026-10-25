@@ -1,32 +1,53 @@
-import type { Progress } from '@tsbs/core';
+import type { Progress, TokenizerId } from '@tsbs/core';
+import { toExamplesWire } from '@tsbs/core/fixture/examples-wire';
 import { DEFAULT_OPTIONS } from '@tsbs/core/model/result';
 import { describe, expect, it } from 'vitest';
 import { cachedTokenizers } from '../shell/cache-probe.ts';
 import { progressPercent } from '../shell/progress.ts';
 import { AppState, optionsFor } from './app-state.svelte.ts';
-import { EXAMPLES, tokenizerEntry } from './registry-stub.ts';
-import { StubTokenizerClient, StubUnavailableError } from './stub-client.ts';
+import { createClient, defaultResult } from './bootstrap.ts';
+import { isNoPrecomputedResult } from './examples-client.ts';
+import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
+import { EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
 import { STORAGE_KEYS } from './storage.ts';
-import { defaultResult } from './stub-result.ts';
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-describe('StubTokenizerClient (TODO(WP-integration))', () => {
-  it('loads with phased, monotone progress and reports the resident tokenizer', async () => {
-    const client = new StubTokenizerClient({ tickMs: 0 });
+/** Serves each tokenizer's examples file (every chip, built from its committed fixture) at its examples-index URL. */
+function fixtureFetch(missing: readonly TokenizerId[] = []): (url: string) => Promise<Response> {
+  const byUrl = new Map(Object.entries(EXAMPLES_INDEX.files).map(([id, url]) => [url, id as TokenizerId] as const));
+  return (url) => {
+    const id = byUrl.get(url);
+    const fixture = id === undefined ? undefined : SHIPPING_FIXTURES.get(id);
+    if (id === undefined || fixture === undefined || missing.includes(id))
+      return Promise.resolve(new Response('not found', { status: 404 }));
+    const body = JSON.stringify(
+      toExamplesWire(
+        fixture,
+        id,
+        EXAMPLES.map((chip) => chip.fixtureCase),
+      ),
+    );
+    return Promise.resolve(new Response(body, { headers: { 'Content-Length': String(new Blob([body]).size) } }));
+  };
+}
+
+/** A committed fixture case. */
+function fixtureCase(id: TokenizerId, name: string): { readonly ids: readonly number[] } {
+  const found = SHIPPING_FIXTURES.get(id)?.cases.find((c) => c.name === name);
+  if (found === undefined) throw new Error(`${id} ${name}`);
+  return found;
+}
+
+describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () => {
+  it('fetches the examples on first load with monotone progress and reports the resident tokenizer', async () => {
+    const client = createClient(fixtureFetch());
     const residents: Array<string | null> = [];
     client.onResident((id) => residents.push(id));
     const progress: Progress[] = [];
     const loaded = await client.load('openai-o200k_base', (p) => progress.push(p));
-    expect(progress.map((p) => p.phase)).toEqual([
-      'download',
-      'download',
-      'download',
-      'download',
-      'verify',
-      'decompress',
-      'build',
-    ]);
+    expect(progress[0]?.phase).toBe('download');
+    expect(progress.at(-1)?.phase).toBe('build');
     const percents = progress.map(progressPercent);
     expect([...percents].sort((a, b) => a - b)).toEqual(percents);
     expect(percents.at(-1)).toBe(100);
@@ -37,19 +58,33 @@ describe('StubTokenizerClient (TODO(WP-integration))', () => {
     expect(residents).toEqual(['openai-o200k_base', null]);
   });
 
-  it('serves exactly the precomputed default and rejects anything else', async () => {
-    const client = new StubTokenizerClient({ tickMs: 0 });
-    await client.load('openai-o200k_base');
-    const result = await client.encode('台灣台南', DEFAULT_OPTIONS);
-    expect([...result.tokens.id]).toEqual([3735, 133072, 3735, 14609]);
-    await expect(client.encode('臺灣', DEFAULT_OPTIONS)).rejects.toBeInstanceOf(StubUnavailableError);
-    const assets = await client.assets;
-    expect(assets['openai-o200k_base'].bytesCompressed).toBe(1025 * 1024);
+  it('answers every chip with its oracle result and rejects other text as not precomputed', async () => {
+    const client = createClient(fixtureFetch());
+    await client.load('openai-cl100k_base');
+    const tainan = await client.encode('台灣台南', DEFAULT_OPTIONS);
+    expect([...tainan.tokens.id]).toEqual(fixtureCase('openai-cl100k_base', 'zh-tw-tainan').ids);
+    expect(tainan.stats.partialTokens).toBe(2); // 灣 = E7 81 + A3 (05 §4.1)
+    await expect(client.encode('not an example ✓', DEFAULT_OPTIONS)).rejects.toSatisfy(isNoPrecomputedResult);
+  });
+
+  it('lets a newer load supersede one that is still fetching (one resident)', async () => {
+    const client = createClient(fixtureFetch());
+    const first = client.load('xai-grok2');
+    const second = client.load('google-gemma4');
+    await expect(first).rejects.toMatchObject({ name: 'cancelled' });
+    await second;
+    expect(client.resident).toBe('google-gemma4');
+  });
+
+  it('reports a missing examples file as a fetch error and knows no wire sizes before the Worker client', async () => {
+    const client = createClient(fixtureFetch(['xai-grok1']));
+    await expect(client.load('xai-grok1')).rejects.toMatchObject({ code: 'fetch' });
+    await expect(client.assets).rejects.toThrow(/WP07/);
   });
 });
 
 describe('AppState (05 §1.1)', () => {
-  const make = (): AppState => new AppState(new StubTokenizerClient({ tickMs: 0 }), defaultResult());
+  const make = (): AppState => new AppState(createClient(fixtureFetch()), defaultResult());
 
   it('starts with the precomputed default example on o200k', () => {
     const app = make();
@@ -82,14 +117,22 @@ describe('AppState (05 §1.1)', () => {
     expect(app.error).toBeNull();
   });
 
-  it('keeps tokens pending for text it has no result for', () => {
+  it('answers example chips live and keeps tokens pending for text it has no result for', async () => {
     const app = make();
     const chip = EXAMPLES.find((c) => c.key === 'ja-text');
     if (chip === undefined) throw new Error('chip');
     app.chooseExample(chip);
     expect(app.text).toBe('日本語のテキスト');
     expect(app.textLang).toBe('ja');
+    expect(app.currentResult).toBeNull(); // nothing loaded yet
+    await app.selectTokenizer('openai-cl100k_base');
+    await flush();
+    expect(app.currentResult?.stats.tokens).toBe(fixtureCase('openai-cl100k_base', 'ja-text').ids.length);
+    app.setText('not an example ✓');
+    app.encodeNow();
+    await flush();
     expect(app.currentResult).toBeNull();
+    expect(app.error).toBeNull();
   });
 
   it('shows only the toggles a tokenizer declares in its options', () => {

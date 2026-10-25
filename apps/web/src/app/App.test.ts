@@ -7,13 +7,12 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { i18n } from '../i18n/locale.svelte.ts';
 import { LOCALES } from '../i18n/types.ts';
 import App from './App.svelte';
-import { AppState } from './app-state.svelte.ts';
+import type { AppState } from './app-state.svelte.ts';
+import { createAppState } from './bootstrap.ts';
 import NotFound from './NotFound.svelte';
-import { StubTokenizerClient } from './stub-client.ts';
-import { defaultResult } from './stub-result.ts';
 
 const renderApp = (configure?: (app: AppState) => void): string => {
-  const app = new AppState(new StubTokenizerClient({ tickMs: 0 }), defaultResult());
+  const app = createAppState();
   configure?.(app);
   return render(App, { props: { app } }).body;
 };

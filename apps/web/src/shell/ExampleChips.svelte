@@ -7,7 +7,7 @@
    */
   import type { ExampleChip } from '@tsbs/registry';
   import { appState } from '../app/context.ts';
-  import { CHIP_SPLITS, EXAMPLES } from '../app/registry-stub.ts';
+  import { CHIP_SPLITS, EXAMPLES } from '../app/registry.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
   import Icon from './Icon.svelte';

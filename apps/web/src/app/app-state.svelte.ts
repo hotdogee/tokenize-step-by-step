@@ -28,7 +28,8 @@ import type { Locale } from '../i18n/types.ts';
 import { preferences } from '../shell/preferences.svelte.ts';
 import { theme, type ThemeChoice } from '../theme/theme.svelte.ts';
 import { DEFAULT_EXAMPLE } from './constants.ts';
-import { DEFAULT_TOKENIZER, tokenizerEntry } from './registry-stub.ts';
+import { isNoPrecomputedResult } from './examples-client.ts';
+import { DEFAULT_TOKENIZER, tokenizerEntry } from './registry.ts';
 import { readStored, STORAGE_KEYS, writeStored } from './storage.ts';
 
 export type Stage = 1 | 2 | 3 | 4 | 5 | 6;
@@ -266,7 +267,7 @@ export class AppState {
       },
       (error: unknown) => {
         if (seq !== this.#encodeSeq || isCancelled(error)) return;
-        if (error instanceof Error && error.name === 'StubUnavailableError') return; // TODO(WP-integration)
+        if (isNoPrecomputedResult(error)) return; // no engine yet (WP05/WP07): tokens stay "waiting for the tokenizer"
         this.error = toUiError(error, this.tokenizer, null);
       },
     );

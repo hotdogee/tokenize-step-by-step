@@ -5,7 +5,7 @@
    */
   import { appState } from '../app/context.ts';
   import type { UiError } from '../app/app-state.svelte.ts';
-  import { tokenizerEntry, DEFAULT_TOKENIZER } from '../app/registry-stub.ts';
+  import { tokenizerEntry, DEFAULT_TOKENIZER } from '../app/registry.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
 
   const app = appState();

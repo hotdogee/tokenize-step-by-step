@@ -1,6 +1,6 @@
 /**
- * The registry stub must behave like WP04's data where the shell depends on it: the rules `registry:check` enforces on the
- * real files (03 §B.7) are asserted here on the stub, against the committed fixtures and the oracle manifest.
+ * The shell's registry view (registry.ts) over WP04's data and WP03's examples index: the facts the shell depends on,
+ * asserted against the committed fixtures and the oracle manifest (`registry:check` enforces the full 03 §B.7 rules).
  */
 import type { TokenizerId } from '@tsbs/core';
 import { describe, expect, it } from 'vitest';
@@ -11,11 +11,12 @@ import {
   EXAMPLES,
   LICENCE_TAGS,
   MODELS,
-  NOTICES,
+  notice,
+  noticeText,
   TOKENIZERS,
-} from './registry-stub.ts';
+} from './registry.ts';
 
-describe('registry stub (03 §B.7 rules)', () => {
+describe('registry view (03 §B.7 rules)', () => {
   it('lists the nine shipped tokenizers with exactly one default (o200k_base)', () => {
     expect(TOKENIZERS).toHaveLength(9);
     expect(TOKENIZERS.filter((entry) => entry.default === true).map((entry) => entry.id)).toEqual([
@@ -83,17 +84,21 @@ describe('registry stub (03 §B.7 rules)', () => {
   });
 
   it('has strings in all three locales for every notice a tokenizer requires; legal ones are verbatim', () => {
+    const locales = ['en', 'zh-TW', 'ja'] as const;
     for (const entry of TOKENIZERS) {
       for (const key of entry.requiredNotices) {
-        const notice = NOTICES[key];
-        for (const locale of ['en', 'zh-TW', 'ja'] as const) expect(notice.text[locale].length, key).toBeGreaterThan(0);
-        if (notice.legal) expect(new Set(Object.values(notice.text)).size, key).toBe(1);
+        const found = notice(key);
+        for (const locale of locales) expect(noticeText(found, locale).length, key).toBeGreaterThan(0);
+        if (found.kind === 'legal')
+          expect(new Set(locales.map((locale) => noticeText(found, locale))).size, key).toBe(1);
       }
     }
-    expect(NOTICES['powered-by-xai'].text.ja).toBe('Powered by xAI');
-    expect(NOTICES['xai-materials-notice'].text.en).toBe(
+    expect(noticeText(notice('powered-by-xai'), 'ja')).toBe('Powered by xAI');
+    expect(noticeText(notice('xai-materials-notice'), 'zh-TW')).toBe(
       'This product includes materials licensed under the xAI Community License. All rights reserved. Copyright © xAI 2026.',
     );
+    expect(notice('powered-by-xai').prominent).toBe(true);
+    expect(notice('built-with-meta-llama-3').prominent).toBe(true);
   });
 
   it('requires "Powered by xAI" for Grok-2 only and "Built with Meta Llama 3" for Llama 3 only (05 §15)', () => {

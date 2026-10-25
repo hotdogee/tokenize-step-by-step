@@ -1,6 +1,6 @@
 <script lang="ts">
   /**
-   * TODO(WP-integration): placeholder for the pipeline rail (WP09 replaces it with the `radiogroup`, scrubber and Play).
+   * TODO(WP09): placeholder for the pipeline rail (WP09 replaces it with the `radiogroup`, scrubber and Play).
    * It reserves the region and shows which of the six stops is current, so the `[` `]` `1`–`6` `,` `.` shortcuts have a
    * visible effect; it is a plain ordered list, not a control.
    */

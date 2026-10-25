@@ -5,7 +5,7 @@
    * text in a `<details>` whose body is fetched from `/licenses/<assetId>/<file>` when first opened (same origin, so the
    * CSP's `connect-src 'self'` allows it). Legal text is never translated and is marked `lang="en"`.
    */
-  import { NOTICES } from '../app/registry-stub.ts';
+  import { notice } from '../app/registry.ts';
   import { at } from '../i18n/about/t.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { licenceTextUrl, type GeneratedLicence } from './licences.ts';
@@ -67,7 +67,7 @@
     </dd>
     <dt>{at('about.licence.modified')}</dt>
     <dd class="prose">
-      {#if licence.modified !== null}<span lang="en">{licence.modified}</span>{:else}{NOTICES['modified-asset'].text[
+      {#if licence.modified !== null}<span lang="en">{licence.modified}</span>{:else}{notice('modified-asset').body[
           i18n.current
         ]}{/if}
     </dd>

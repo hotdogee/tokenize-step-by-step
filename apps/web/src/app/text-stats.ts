@@ -1,8 +1,12 @@
 /**
- * TODO(WP-integration): minimal main-thread text analysis for the counts line and the board placeholder until WP01's
- * `analyzeText` (`@tsbs/core/text`) lands. Code points and UTF-8 lengths follow TextEncoder semantics (a lone surrogate is
- * U+FFFD, 3 bytes); grapheme clusters come from `Intl.Segmenter`, or one per code point when it is unavailable (PD-4).
+ * Main-thread text figures for the counts line, the stage announcements and the board placeholder, from WP01's
+ * `analyzeText` (`@tsbs/core/text/analyze`): code points and UTF-8 bytes follow TextEncoder semantics (a lone surrogate is
+ * U+FFFD, 3 bytes) and grapheme clusters come from `Intl.Segmenter`, or one per code point without it (PD-4). They need
+ * no tokenizer, so they stay live in every long-input tier (AD-27).
  */
+import { analyzeText } from '@tsbs/core/text/analyze';
+
+export { codePointLabel, hexByte as byteHex } from '@tsbs/core/text/utf8';
 
 /** One code point of the text. */
 export interface CodePointInfo {
@@ -19,43 +23,19 @@ export interface TextStats {
   readonly chars: readonly CodePointInfo[];
 }
 
-const encoder = new TextEncoder();
-
-/** Counts graphemes with Intl.Segmenter when available; otherwise one per code point. */
-export function countGraphemes(text: string): number {
-  let count = 0;
-  if (typeof Intl.Segmenter === 'function') {
-    for (const _ of new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)) count++;
-    return count;
-  }
-  for (const _ of text) count++;
-  return count;
-}
-
 /** Per-code-point analysis (`limit` caps the per-char rows; counts always cover the whole text). */
 export function textStats(text: string, limit = 2000): TextStats {
+  const { utf8, chars: table, graphemes } = analyzeText(text);
   const chars: CodePointInfo[] = [];
-  let codePoints = 0;
-  let bytes = 0;
-  for (const raw of text) {
-    const cp = raw.codePointAt(0) ?? 0xfffd;
-    const isLoneSurrogate = cp >= 0xd800 && cp <= 0xdfff;
-    const char = isLoneSurrogate ? '�' : raw;
-    const encoded = encoder.encode(char);
-    if (codePoints < limit)
-      chars.push({ cp: isLoneSurrogate ? 0xfffd : cp, char, byteStart: bytes, bytes: [...encoded] });
-    codePoints++;
-    bytes += encoded.length;
+  for (let i = 0; i < Math.min(limit, table.count); i++) {
+    const cp = table.cp[i] ?? 0xfffd;
+    const byteStart = table.byteStart[i] ?? 0;
+    chars.push({
+      cp,
+      char: String.fromCodePoint(cp),
+      byteStart,
+      bytes: [...utf8.subarray(byteStart, table.byteStart[i + 1] ?? utf8.length)],
+    });
   }
-  return { codePoints, graphemes: countGraphemes(text), bytes, chars };
-}
-
-/** "U+7063" (at least four uppercase hex digits). */
-export function codePointLabel(cp: number): string {
-  return `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`;
-}
-
-/** "E7" (two uppercase hex digits). */
-export function byteHex(byte: number): string {
-  return byte.toString(16).toUpperCase().padStart(2, '0');
+  return { codePoints: table.count, graphemes: graphemes.count, bytes: utf8.length, chars };
 }

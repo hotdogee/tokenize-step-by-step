@@ -1,6 +1,6 @@
 <script lang="ts">
   /** About › Fidelity (05 §14 item 2): model → tokenizer → status → evidence → checked on, from models.json. */
-  import { MODELS, tokenizerEntry } from '../app/registry-stub.ts';
+  import { MODELS, tokenizerEntry } from '../app/registry.ts';
   import { at } from '../i18n/about/t.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import FidelityBadge from '../shell/FidelityBadge.svelte';
