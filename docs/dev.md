@@ -42,5 +42,9 @@ references to `node_modules/.cache/tsbuild/`.
   ```
 
   Enabling Win32 long paths (`git config --global core.longpaths true` and the `LongPathsEnabled` registry policy) also
-  helps. CI runs on Linux and is unaffected. (Not observed during WP00: `wrangler deploy --dry-run` worked from a
-  worktree path; the note is kept from the design's risk register, 07 §5 item 12.)
+  helps. CI runs on Linux and is unaffected. (Not observed during WP00: `wrangler dev` and `wrangler deploy --dry-run`
+  both worked from a git-worktree path on Windows 11; the note is kept from the design's risk register, 07 §5 item 12.)
+
+- **Port clashes with stray `workerd`.** A `wrangler dev` killed by a timeout can leave `workerd.exe` listening; a new
+  session on the same port then answers from the old process (stale assets, missing headers). Pick another `--port` or
+  stop the leftover `workerd.exe`.
