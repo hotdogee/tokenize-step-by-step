@@ -2,7 +2,8 @@
 #
 #   check ─────────────────────────────── lint · typecheck · format · knip · registry · unicode · audit
 #   vocab ──┬─ unit                        uv + raw-vocab cache · vocab:fetch · conformance gate · vocab:build · guard
-#           │                              (unit: registry:check --require-built on the vocab-dist artifact · pnpm test)
+#           │                              (unit: registry:check --require-built on the vocab-dist artifact · chromium ·
+#           │                               pnpm test incl. the Vitest browser-mode projects)
 #           ├─ build ──┬─ e2e              vite build · check:dist · wrangler deploy --dry-run → `dist` artifact
 #           │          ├─ e2e-headers      Playwright on `wrangler dev --assets apps/web/dist` (workerd applies _headers)
 #           │          └─ preview ── lighthouse   PRs only, and only when the Cloudflare secrets exist (cf-secrets)
@@ -139,6 +140,20 @@ jobs:
       # the `check` job has no data/vocab/dist, so it runs here on the downloaded artifact and fails if nothing was compared.
       - name: registry:check against the built assets
         run: node packages/registry/scripts/registry-check.ts --require-built
+      # `pnpm test` also runs the Vitest browser-mode projects (worker-browser: the real Worker on the built .bin files;
+      # web-browser: the board/inspector component tests), which need Playwright's chromium; web-browser fails under CI
+      # without it rather than passing by running nothing. Same cache key as the e2e jobs.
+      - id: playwright
+        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm --filter @tsbs/e2e exec playwright install-deps chromium
       - run: pnpm test
 
   build:

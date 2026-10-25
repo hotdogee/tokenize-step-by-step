@@ -172,7 +172,13 @@
   outline-offset: -2px;
 }
 
-.bd-cell[data-slice] > .bd-vis::after {
+/*
+ * The inspected-slice bar. Char boxes, byte faces and chunk brackets draw it on their visual (a char box is translated at
+ * stops 1–2, and the bar follows it). Token chips use both pseudo-elements for the two-tone partial hatch (AD-35), so
+ * their bar is drawn on the gridcell instead, at the same place: the cut edge stays hatched while the token is inspected.
+ */
+.bd-cell[data-slice] > .bd-vis:not(.bd-chip)::after,
+.bd-cell-token[data-slice]::after {
   content: '';
   position: absolute;
   inset-inline: 2px;
@@ -180,6 +186,11 @@
   height: 2px;
   border-radius: 1px;
   background: var(--accent);
+  pointer-events: none;
+}
+
+.bd-cell-token[data-slice]::after {
+  inset-inline: 3px; /* the chip is inset 1 px inside its gridcell (.bd-vis) */
 }
 
 .bd-cell[data-selected] > .bd-vis {

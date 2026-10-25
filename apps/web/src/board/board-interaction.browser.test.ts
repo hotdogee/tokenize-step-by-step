@@ -280,3 +280,50 @@ describe('selection sync (05 §6)', () => {
     expect(selected).toEqual(['char:1', 'hex:3', 'hex:4', 'hex:5', 'token:1', 'token:2']);
   });
 });
+
+describe('inspected slice on a partial token (05 §4.1, AD-35)', () => {
+  /** The partial chip's cut edge and its slice bar, as computed styles. */
+  function hatchAndBar(board: MountedBoard): {
+    hatch: CSSStyleDeclaration;
+    bar: CSSStyleDeclaration;
+    chip: HTMLElement;
+  } {
+    const cell = board.grid.querySelector<HTMLElement>('[data-tier="token"][data-index="1"]');
+    const vis = cell?.querySelector<HTMLElement>('.bd-chip.hatch-end');
+    if (cell === null || cell === undefined || vis === null || vis === undefined) throw new Error('no partial chip');
+    expect(cell.hasAttribute('data-slice')).toBe(true);
+    return {
+      hatch: getComputedStyle(vis, '::after'),
+      bar: getComputedStyle(cell, '::after'),
+      chip: vis,
+    };
+  }
+
+  function expectHatchedEdgeAndFullBar(board: MountedBoard): void {
+    const { hatch, bar, chip } = hatchAndBar(board);
+    // The two-tone hatch stays on the right (cut) edge, over the chip's full inner height …
+    expect(hatch.backgroundImage).toContain('repeating-linear-gradient');
+    expect(hatch.right).toBe('0px');
+    expect(hatch.width).toBe('4px');
+    expect(Number.parseFloat(hatch.height)).toBe(chip.clientHeight);
+    // … and the slice bar runs along the bottom of the chip instead of replacing it.
+    expect(bar.content).not.toBe('none');
+    expect(bar.height).toBe('2px');
+    expect(bar.bottom).toBe('1px');
+    expect(Number.parseFloat(bar.width)).toBeGreaterThan(chip.getBoundingClientRect().width - 8);
+  }
+
+  it('keeps the hatched cut edge of cl100k 66285 while 灣 is focused and while the token is pinned', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    board.grid.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
+    await press('{ArrowRight}');
+    expect(focused()).toBe('char:1');
+    expectHatchedEdgeAndFullBar(board);
+    await press('{ArrowDown}{ArrowDown}');
+    expect(focused()).toBe('token:1');
+    await press('{Enter}');
+    expect(board.app.pinned).toEqual({ byte: 3, tier: 'token' });
+    expectHatchedEdgeAndFullBar(board);
+  });
+});
