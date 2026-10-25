@@ -22,7 +22,9 @@ import { grid } from './board-helpers.ts';
 import { motionReady } from './pipeline-helpers.ts';
 import { openShell } from './shell-helpers.ts';
 
-test.skip(({ browserName }) => browserName !== 'chromium', 'chromium: tracing');
+// The 06 §3 criterion is one desktop chromium trace; the device and viewport projects (DPR 2–2.75, touch emulation) would
+// measure their emulation and, run alongside the whole matrix, the CPU contention.
+test.skip(() => test.info().project.name !== 'chromium', 'desktop chromium: the trace');
 test.use({ trace: 'off' });
 
 /** 06 §3: no frame over 32 ms — enforced in a serial perf run (`TSBS_PERF=1`), doubled under parallel workers. */
