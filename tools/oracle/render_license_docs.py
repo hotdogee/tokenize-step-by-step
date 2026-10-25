@@ -1,9 +1,11 @@
-"""Render ``docs/licenses/README.md`` from ``tools/oracle/manifest.json``.
+"""Render ``docs/licenses/README.md`` and authored Notice files from ``tools/oracle/manifest.json``.
 
 The README summarises, per asset, the SPDX identifier, ship intent, plain-
 language obligations and links to the verbatim snapshots that
-``fetch_vocab.py`` copied into ``docs/licenses/<asset-id>/``. Output is
-deterministic; re-run after editing the manifest.
+``fetch_vocab.py`` copied into ``docs/licenses/<asset-id>/``. An asset whose
+``license.notice`` is set also gets ``docs/licenses/<asset-id>/<notice.file>``
+holding exactly ``notice.text`` plus a newline (e.g. the Llama 3 "Notice"
+file). Output is deterministic; re-run after editing the manifest.
 
 Usage (from the repository root)::
 
@@ -37,12 +39,26 @@ def _cell(text: str) -> str:
 
 
 def _snapshot_links(asset: mf.Asset) -> list[str]:
+    """Markdown links to every committed file under ``docs/licenses/<asset-id>/``."""
     links = []
     for entry in asset["files"]:
         if entry["role"] in mf.SNAPSHOT_ROLES:
             rel = f"{asset['id']}/{entry['name']}"
             links.append(f"[{entry['name']}]({rel}) ({entry['role']})")
+    notice = asset["license"].get("notice")
+    if notice:
+        links.append(f"[{notice['file']}]({asset['id']}/{notice['file']}) (notice, rendered from the manifest)")
     return links
+
+
+def notice_files(manifest: dict) -> dict[Path, bytes]:
+    """Authored Notice files: ``docs/licenses/<asset-id>/<notice.file>`` -> ``notice.text`` + LF."""
+    out: dict[Path, bytes] = {}
+    for asset in manifest["assets"]:
+        notice = asset["license"].get("notice")
+        if notice:
+            out[paths.license_snapshot_path(asset["id"], notice["file"])] = (notice["text"] + "\n").encode("utf-8")
+    return out
 
 
 def render(manifest: dict) -> str:
@@ -55,8 +71,10 @@ def render(manifest: dict) -> str:
         "",
         "Each folder holds verbatim licence, notice and policy files fetched at the pinned upstream revision",
         "recorded in `tools/oracle/manifest.json` (re-fetch with `tools/oracle/fetch_vocab.py`).",
-        "The one exception is a `.txt` file whose manifest source type is `html-text`: it is a deterministic",
-        "plain-text extraction of the HTML page snapshotted next to it (e.g. the Gemma Terms of Use).",
+        "Two kinds of file are not verbatim upstream copies: a `.txt` file whose manifest source type is",
+        "`html-text` is a deterministic plain-text extraction of an HTML page (e.g. the Gemma Terms of Use), and",
+        "a file marked *rendered from the manifest* is an attribution Notice that the licence requires the",
+        "distributor to write (e.g. the Llama 3 `NOTICE.txt`), generated from the asset's `license.notice`.",
         "Obligations are plain-language summaries for planning, not legal advice; the snapshot text governs.",
         "",
         "Ship intent:",
@@ -97,17 +115,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="fail if the README is out of date")
     args = parser.parse_args(argv)
 
-    text = render(mf.load(args.manifest)).encode("utf-8")
-    if args.check:
-        current = README_PATH.read_bytes() if README_PATH.exists() else b""
-        if current != text:
-            print(f"{paths.repo_relative(README_PATH)} is out of date; re-run without --check", file=sys.stderr)
-            return 1
-        print(f"{paths.repo_relative(README_PATH)} is up to date")
-        return 0
-    changed = fsio.write_bytes_if_changed(README_PATH, text)
-    print(f"{paths.repo_relative(README_PATH)} {'written' if changed else 'unchanged'}")
-    return 0
+    manifest = mf.load(args.manifest)
+    outputs = {README_PATH: render(manifest).encode("utf-8"), **notice_files(manifest)}
+    stale = 0
+    for path, data in outputs.items():
+        rel = paths.repo_relative(path)
+        if args.check:
+            current = path.read_bytes() if path.exists() else b""
+            if current != data:
+                print(f"{rel} is out of date; re-run without --check", file=sys.stderr)
+                stale += 1
+            else:
+                print(f"{rel} is up to date")
+        else:
+            changed = fsio.write_bytes_if_changed(path, data)
+            print(f"{rel} {'written' if changed else 'unchanged'}")
+    return 1 if stale else 0
 
 
 if __name__ == "__main__":

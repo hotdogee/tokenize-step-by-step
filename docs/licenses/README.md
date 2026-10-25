@@ -4,8 +4,10 @@
 
 Each folder holds verbatim licence, notice and policy files fetched at the pinned upstream revision
 recorded in `tools/oracle/manifest.json` (re-fetch with `tools/oracle/fetch_vocab.py`).
-The one exception is a `.txt` file whose manifest source type is `html-text`: it is a deterministic
-plain-text extraction of the HTML page snapshotted next to it (e.g. the Gemma Terms of Use).
+Two kinds of file are not verbatim upstream copies: a `.txt` file whose manifest source type is
+`html-text` is a deterministic plain-text extraction of an HTML page (e.g. the Gemma Terms of Use), and
+a file marked *rendered from the manifest* is an attribution Notice that the licence requires the
+distributor to write (e.g. the Llama 3 `NOTICE.txt`), generated from the asset's `license.notice`.
 Obligations are plain-language summaries for planning, not legal advice; the snapshot text governs.
 
 Ship intent:
@@ -20,7 +22,7 @@ Ship intent:
 | [openai-cl100k_base](#openai-cl100k_base) | OpenAI | `MIT` | `ship` |
 | [meta-muse-glimmer](#meta-muse-glimmer) | Meta Superintelligence Labs | `Apache-2.0` | `ship` |
 | [meta-llama4-model](#meta-llama4-model) | Meta Superintelligence Labs | `LicenseRef-Llama-4-Community-License` | `oracle-only` |
-| [meta-llama3-model](#meta-llama3-model) | Meta Superintelligence Labs | `LicenseRef-Llama-3-Community-License` | `oracle-only` |
+| [meta-llama3-model](#meta-llama3-model) | Meta Superintelligence Labs | `LicenseRef-Llama-3-Community-License` | `ship` |
 | [google-gemma4](#google-gemma4) | Google DeepMind | `Apache-2.0` | `ship` |
 | [google-gemma3-spiece](#google-gemma3-spiece) | Google DeepMind | `Apache-2.0` | `oracle-only` |
 | [google-gemma2](#google-gemma2) | Google DeepMind | `Apache-2.0 (repo) + LicenseRef-Gemma-Terms-of-Use (applicability unresolved)` | `ship` |
@@ -102,16 +104,16 @@ Llama 3.x tokenizer.model (tiktoken-format, 128,000 ranks) from meta-llama/llama
 
 - **Lab:** Meta Superintelligence Labs
 - **SPDX:** `LicenseRef-Llama-3-Community-License`
-- **Ship intent:** `oracle-only` (secondary ship candidate pending owner decision (research section 8.3): shipping requires the Llama 3 attribution package)
+- **Ship intent:** `ship` (secondary Meta tokenizer for Llama 3.x (owner decision OD-4, design AD-26): ship a compact asset derived from tokenizer.model with the Llama 3 attribution package (Agreement copy, "Built with Meta Llama 3", NOTICE.txt, Acceptable Use Policy by reference); the Xenova tokenizer.json stays an oracle cross-check and is never shipped)
 - **Licence source (pinned):** <https://raw.githubusercontent.com/meta-llama/llama-models/1f0feb795a4130697ced243fb53051670d591653/models/llama3/LICENSE>
-- **Snapshots:** [LICENSE](meta-llama3-model/LICENSE) (license), [USE_POLICY.md](meta-llama3-model/USE_POLICY.md) (policy), [xenova/LICENSE](meta-llama3-model/xenova/LICENSE) (license)
+- **Snapshots:** [LICENSE](meta-llama3-model/LICENSE) (license), [USE_POLICY.md](meta-llama3-model/USE_POLICY.md) (policy), [xenova/LICENSE](meta-llama3-model/xenova/LICENSE) (license), [NOTICE.txt](meta-llama3-model/NOTICE.txt) (notice, rendered from the manifest)
 - **Obligations:**
-  - Currently oracle-only: keep it out of git and dist/ until the owner decides (research section 8.3).
-  - If shipped: provide a copy of the Meta Llama 3 Community License Agreement.
-  - If shipped: prominently display "Built with Meta Llama 3" on a related website, UI, blog post, about page or product documentation.
-  - If shipped: ship a "Notice" text file containing "Meta Llama 3 is licensed under the Meta Llama 3 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved."
-  - Comply with the Meta Llama 3 Acceptable Use Policy (incorporated by reference; USE_POLICY.md).
-  - Licensees above 700 million monthly active users need a separate licence; distributed AI models built with the materials must have a name beginning with "Llama 3".
+  - Provide a copy of the Meta Llama 3 Community License Agreement (docs/licenses/meta-llama3-model/LICENSE) with the shipped tokenizer asset or any asset derived from it, e.g. on the site's licences page (§1.b.i(A)).
+  - Prominently display "Built with Meta Llama 3" on a related website, user interface, blog post, about page or product documentation (§1.b.i(B)).
+  - Retain the attribution notice "Meta Llama 3 is licensed under the Meta Llama 3 Community License, Copyright © Meta Platforms, Inc. All Rights Reserved." in a "Notice" text file distributed as part of every copy (docs/licenses/meta-llama3-model/NOTICE.txt, generated from this manifest; §1.b.iii).
+  - Comply with applicable law and the Meta Llama 3 Acceptable Use Policy, incorporated by reference (docs/licenses/meta-llama3-model/USE_POLICY.md; https://llama.meta.com/llama3/use-policy; §1.b.iv).
+  - Do not use the Llama Materials or any output or results of them to improve any other large language model (excluding Meta Llama 3 or derivative works thereof) (§1.b.v).
+  - Licensees above 700 million monthly active users need a separate licence (§2); distributed AI models built with the materials must have a name beginning with "Llama 3" (§1.b.i).
 
 Provenance notes: tokenizer.model pinned at 5fdf8311 (2025-04-05); LICENSE and USE_POLICY.md last changed at 1f0feb79 (2024-07-23). tokenizer.model: 128,000 rank lines; size matches research. The llama-models LICENSE is the Meta Llama 3 Community License (version release date April 18, 2024) with the Acceptable Use Policy appended; the 3.0 AUP has no EU multimodal clause. Xenova/llama3-tokenizer (pinned 72bff9ee, 2024-04-18): the HF model card has NO license metadata field (cardData null, no license tag); its LICENSE file is the same Meta Llama 3 agreement text without the appended AUP (identical after whitespace normalisation). xenova/tokenizer.json: 128,000 vocab + 256 added tokens.
 

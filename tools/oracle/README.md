@@ -65,7 +65,7 @@ The full list, from the repository root:
 uv run --project tools/oracle python tools/oracle/pin_manifest.py [--asset ID ...]     # re-resolve url/revision (never hashes)
 uv run --project tools/oracle python tools/oracle/fetch_vocab.py [--asset ID ...]      # download + verify + snapshot licences
 uv run --project tools/oracle python tools/oracle/fetch_vocab.py --update-manifest     # accept new/changed hashes (human review!)
-uv run --project tools/oracle python tools/oracle/render_license_docs.py               # regenerate docs/licenses/README.md
+uv run --project tools/oracle python tools/oracle/render_license_docs.py               # regenerate docs/licenses/README.md + NOTICE files
 
 # Corpus and fixtures
 uv run --project tools/oracle python tools/oracle/make_corpus.py                       # rewrite corpus.json
@@ -173,7 +173,10 @@ The top level has `schemaVersion` (1), `about`, and an ordered `assets` list
   `Apache-2.0 (repo) + LicenseRef-Gemma-Terms-of-Use (applicability unresolved)`),
   `file` (the primary licence file among the asset's files), `sourceUrl` (its
   pinned URL), `snapshotPath` (its copy under `docs/licenses/`), and
-  `obligations` (a plain-language list).
+  `obligations` (a plain-language list). An optional `notice` (`{file, text}`)
+  is an attribution Notice file that the licence requires the distributor to
+  write, not an upstream file (Llama 3's `NOTICE.txt`). `render_license_docs.py`
+  renders it to `docs/licenses/<asset-id>/<file>`, and `--check` verifies it.
 - `files[]`, where each file has:
   - `name`: the path under `data/vocab/raw/<asset-id>/` (it may contain `/`).
   - `role`: `vocab`, `config`, `archive`, `license`, `notice`, `policy` or
@@ -496,7 +499,7 @@ tools/oracle/
   manifest.json            provenance manifest (committed)
   pin_manifest.py          resolve sources to pinned URLs and revisions
   fetch_vocab.py           download, verify and snapshot licences
-  render_license_docs.py   generate docs/licenses/README.md
+  render_license_docs.py   generate docs/licenses/README.md and authored NOTICE files
   oracle_lib/              small standard-library helpers (paths, jsonio, fsio, netio,
                            manifest, resolvers, archives, htmltext, report)
   make_corpus.py, corpus.json  golden-fixture corpus (generator and output, committed)

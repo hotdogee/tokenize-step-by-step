@@ -12,6 +12,11 @@ ship intent, notes) and a list of files. Every file carries:
 * ``volatile`` (optional) -- why a re-download can never reproduce the
   recorded hash (e.g. a per-request nonce in a web page); such a file is
   restored from its committed ``docs/licenses`` snapshot instead.
+
+An asset's ``license`` may also carry ``notice`` (``{file, text}``): an
+attribution Notice file that the licence requires the distributor to write
+(not an upstream file). ``render_license_docs.py`` renders it to
+``docs/licenses/<asset-id>/<file>``.
 """
 
 from __future__ import annotations
@@ -107,6 +112,8 @@ def _asset_problems(asset: Asset, seen_ids: set[str]) -> list[str]:
         out.extend(_file_problems(aid, entry, names))
     if lic.get("file") and lic["file"] not in names:
         out.append(f"{aid}: license.file {lic['file']!r} is not one of the asset's files")
+    if "notice" in lic:
+        out.extend(_notice_problems(aid, lic["notice"], names))
     for entry in asset.get("files", []):
         src = entry.get("source", {})
         if src.get("type") == "archive-member" and src.get("archive") not in names:
@@ -116,6 +123,22 @@ def _asset_problems(asset: Asset, seen_ids: set[str]) -> list[str]:
                 out.append(f"{aid}/{entry.get('name')}: document {src.get('document')!r} not in asset")
             if not src.get("classes") or not all(isinstance(c, str) and c for c in src["classes"]):
                 out.append(f"{aid}/{entry.get('name')}: html-text needs a non-empty classes list")
+    return out
+
+
+def _notice_problems(aid: str, notice: Any, names: set[str]) -> list[str]:
+    """Check ``license.notice``: an authored Notice file rendered into ``docs/licenses/<asset-id>/``."""
+    if not isinstance(notice, dict) or set(notice) != {"file", "text"}:
+        return [f"{aid}: license.notice must be an object with exactly 'file' and 'text'"]
+    out: list[str] = []
+    try:
+        safe_relative(str(notice["file"]))
+    except ValueError as exc:
+        out.append(f"{aid}: license.notice.file: {exc}")
+    if notice["file"] in names:
+        out.append(f"{aid}: license.notice.file {notice['file']!r} collides with an upstream file name")
+    if not isinstance(notice["text"], str) or not notice["text"].strip() or "\n" in notice["text"]:
+        out.append(f"{aid}: license.notice.text must be one non-empty line")
     return out
 
 
