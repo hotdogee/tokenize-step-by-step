@@ -2,7 +2,7 @@
  * WP13 integration — long input tiers (AD-27, binding; 05 §6) on the real Worker:
  *
  * - at 20,001 code points live tokenization pauses behind the "Long input — tokenize on demand" banner; the counts keep
- *   code points live; the on-demand run tokenizes the WHOLE text (a run past 50,000 merge steps says "merge replay limited
+ *   code points live and point at "Tokenize now" for the tokens; the on-demand run tokenizes the WHOLE text (a run past 50,000 merge steps says "merge replay limited
  *   to the first 50,000 steps"); an edit after the run marks the tokens "stale";
  * - the board is a 2,000-byte window of the whole-text result: built from 50 copies of the o200k zh-TW paragraph (each copy
  *   chunks exactly as the fixture case, a "1" between copies), the token ids at both window edges equal the fixture's;
@@ -55,6 +55,8 @@ test('20,001 code points: the on-demand banner, a whole-text run, the 50,000-ste
   await expect(banner(page)).toBeVisible();
   await expect(banner(page)).toContainText('Long input — tokenize on demand');
   await expect(page.getByTestId('cap-banner')).toHaveCount(0);
+  // The tokenizer is resident: the tokens wait for the banner's button, and the counts line says so.
+  await expect(page.getByTestId('tokens-pending')).toHaveText('tokens: press “Tokenize now”');
 
   // 60,000 letters are one chunk with well over 50,000 merges: the run records the first 50,000.
   await setText(page, 'a'.repeat(60_000), '60,000');

@@ -112,6 +112,7 @@ export const en = {
   'counts.steps': { one: '{n} step', other: '{n} steps' },
   'counts.partial': { one: '{n} partial-character token', other: '{n} partial-character tokens' },
   'counts.tokensPending': 'tokens: waiting for the tokenizer',
+  'counts.tokensOnDemand': 'tokens: press “Tokenize now”',
   'counts.stale': 'stale',
   'badge.precomputed': 'precomputed',
   'badge.live': 'live',

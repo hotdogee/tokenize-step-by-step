@@ -108,6 +108,7 @@ export const zhTW = {
   'counts.steps': { other: '{n} 步' },
   'counts.partial': { other: '{n} 部分字元詞元' },
   'counts.tokensPending': '詞元：等待分詞器',
+  'counts.tokensOnDemand': '詞元：請按「立即分詞」',
   'counts.stale': '已過時',
   'badge.precomputed': '預先計算',
   'badge.live': '即時',

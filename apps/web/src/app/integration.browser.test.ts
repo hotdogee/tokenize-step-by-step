@@ -76,7 +76,7 @@ describe('counts line', () => {
     app.setText(long);
     flushSync();
     expect(text(root, '[data-testid="counts"]')).toContain('20,001 code points');
-    expect(text(root, '[data-testid="counts"]')).toContain('tokens: waiting for the tokenizer');
+    expect(text(root, '[data-testid="counts"]')).toContain('tokens: press “Tokenize now”');
     expect(root.querySelector('[data-testid="stale-badge"]')).toBeNull();
     const run = app.runOnDemand();
     flushSync();

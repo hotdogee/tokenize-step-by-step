@@ -18,9 +18,12 @@
  *   Long inputs (AD-27, `long-input.ts`) show a 2,000-byte window of the whole-text result around the caret.
  * - **Crossfade.** When the engine's first answer replaces a precomputed result, or a new tokenizer's answer replaces
  *   another's, the change runs inside the page's switch crossfade (`setResultTransition`, a View Transition) — skipped
- *   above 8 MB, where the previous result is released before the new one is accepted (AD-27).
- * - **Focus** and **pin** are byte offsets (AD-17); they survive re-tokenization and tokenizer switches and are clamped
- *   to a shorter text. The board restores DOM focus from them.
+ *   above 8 MB, where the previous result is released before the new one is accepted (AD-27). Released means
+ *   unreachable: no field keeps the whole-text result (`#slice` goes with it, and the counts line keeps only the last
+ *   on-demand run's counts, `OnDemandRun`), so it is collectable before the next one arrives.
+ * - **Focus** and **pin** are byte offsets into the analysed text (AD-17), absolute even while the board shows a window
+ *   (the board converts at its boundary with `BoardState.offset`); they survive re-tokenization, tokenizer switches and
+ *   window moves and are clamped to a shorter text. The board restores DOM focus from them.
  * - **URL state** (`url-state.ts`) is read once by `bootstrap.ts`; a deep link's merge step is re-applied when the live
  *   result arrives (the precomputed one may have no timeline).
  */
@@ -90,6 +93,30 @@ export interface BoardState {
   readonly kind: 'final' | 'stale' | 'text';
   /** The byte window of a long input's whole-text result (null: the board shows all of it). */
   readonly window: ByteWindow | null;
+  /**
+   * The analysed-text byte offset of `result`'s byte 0: a long input's window start (also of its text-only window), else
+   * 0. The board adds it to the anchors it writes, so `focus` and `pinned` stay absolute (AD-17).
+   */
+  readonly offset: number;
+}
+
+/** The token counts the counts line shows (05 §1). */
+export interface TokenCounts {
+  readonly tokens: number;
+  readonly partialTokens: number;
+}
+
+/** The options that change tokens (`trace` only changes the timeline). */
+type TokenOptions = Pick<EncodeOptions, 'specialTokens' | 'addBos' | 'normalize'>;
+
+/**
+ * What the counts line keeps of the last on-demand run (AD-27): its counts and what they answer — never the result
+ * itself, so a released result is unreachable.
+ */
+interface OnDemandRun extends TokenCounts, TokenOptions {
+  readonly tokenizer: TokenizerId;
+  /** The analysed text the run tokenized (the counts are stale once the text differs). */
+  readonly text: string;
 }
 
 /** Runs a result swap inside the page's crossfade (motion/view-transition.ts); resolves once the DOM shows it. */
@@ -133,12 +160,25 @@ export function optionsFor(entry: TokenizerEntry, current: EncodeOptions = DEFAU
   };
 }
 
-/** True when `result` was encoded with the options that change tokens (`trace` only changes the timeline). */
-function sameTokenOptions(result: TokenizationResult, options: EncodeOptions): boolean {
-  const own = result.options;
+/** True when `own` and `options` agree on every option that changes tokens. */
+function sameTokenOptions(own: TokenOptions, options: TokenOptions): boolean {
   return (
     own.specialTokens === options.specialTokens && own.addBos === options.addBos && own.normalize === options.normalize
   );
+}
+
+/** What the counts line keeps of an on-demand run's result (`OnDemandRun`). */
+function onDemandRun(result: TokenizationResult): OnDemandRun {
+  const { specialTokens, addBos, normalize } = result.options;
+  return {
+    tokens: result.stats.tokens,
+    partialTokens: result.stats.partialTokens,
+    tokenizer: result.tokenizer,
+    specialTokens,
+    addBos,
+    normalize,
+    text: result.input.text,
+  };
 }
 
 /** The text-only result of a long text: a window of about `WINDOW_BYTES` bytes around the caret (code-point safe). */
@@ -214,8 +254,8 @@ export class AppState {
   /** An on-demand run asked for before the tokenizer was loaded. */
   #pendingRun = false;
   #started = false;
-  /** The result of the last on-demand run (the counts line's source in on-demand tiers, AD-27). */
-  #onDemand: TokenizationResult | null = $state.raw(null);
+  /** The last on-demand run's counts (the counts line's source in on-demand tiers, AD-27; not the result). */
+  #onDemand: OnDemandRun | null = $state.raw(null);
   /** Code points of `text` (kept with it; `setText` updates both). */
   #codePoints = countCodePoints(DEFAULT_EXAMPLE);
   /** The window slicer (`window-slice.ts`), imported when a text first reaches an on-demand tier (not startup code). */
@@ -223,8 +263,8 @@ export class AppState {
   #slicerImport: Promise<void> | null = null;
   /** The last window slice (kept while the caret stays inside the same window). */
   #slice: { of: TokenizationResult; start: number; end: number; slice: TokenizationResult } | null = null;
-  /** The last text-only window of a long text. */
-  #textWindow: { text: string; start: number; end: number; slice: TokenizationResult } | null = null;
+  /** The last text-only window of a long text (`offset`: the UTF-8 bytes before `start`). */
+  #textWindow: { text: string; start: number; end: number; offset: number; slice: TokenizationResult } | null = null;
   /** The capped text's analysed prefix, kept for the text it was cut from. */
   #analysed = { text: '', value: '' };
 
@@ -334,7 +374,7 @@ export class AppState {
       result !== null &&
       result.tokenizer === this.tokenizer &&
       result.input.text === this.analysed &&
-      sameTokenOptions(result, this.options)
+      sameTokenOptions(result.options, this.options)
     );
   }
 
@@ -350,7 +390,7 @@ export class AppState {
         const cached = this.#slice;
         if (cached?.of !== result || cached.start !== window.start || cached.end !== window.end)
           this.#slice = { of: result, start: window.start, end: window.end, slice: slicer.sliceResult(result, window) };
-        return { result: this.#slice?.slice ?? result, kind: 'final', window };
+        return { result: this.#slice?.slice ?? result, kind: 'final', window, offset: window.start };
       }
       const [start, end] = textWindowRange(text, this.caret);
       const cached = this.#textWindow;
@@ -364,22 +404,24 @@ export class AppState {
           text,
           start,
           end,
+          offset: utf8ByteLength(text.slice(0, start)),
           slice: textOnlyResult(text.slice(start, end), this.tokenizer, entry.family),
         };
       return {
         result: this.#textWindow?.slice ?? textOnlyResult('', this.tokenizer, entry.family),
         kind: 'text',
         window: null,
+        offset: this.#textWindow?.offset ?? 0,
       };
     }
     if (this.composing)
-      return { result: textOnlyResult(this.text, this.tokenizer, entry.family), kind: 'text', window: null };
-    if (result !== null && this.#isCurrent(result)) return { result, kind: 'final', window: null };
+      return { result: textOnlyResult(this.text, this.tokenizer, entry.family), kind: 'text', window: null, offset: 0 };
+    if (result !== null && this.#isCurrent(result)) return { result, kind: 'final', window: null, offset: 0 };
     // Keep the last result while its successor is on the way: same text on another tokenizer (a switch, AD-19), or a
     // newer text on the loaded tokenizer (render once per keystroke, PA-11).
     if (result !== null && (result.input.text === this.text || this.resident === this.tokenizer))
-      return { result, kind: 'stale', window: null };
-    return { result: textOnlyResult(this.text, this.tokenizer, entry.family), kind: 'text', window: null };
+      return { result, kind: 'stale', window: null, offset: 0 };
+    return { result: textOnlyResult(this.text, this.tokenizer, entry.family), kind: 'text', window: null, offset: 0 };
   }
 
   /** The board's result when it is the current one, else null (stops 4–6 wait for the engine). */
@@ -389,19 +431,25 @@ export class AppState {
   }
 
   /**
-   * The counts line's tokens · partial source: the current result; in an on-demand tier the last on-demand run on this
-   * tokenizer, even when the text has changed since (shown with the "stale" badge, AD-27).
+   * The counts line's tokens · partial: the current result's; in an on-demand tier the last on-demand run's on this
+   * tokenizer and token options, even when the text has changed since (shown with the "stale" badge, AD-27) and while
+   * the next run is in flight.
    */
-  get countsResult(): TokenizationResult | null {
+  get tokenCounts(): TokenCounts | null {
+    if (isOnDemand(this.longInput)) {
+      const run = this.#onDemand;
+      return run !== null && run.tokenizer === this.tokenizer && sameTokenOptions(run, this.options) ? run : null;
+    }
     const result = this.result;
-    if (isOnDemand(this.longInput))
-      return result !== null &&
-        result === this.#onDemand &&
-        result.tokenizer === this.tokenizer &&
-        sameTokenOptions(result, this.options)
-        ? result
-        : null;
-    return this.#isCurrent(result) ? result : null;
+    return result !== null && this.#isCurrent(result) ? result.stats : null;
+  }
+
+  /**
+   * An on-demand tier whose tokens wait for the banner's button (no run on this tokenizer and token options yet, none in
+   * flight): the counts line says so instead of "waiting for the tokenizer".
+   */
+  get awaitingRun(): boolean {
+    return isOnDemand(this.longInput) && !this.running && this.tokenCounts === null;
   }
 
   /** The merge-step cap of the run on screen when its timeline was truncated (the rail's "limited to …" line). */
@@ -489,13 +537,21 @@ export class AppState {
    * or the tier is on demand (AD-27). `immediate` (a paste) skips the debounce.
    */
   setText(text: string, immediate = false): void {
+    const wasOnDemand = isOnDemand(this.longInput);
     this.text = text;
     this.#codePoints = countCodePoints(text);
     this.longInput = longInputMode(this.#codePoints);
     if (isOnDemand(this.longInput)) {
       this.#loadSlicer();
-      this.resultStale = this.result !== null && this.result.input.text !== this.analysed;
+      this.resultStale = this.#onDemand !== null && this.#onDemand.text !== this.analysed;
       return;
+    }
+    // Back below the on-demand tiers: the whole-text run is never shown again (a window only exists there), so it is
+    // released now instead of being kept on the board as the "stale" result of a short text.
+    if (wasOnDemand) {
+      this.#release();
+      this.#onDemand = null;
+      this.#textWindow = null;
     }
     this.resultStale = false;
     if (this.composing) return;
@@ -555,13 +611,10 @@ export class AppState {
     const seq = ++this.#seq;
     this.running = true;
     // AD-27: never hold two big results at once — release the previous one before the new one exists.
-    if (estimatedResultBytes(utf8ByteLength(text), trace) > RELEASE_ABOVE_BYTES) this.result = null;
+    if (estimatedResultBytes(utf8ByteLength(text), trace) > RELEASE_ABOVE_BYTES) this.#release();
     try {
       const result = await this.#client.encode(text, { ...this.options, trace });
-      if (seq === this.#seq) {
-        this.#onDemand = result;
-        this.#accept(result, 'live', seq);
-      }
+      if (seq === this.#seq) this.#accept(result, 'live', seq, true);
     } catch (error) {
       this.#encodeFailed(error, seq);
     } finally {
@@ -590,15 +643,29 @@ export class AppState {
     );
   }
 
-  /** Puts `result` on screen (see the module comment for the crossfade and the 8 MB rule). */
-  #accept(result: TokenizationResult, source: 'precomputed' | 'live', seq: number): void {
-    const previous = this.result;
+  /**
+   * Drops every reference to the whole-text result — `result` and its window slice (`#slice.of`) — so it is collectable
+   * before a result above 8 MB arrives (AD-27). The last run's counts (`#onDemand`) hold no result and stay.
+   */
+  #release(): void {
+    this.result = null;
+    this.#slice = null;
+  }
+
+  /**
+   * Puts `result` on screen (see the module comment for the crossfade and the 8 MB rule). `onDemand`: the result of an
+   * on-demand run, whose counts the counts line keeps; any other result drops the last run's counts.
+   */
+  #accept(result: TokenizationResult, source: 'precomputed' | 'live', seq: number, onDemand = false): void {
     const update = (): void => {
       if (seq < this.#shownSeq) return; // a newer result was shown while this one waited for its transition
       this.#shownSeq = seq;
+      this.#slice = null; // the previous result's window
+      this.#onDemand = onDemand ? onDemandRun(result) : null;
       this.result = result;
       this.resultSource = source;
-      this.resultStale = false;
+      // A run whose text was edited while it was in flight is stale at once (AD-27).
+      this.resultStale = onDemand && result.input.text !== this.analysed;
       this.running = false;
       this.#clampAnchors(result.utf8.length);
       if (this.#urlStep !== null && source === 'live' && this.#isCurrent(result)) {
@@ -607,10 +674,11 @@ export class AppState {
       }
     };
     if (resultBytes(result) > RELEASE_ABOVE_BYTES) {
-      this.result = null; // release the previous result first; no crossfade above 8 MB
+      this.#release(); // release the previous result first; no crossfade above 8 MB
       update();
       return;
     }
+    const previous = this.result;
     const swap =
       previous !== null &&
       (previous.tokenizer !== result.tokenizer || (this.resultSource === 'precomputed' && source === 'live'));
@@ -634,7 +702,7 @@ export class AppState {
   /** Sets one encode option (only the toggles the tokenizer declares are shown). */
   setOption<K extends 'specialTokens' | 'addBos' | 'normalize'>(key: K, value: EncodeOptions[K]): void {
     this.options = { ...this.options, [key]: value };
-    if (isOnDemand(this.longInput)) this.resultStale = this.result !== null;
+    if (isOnDemand(this.longInput)) this.resultStale = this.#onDemand !== null;
     else this.encodeNow();
   }
 

@@ -112,6 +112,7 @@ export const ja = {
   'counts.steps': { other: '{n} ステップ' },
   'counts.partial': { other: '{n} 部分文字トークン' },
   'counts.tokensPending': 'トークン：トークナイザーを待っています',
+  'counts.tokensOnDemand': 'トークン：「今すぐトークン化」を押してください',
   'counts.stale': '古い結果',
   'badge.precomputed': '事前計算',
   'badge.live': 'ライブ',

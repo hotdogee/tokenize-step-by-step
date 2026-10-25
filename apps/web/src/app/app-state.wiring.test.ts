@@ -3,6 +3,7 @@
  * coalescing, the pending encode across a load, `cancelled` naming, focus persistence by byte offset, the precomputed →
  * live crossfade, the board's final / stale / text states, the long-input tiers and the URL state.
  */
+import type { TokenizationResult } from '@tsbs/core';
 import { CancelledError } from '@tsbs/core/model/cancelled';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppState, ENCODE_DEBOUNCE_MS } from './app-state.svelte.ts';
@@ -11,6 +12,24 @@ import { FakeClient, flush, syntheticResult } from './fake-client.test-helper.ts
 import { ANALYSED_MAX, ON_DEMAND_MAX_STEPS, RELEASE_ABOVE_BYTES, resultBytes } from './long-input.ts';
 import type { PrecomputedSource } from './precomputed.ts';
 import { EXAMPLES } from './registry.ts';
+
+/**
+ * Node's `gc()` (exposed at runtime with `--expose-gc`; `vm` hands out the function), so a `WeakRef` shows whether a
+ * released result is still reachable from the app. Returns a collector that lets pending callbacks run first.
+ */
+function forcedGc(): () => Promise<void> {
+  const { process } = globalThis as unknown as { process: { getBuiltinModule(id: string): unknown } };
+  const v8 = process.getBuiltinModule('node:v8') as { setFlagsFromString(flags: string): void };
+  const vm = process.getBuiltinModule('node:vm') as { runInNewContext(code: string): unknown };
+  v8.setFlagsFromString('--expose-gc');
+  const gc = vm.runInNewContext('gc') as () => void;
+  return async () => {
+    for (let i = 0; i < 3; i++) {
+      await flush();
+      gc();
+    }
+  };
+}
 
 /** An app whose o200k engine is loaded (resident) and whose first live encode is answered. */
 async function loadedApp(client = new FakeClient(), source: PrecomputedSource | null = null): Promise<AppState> {
@@ -239,6 +258,54 @@ describe('precomputed → live (AD-16, 05 §12)', () => {
     expect(swaps).toBe(0);
     expect(app.result).toBe(big);
   });
+
+  it('leaves no reference to a released result: before a big run and once the text leaves the on-demand tiers', async () => {
+    const collect = forcedGc();
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    /** Answers the latest encode with a fresh result of its text; only a weak reference to it is kept. */
+    const answerWeakly = (): WeakRef<TokenizationResult> => {
+      const call = client.encodes.at(-1);
+      if (call === undefined) throw new Error('no encode');
+      const result = syntheticResult(call.text, 'openai-o200k_base', call.options);
+      call.resolve(result);
+      return new WeakRef(result);
+    };
+    /** The fake client keeps every call (and its settled promise): drop all but the one in flight. */
+    const forgetSettled = (): void => {
+      client.encodes.splice(0, client.encodes.length - 1);
+    };
+
+    // A whole-text run on screen as a window (its slice cache refers to the whole result).
+    app.setText('e'.repeat(30_000), true);
+    const first = app.runOnDemand();
+    const firstRef = answerWeakly();
+    await first;
+    await app.slicerReady();
+    expect(app.board.window).not.toBeNull();
+    // A run whose result may exceed 8 MB releases the previous one before the Worker answers; the counts stay.
+    app.setText('台'.repeat(150_000), true);
+    const second = app.runOnDemand();
+    expect(app.result).toBeNull();
+    expect(app.tokenCounts?.tokens).toBe(30_000);
+    expect(app.resultStale).toBe(true);
+    forgetSettled();
+    await collect();
+    expect(firstRef.deref(), 'the previous run is unreachable while the next one is in flight').toBeUndefined();
+
+    const secondRef = answerWeakly();
+    await second;
+    expect(app.board.window).not.toBeNull();
+    // Back to a short text: the whole-text run goes, and the short live result never keeps it alive.
+    app.setText('短文', true);
+    client.encodes.at(-1)?.answer();
+    await flush();
+    expect(app.board.kind).toBe('final');
+    expect(app.tokenCounts?.tokens).toBe(2);
+    forgetSettled();
+    await collect();
+    expect(secondRef.deref(), 'the whole-text run is unreachable after a short text').toBeUndefined();
+  });
 });
 
 describe('long input tiers (AD-27)', () => {
@@ -270,13 +337,32 @@ describe('long input tiers (AD-27)', () => {
     app.setCaret(10_000);
     expect(app.board.window?.start).toBeGreaterThan(8000);
     expect(app.board.result).not.toBe(slice);
-    expect(app.countsResult?.stats.tokens).toBe(20_001);
+    expect(app.tokenCounts?.tokens).toBe(20_001);
     expect(app.resultStale).toBe(false);
     // An edit makes the tokens stale; the counts keep the last run's values.
     app.setText(`${text}b`);
     expect(app.resultStale).toBe(true);
-    expect(app.countsResult?.stats.tokens).toBe(20_001);
+    expect(app.tokenCounts?.tokens).toBe(20_001);
     expect(app.board.kind).toBe('text');
+  });
+
+  it('says the tokens wait for "Tokenize now" until a run on this tokenizer and options; an edit during a run is stale', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    const text = 'f'.repeat(25_000);
+    app.setText(text, true);
+    expect(app.awaitingRun).toBe(true);
+    const run = app.runOnDemand();
+    expect(app.awaitingRun).toBe(false); // in flight: the counts wait for the tokenizer
+    app.setText(`${text}g`); // typed while the run is in flight
+    client.encodes.at(-1)?.answer();
+    await run;
+    expect(app.awaitingRun).toBe(false);
+    expect(app.tokenCounts?.tokens).toBe(25_000);
+    expect(app.resultStale).toBe(true);
+    void app.selectTokenizer('openai-cl100k_base');
+    expect(app.tokenCounts).toBeNull();
+    expect(app.awaitingRun).toBe(true);
   });
 
   it('runs without a timeline above 100,000 code points and analyses only the first 200,000 beyond that', async () => {
