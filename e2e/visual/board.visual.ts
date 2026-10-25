@@ -4,13 +4,16 @@
  *
  * The baselines are Linux renders (`__screenshots__/<name>-linux.png`): they are produced by the `visual-baselines`
  * workflow (`.github/workflows/ci.yml`, workflow_dispatch) and committed from its artifact (docs/release.md § Visual
- * baselines). A test whose baseline is absent — or any run off Linux, whose font rendering differs — skips with a notice
- * instead of writing a baseline nobody reviewed. `--update-snapshots` on Linux writes them.
+ * baselines). Until the first baselines are committed (no `*-linux.png` in `__screenshots__` at all), and on any run off
+ * Linux, whose font rendering differs, every test skips with a notice instead of writing a baseline nobody reviewed. Once
+ * any baseline exists, a missing one fails: a deleted file, a renamed fixture or theme, or a new viewport must not drop
+ * coverage silently. `--update-snapshots` on Linux writes them.
  *
  * The page runs on the precomputed-examples client (`?mock=1`, docs/dev.md), so no Worker timing or vocabulary download
  * can change a pixel; the footer's build stamp (sha + date) is masked.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
+import { basename, dirname } from 'node:path';
 import process from 'node:process';
 import { expect, test, type Page } from '@playwright/test';
 import { chooseExample } from '../specs/board-helpers.ts';
@@ -30,6 +33,11 @@ const VIEWPORTS = [
   { width: 768, height: 1024 },
   { width: 1440, height: 900 },
 ] as const;
+
+/** True while no Linux baseline is committed at all (before the first visual-baselines run): the only state that skips. */
+function bootstrapping(directory: string): boolean {
+  return !existsSync(directory) || !readdirSync(directory).some((file) => file.endsWith('-linux.png'));
+}
 
 /** Opens `/` on the precomputed client, selects the tokenizer and the chip, and waits for fonts and a settled board. */
 async function open(page: Page, tokenizer: string, example: string): Promise<void> {
@@ -51,9 +59,13 @@ for (const fixture of FIXTURES) {
         const updating = testInfo.config.updateSnapshots === 'all' || testInfo.config.updateSnapshots === 'changed';
         test.skip(process.platform !== 'linux', 'visual baselines are Linux renders (fonts-noto-cjk); run on Linux');
         test.skip(
-          !updating && !existsSync(baseline),
-          `no baseline yet (${name}): run the visual-baselines workflow and commit its artifact (docs/release.md)`,
+          !updating && bootstrapping(dirname(baseline)),
+          'no visual baselines committed yet: run the visual-baselines workflow and commit its artifact (docs/release.md)',
         );
+        expect(
+          updating || existsSync(baseline),
+          `${basename(baseline)} is missing while other baselines are committed: refresh them (docs/release.md)`,
+        ).toBe(true);
         await page.setViewportSize(viewport);
         await useTheme(page, theme);
         await open(page, fixture.tokenizer, fixture.example);

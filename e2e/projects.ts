@@ -77,7 +77,7 @@ export function allFunctionalProjects(): PlaywrightTestProject[] {
 /**
  * The visual-baseline project (06 §1 "Visual"): `visual/*.visual.ts` on chromium, `toHaveScreenshot` with
  * `maxDiffPixelRatio` 0.002, baselines at `visual/__screenshots__/<name>-<platform>.png` (Linux renders only; the specs
- * skip with a notice where a baseline is absent).
+ * skip with a notice until the first baselines are committed, then a missing one fails).
  */
 export function visualProject(): PlaywrightTestProject {
   return {
