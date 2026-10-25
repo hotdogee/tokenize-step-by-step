@@ -1,0 +1,21 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/core" },
+    { "path": "packages/core/test" },
+    { "path": "packages/worker" },
+    { "path": "packages/worker/test" },
+    { "path": "packages/registry" },
+    { "path": "packages/registry/test" },
+    { "path": "packages/conformance" },
+    { "path": "packages/conformance/test" },
+    { "path": "packages/vocab-tools" },
+    { "path": "packages/vocab-tools/test" },
+    { "path": "packages/ui-tokens" },
+    { "path": "packages/ui-tokens/test" },
+    { "path": "apps/web/tsconfig.app.json" },
+    { "path": "apps/web/tsconfig.node.json" },
+    { "path": "e2e" },
+    { "path": "tsconfig.tools.json" }
+  ]
+}

@@ -1,0 +1,99 @@
+/*
+ * @tsbs/ui-tokens — design tokens (docs/design/05-ui-ux.md §11). SKELETON from WP00: every token name of §11 exists with
+ * the value the table gives; WP06 owns the values, the per-breakpoint layout tokens (§3.3) and check-contrast.mjs.
+ *
+ * Light values sit on :root; dark values apply under prefers-color-scheme unless the page forces light, and always when it
+ * forces dark (boot.js sets data-theme="auto" | "light" | "dark" before first paint, AD-29).
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* Surfaces and text (neutral oklch lightness ramp). */
+  --bg: oklch(0.985 0 0);
+  --surface: oklch(0.96 0 0);
+  --surface-2: oklch(0.92 0 0);
+  --surface-3: oklch(0.86 0 0);
+  --fg: oklch(0.22 0 0);
+  --fg-muted: oklch(0.45 0 0);
+
+  /* The 1 px border is the WCAG 1.4.1 / 1.4.11 conformance cue: >= 3:1 against all tints and surfaces (AD-35). */
+  --border: oklch(0.5 0 0);
+  --accent: oklch(0.5 0.12 200);
+  --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  /* Token tints: hue 20deg + 45deg * i, chroma 0.08, lightness alternating 0.90 / 0.83. */
+  --tok-h0: oklch(0.9 0.08 20);
+  --tok-h1: oklch(0.83 0.08 65);
+  --tok-h2: oklch(0.9 0.08 110);
+  --tok-h3: oklch(0.83 0.08 155);
+  --tok-h4: oklch(0.9 0.08 200);
+  --tok-h5: oklch(0.83 0.08 245);
+  --tok-h6: oklch(0.9 0.08 290);
+  --tok-h7: oklch(0.83 0.08 335);
+
+  /* Two-tone partial-cut hatch; consumers set --hatch-tint to the chip's own tint where they use --hatch. */
+  --hatch-tint: var(--tok-h0);
+  --hatch: repeating-linear-gradient(45deg, var(--fg) 0 1.5px, var(--hatch-tint) 1.5px 3px);
+
+  /* Layout (per-breakpoint values in §3.3 are WP06/WP08's; these are the M cell at 1024-1439 px). */
+  --cell: 30px;
+  --gap: 2px;
+  --row-h: 172px;
+  --radius: 4px;
+  --sheet-height: 0px;
+
+  /* Motion. */
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 350ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: oklch(0.13 0 0);
+    --surface: oklch(0.17 0 0);
+    --surface-2: oklch(0.22 0 0);
+    --surface-3: oklch(0.3 0 0);
+    --fg: oklch(0.95 0 0);
+    --fg-muted: oklch(0.72 0 0);
+    --border: oklch(0.72 0 0);
+    --accent: oklch(0.75 0.12 200);
+    --tok-h0: oklch(0.3 0.08 20);
+    --tok-h1: oklch(0.38 0.08 65);
+    --tok-h2: oklch(0.3 0.08 110);
+    --tok-h3: oklch(0.38 0.08 155);
+    --tok-h4: oklch(0.3 0.08 200);
+    --tok-h5: oklch(0.38 0.08 245);
+    --tok-h6: oklch(0.3 0.08 290);
+    --tok-h7: oklch(0.38 0.08 335);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: oklch(0.13 0 0);
+  --surface: oklch(0.17 0 0);
+  --surface-2: oklch(0.22 0 0);
+  --surface-3: oklch(0.3 0 0);
+  --fg: oklch(0.95 0 0);
+  --fg-muted: oklch(0.72 0 0);
+  --border: oklch(0.72 0 0);
+  --accent: oklch(0.75 0.12 200);
+  --tok-h0: oklch(0.3 0.08 20);
+  --tok-h1: oklch(0.38 0.08 65);
+  --tok-h2: oklch(0.3 0.08 110);
+  --tok-h3: oklch(0.38 0.08 155);
+  --tok-h4: oklch(0.3 0.08 200);
+  --tok-h5: oklch(0.38 0.08 245);
+  --tok-h6: oklch(0.3 0.08 290);
+  --tok-h7: oklch(0.38 0.08 335);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}

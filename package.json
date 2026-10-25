@@ -1,0 +1,62 @@
+{
+  "name": "tokenize-step-by-step",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Client-side step-by-step tokenization visualizer: text → code points → UTF-8 bytes → pre-tokenizer chunks → BPE merges → tokens.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=26 <27"
+  },
+  "browserslist": [
+    "safari >= 16.4",
+    "ios_saf >= 16.4",
+    "chrome >= 109",
+    "firefox >= 115"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter @tsbs/web dev",
+    "vocab:fetch": "uv run --project tools/oracle tools/oracle/fetch_vocab.py",
+    "vocab:build": "tsbs-vocab build",
+    "vocab:verify": "tsbs-vocab verify",
+    "unicode:export": "uv run --project tools/oracle tools/oracle/export_unicode_tables.py",
+    "unicode:check": "node scripts/pending.ts unicode:check WP02 --skip",
+    "registry:check": "node scripts/pending.ts registry:check WP04 --skip",
+    "test": "vitest run",
+    "test:fuzz": "node scripts/pending.ts test:fuzz WP12",
+    "e2e": "node scripts/pending.ts e2e WP11 --skip",
+    "e2e:headers": "node scripts/pending.ts e2e:headers WP11",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "tsc -b && pnpm --filter @tsbs/web svelte-check",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "knip": "knip",
+    "build": "pnpm vocab:build && pnpm --filter @tsbs/web build && pnpm check:dist && pnpm exec wrangler deploy --dry-run",
+    "check:dist": "node scripts/check-dist.ts && size-limit --config size-limit.json --ignore-missing",
+    "lhci": "node scripts/pending.ts lhci WP11 --skip",
+    "deploy": "wrangler deploy",
+    "preview:pr": "node scripts/preview-pr.ts",
+    "oracle:check": "uv run --project tools/oracle tools/oracle/fetch_vocab.py && uv run --project tools/oracle tools/oracle/make_corpus.py --check && uv run --project tools/oracle tools/oracle/gen_fixtures.py --check && uv run --project tools/oracle tools/oracle/render_license_docs.py --check"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@size-limit/file": "14.3.0",
+    "@tsbs/vocab-tools": "workspace:*",
+    "@types/node": "26.6.5",
+    "eslint": "9.39.5",
+    "eslint-plugin-compat": "7.0.2",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-svelte": "3.23.1",
+    "globals": "17.13.0",
+    "knip": "6.41.0",
+    "prettier": "3.9.10",
+    "prettier-plugin-svelte": "4.1.1",
+    "size-limit": "14.3.0",
+    "svelte": "5.57.2",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.0",
+    "vitest": "4.1.12",
+    "wrangler": "4.152.0"
+  }
+}

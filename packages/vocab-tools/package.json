@@ -1,0 +1,19 @@
+{
+  "name": "@tsbs/vocab-tools",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Node-only vocabulary converter CLI (tsbs-vocab): upstream files → TSBV1 assets + vocab manifest. Never bundled.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "tsbs-vocab": "./src/cli.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@tsbs/conformance": "workspace:*",
+    "@tsbs/core": "workspace:*"
+  }
+}

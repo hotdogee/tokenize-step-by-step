@@ -1,0 +1,4 @@
+*.map
+.vite/
+.DS_Store
+Thumbs.db

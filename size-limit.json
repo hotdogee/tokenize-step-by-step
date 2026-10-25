@@ -1,0 +1,49 @@
+[
+  {
+    "name": "dist/index.html",
+    "path": "apps/web/dist/index.html",
+    "limit": "14 KB"
+  },
+  {
+    "name": "Main JS: initial shell (Svelte runtime + app + i18n + inlined example + manifest summary)",
+    "path": [
+      "apps/web/dist/assets/*.js",
+      "!apps/web/dist/assets/about-*.js",
+      "!apps/web/dist/assets/boot-*.js",
+      "!apps/web/dist/assets/entry-*.js",
+      "!apps/web/dist/assets/bytelevel-*.js",
+      "!apps/web/dist/assets/spm-*.js"
+    ],
+    "limit": "55 KB"
+  },
+  {
+    "name": "Worker core (loader + protocol + host)",
+    "path": "apps/web/dist/assets/entry-*.js",
+    "limit": "12 KB"
+  },
+  {
+    "name": "Engine chunk: bytelevel (incl. Unicode tables)",
+    "path": "apps/web/dist/assets/bytelevel-*.js",
+    "limit": "16 KB"
+  },
+  {
+    "name": "Engine chunk: spm",
+    "path": "apps/web/dist/assets/spm-*.js",
+    "limit": "10 KB"
+  },
+  {
+    "name": "CSS",
+    "path": "apps/web/dist/assets/*.css",
+    "limit": "20 KB"
+  },
+  {
+    "name": "Stand-in font (WOFF2)",
+    "path": "apps/web/dist/assets/*.woff2",
+    "limit": "4 KB"
+  },
+  {
+    "name": "boot-[hash].js",
+    "path": "apps/web/dist/assets/boot-*.js",
+    "limit": "0.5 KB"
+  }
+]
