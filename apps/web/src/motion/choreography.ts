@@ -234,10 +234,11 @@ function holdBox(el: HTMLElement, first: readonly [string, string]): Hold {
     const last = [el.style.getPropertyValue('--dx'), el.style.getPropertyValue('--w')] as const;
     el.style.setProperty('--dx', first[0]);
     el.style.setProperty('--w', first[1]);
-    // Restores exactly what the board wrote, so the board's own record of these values stays true.
+    // Restores exactly what the board wrote, so the board's own record of these values stays true — unless the board
+    // has written newer values in the meantime (a resize re-packed the rows): those stay.
     return () => {
-      el.style.setProperty('--dx', last[0]);
-      el.style.setProperty('--w', last[1]);
+      if (el.style.getPropertyValue('--dx') === first[0]) el.style.setProperty('--dx', last[0]);
+      if (el.style.getPropertyValue('--w') === first[1]) el.style.setProperty('--w', last[1]);
     };
   };
 }
@@ -339,14 +340,6 @@ interface StageMotion {
 }
 
 function playStage(plan: Plan, grid: HTMLElement, { boxes, firstVars, added, to, detailed }: StageMotion): void {
-  if (!detailed && boxes.length > 0) {
-    // The U+ labels sit inside the scaled boxes: hidden until the boxes have settled.
-    const token = String(++morphs);
-    grid.dataset['moMorph'] = token;
-    plan.onSettled(() => {
-      if (grid.dataset['moMorph'] === token) delete grid.dataset['moMorph'];
-    });
-  }
   const counter = detailed ? '.bd-glyph, .bd-ulabel' : '.bd-glyph';
   for (const pair of boxes) {
     const first = firstVars.get(pair.el);
@@ -396,6 +389,14 @@ function playStage(plan: Plan, grid: HTMLElement, { boxes, firstVars, added, to,
     else fade(plan, el, chipMs);
   }
   for (const el of added.ids) fade(plan, el, 200);
+  if (!detailed && boxes.length > 0) {
+    // The U+ labels sit inside the scaled boxes: hidden until every animation of the plan has ended.
+    const token = String(++morphs);
+    grid.dataset['moMorph'] = token;
+    plan.onSettled(() => {
+      if (grid.dataset['moMorph'] === token) delete grid.dataset['moMorph'];
+    });
+  }
 }
 
 function playStep(

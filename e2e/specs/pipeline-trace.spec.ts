@@ -3,7 +3,8 @@
  * chromium. 150 ideographs = 150 char boxes + 450 byte cells = 600 cells, all on screen:
  *
  * - nothing animates in the frame that paints the commit (the boxes keep their First geometry for that frame; flip.ts
- *   `Plan.startAfterPaint`) and the FLIP and the unfold start right after it;
+ *   `Plan.startAfterPaint`) and the FLIP and the unfold start right after it; the U+ labels wait hidden while the boxes
+ *   scale (above 120 changed cells they are not counter-scaled) and come back when the morph ends;
  * - the keydown task reads no layout after the board re-rendered: at most one forced layout, the read of the old (clean)
  *   layout before the commit, and it is short;
  * - a chromium trace bounds the commit frame — from the start of the keydown task to the end of the task that paints
@@ -77,11 +78,22 @@ async function drained(page: Page): Promise<void> {
   await expect.poll(() => page.evaluate(() => document.getAnimations().length), { timeout: 5000 }).toBe(0);
 }
 
+interface AroundCommit {
+  /** Animations running in the frame that paints the commit. */
+  readonly commitFrame: number;
+  /** Most animations running in one of the frames after it. */
+  readonly later: number;
+  /** Whether the U+ labels were hidden while the boxes scaled, and are shown again once the morph ended. */
+  readonly labelsHidden: boolean;
+  readonly labelsBack: boolean;
+}
+
 /**
  * Presses `key` and reports how many animations ran in the frame that paints the commit (an animation frame callback
- * queued before the keydown reaches the app runs first in that frame) and at most in the frames after it.
+ * queued before the keydown reaches the app runs first in that frame) and at most in the frames after it, and whether
+ * the U+ labels waited hidden while the boxes scaled.
  */
-async function animationsAroundCommit(page: Page, key: string): Promise<{ commitFrame: number; later: number }> {
+async function animationsAroundCommit(page: Page, key: string): Promise<AroundCommit> {
   await page.evaluate(() => {
     const store = window as unknown as Record<string, number>;
     store['__tsbsCommitFrame'] = -1;
@@ -94,6 +106,9 @@ async function animationsAroundCommit(page: Page, key: string): Promise<{ commit
           let n = 0;
           const tick = (): void => {
             store['__tsbsLater'] = Math.max(store['__tsbsLater'] ?? 0, document.getAnimations().length);
+            const label = document.querySelector('.bd-ulabel');
+            if (n === 4 && label !== null)
+              store['__tsbsLabels'] = getComputedStyle(label).visibility === 'hidden' ? 1 : 0;
             if (++n < 6) requestAnimationFrame(tick);
           };
           requestAnimationFrame(tick);
@@ -106,7 +121,13 @@ async function animationsAroundCommit(page: Page, key: string): Promise<{ commit
   await drained(page);
   return page.evaluate(() => {
     const store = window as unknown as Record<string, number>;
-    return { commitFrame: store['__tsbsCommitFrame'] ?? -1, later: store['__tsbsLater'] ?? 0 };
+    const label = document.querySelector('.bd-ulabel');
+    return {
+      commitFrame: store['__tsbsCommitFrame'] ?? -1,
+      later: store['__tsbsLater'] ?? 0,
+      labelsHidden: store['__tsbsLabels'] === 1,
+      labelsBack: label !== null && getComputedStyle(label).visibility === 'visible',
+    };
   });
 }
 
@@ -131,6 +152,7 @@ test('the stop 2→3 morph at 600 cells: nothing animates in the commit frame, w
   const around = await animationsAroundCommit(page, 'Digit3');
   expect(around.commitFrame).toBe(0);
   expect(around.later).toBeGreaterThan(150); // the boxes, their glyphs and the byte tier rows
+  expect(around).toMatchObject({ labelsHidden: true, labelsBack: true }); // 600 cells: not counter-scaled, but hidden
   await page.keyboard.press('Digit2');
   await drained(page);
   const flipsBefore = await boxFlips(page);
