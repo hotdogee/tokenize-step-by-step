@@ -35,7 +35,7 @@
     "e2e": "pnpm --filter @tsbs/e2e e2e",
     "e2e:shell": "pnpm e2e shell",
     "e2e:headers": "pnpm --filter @tsbs/e2e e2e:headers",
-    "e2e:perf": "pnpm --filter @tsbs/e2e e2e:perf",
+    "e2e:perf": "pnpm --filter @tsbs/e2e exec playwright test --config perf/playwright.config.ts",
     "lint": "pnpm generate && eslint --max-warnings 0 .",
     "typecheck": "pnpm generate && tsc -b && pnpm --filter @tsbs/web svelte-check",
     "format": "prettier --write .",
