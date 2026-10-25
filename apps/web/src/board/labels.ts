@@ -7,7 +7,7 @@
 import type { TokenizationResult } from '@tsbs/core';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
 import { isCombiningMark, standInFor, standInGlyph, type StandInKey } from '@tsbs/core/text/stand-ins';
-import { codePointLabel, hexByte } from '@tsbs/core/text/utf8';
+import { codePointLabel, decodeUtf8, hexByte } from '@tsbs/core/text/utf8';
 import type { MessageKey } from '../i18n/en.ts';
 import type { Params } from '../i18n/types.ts';
 
@@ -73,6 +73,56 @@ export function spokenGlyph(result: TokenizationResult, i: number, t: Translate)
     return t(key, { cp: codePointLabel(cp), base: baseOf(result, i) });
   }
   return charText(result, i);
+}
+
+/** The spm escaped-space glyph (piece display only, 05 §4). */
+const ESCAPED_SPACE = '▁';
+
+/** A chip's visible text and its screen-reader form (`chipText`). */
+export interface ChipText {
+  readonly visible: string;
+  readonly spoken: string;
+}
+
+/**
+ * What a token chip shows for the byte span [start, end) and what a screen reader hears (05 §4, §4.1; AD-36): the text
+ * with the char tier's stand-ins (`standInGlyph`: `␠ ⇥ ⏎ ␍ ⍽ ⟨U+0085⟩ BOM ZWJ ZWNJ`; `▁` for an spm space, and in front
+ * when the chip fuses the dummy prefix), and the same text with each glyph followed by its localized name ("a ZWJ
+ * zero-width joiner b"), so the accessible name keeps the visible label in order (WCAG 2.5.3) without a raw glyph that a
+ * screen reader would read literally. Null when the span is not whole UTF-8.
+ */
+export function chipText(
+  result: TokenizationResult,
+  start: number,
+  end: number,
+  t: Translate,
+  spm: boolean,
+  fusedDummy = false,
+): ChipText | null {
+  const text = decodeUtf8(result.utf8, start, end);
+  if (text === null) return null;
+  let visible = '';
+  const spoken: string[] = [];
+  let run = '';
+  const glyph = (shown: string, name: string): void => {
+    visible += shown;
+    if (run !== '') spoken.push(run);
+    run = '';
+    spoken.push(`${shown} ${name}`);
+  };
+  if (fusedDummy) glyph(ESCAPED_SPACE, t('a11y.standin.escapedSpace'));
+  for (const ch of text) {
+    const cp = ch.codePointAt(0) ?? 0;
+    const standIn = standInFor(cp);
+    if (spm && cp === 0x20) glyph(ESCAPED_SPACE, t('a11y.standin.escapedSpace'));
+    else if (standIn !== null) glyph(standInGlyph(standIn, cp), t(STAND_IN_NAMES[standIn], { cp: codePointLabel(cp) }));
+    else {
+      visible += ch;
+      run += ch;
+    }
+  }
+  if (run !== '') spoken.push(run);
+  return { visible, spoken: spoken.join(' ') };
 }
 
 /** Joins label parts with the locale's separator (", " / "，" / "、"), skipping empty ones. */
@@ -192,8 +242,9 @@ export function byteLabel(result: TokenizationResult, byte: number, t: Translate
 
 /**
  * `aria-label` of final token `index` (markers included): "token 2 of 5, id 66285, 2 bytes, partial: first 2 of 3 bytes of
- * 灣". `visible` is the text the chip shows after its id (piece / stand-ins), so the name contains the visible label in
- * the same order (WCAG 2.5.3): id, visible text, SPECIAL badge.
+ * 灣". `visible` is the spoken form of the text the chip shows after its id (`chipText(…).spoken`: the piece with each
+ * stand-in glyph followed by its name), so the name contains the visible label in the same order (WCAG 2.5.3): id,
+ * visible text, SPECIAL badge.
  */
 export function tokenLabel(
   result: TokenizationResult,

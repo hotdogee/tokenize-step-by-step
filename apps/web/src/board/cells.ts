@@ -13,7 +13,7 @@
 import type { PartsAt, ResolvedTextLang, RowModel, TokenizationResult } from '@tsbs/core';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
 import { standInFor } from '@tsbs/core/text/stand-ins';
-import { codePointLabel, decodeUtf8, hexByte } from '@tsbs/core/text/utf8';
+import { codePointLabel, hexByte } from '@tsbs/core/text/utf8';
 import type { Stage } from '../app/app-state.svelte.ts';
 import type { BoardTier } from './geometry.ts';
 import {
@@ -21,6 +21,7 @@ import {
   bytePiece,
   charLabel,
   charText,
+  chipText,
   chunkLabel,
   chunkText,
   cutsChar,
@@ -221,48 +222,26 @@ function tintOfByte(result: TokenizationResult, byte: number, pending: boolean):
   return token < 0 ? -1 : token % 8;
 }
 
+const tokenStartMarks = new WeakMap<BoardContext, Uint8Array>();
+
 /**
  * Byte offsets where a final token starts (stops 4–6): the cuts the char and byte tiers hatch, matching the per-byte tints
- * (both follow the final tokens, so the alignment cue does not change while the merge replay runs).
+ * (both follow the final tokens, so the alignment cue does not change while the merge replay runs). Computed once per
+ * context, not per mounted row.
  */
 function tokenStarts(ctx: BoardContext): Uint8Array {
+  const cached = tokenStartMarks.get(ctx);
+  if (cached !== undefined) return cached;
   const { result, stage } = ctx;
   const { tokens } = result;
   const marks = new Uint8Array(result.utf8.length + 1);
-  if (ctx.pending || stage < 4) return marks;
-  for (let i = 0; i < tokens.count; i++) marks[tokens.byteStart[i] ?? 0] = 1;
+  if (!ctx.pending && stage >= 4) for (let i = 0; i < tokens.count; i++) marks[tokens.byteStart[i] ?? 0] = 1;
+  tokenStartMarks.set(ctx, marks);
   return marks;
 }
 
 function descriptionId(kind: 'chunk' | 'token' | 'part', index: number, part: number): string {
   return part > 1 ? `frag-${kind}-${String(index)}-${String(part)}` : `frag-${kind}-${String(index)}`;
-}
-
-function visibleText(result: TokenizationResult, start: number, end: number, spm: boolean): string | null {
-  const text = decodeUtf8(result.utf8, start, end);
-  if (text === null) return null;
-  let out = '';
-  for (const ch of text) {
-    const cp = ch.codePointAt(0) ?? 0;
-    if (spm && cp === 0x20) out += '▁';
-    else out += standInFor(cp) === null ? ch : visibleStandIn(cp);
-  }
-  return out;
-}
-
-function visibleStandIn(cp: number): string {
-  switch (standInFor(cp)) {
-    case 'space':
-      return '␠';
-    case 'tab':
-      return '⇥';
-    case 'lf':
-      return '⏎';
-    case 'cr':
-      return '␍';
-    default:
-      return '⍽';
-  }
 }
 
 // ---- the row ----
@@ -517,8 +496,7 @@ function tokenCellsFinal(
     const fragment = fragmentInfo(ctx, 'token', i, row.index, f.first && f.last);
     const id = tokens.id[i] ?? 0;
     const chunk = tokens.chunk[i] ?? -1;
-    let text = f.first && f.colSpan >= 4 ? visibleText(result, start, end, spm) : null;
-    if (text !== null && i === fused) text = `▁${text}`;
+    const text = f.first && f.colSpan >= 4 ? chipText(result, start, end, t, spm, i === fused) : null;
     out.push({
       index: i,
       start: f.byteStart,
@@ -527,7 +505,7 @@ function tokenCellsFinal(
       span: f.colSpan,
       first: f.first,
       last: f.last,
-      label: tokenLabel(result, i, t, i === fused, text),
+      label: tokenLabel(result, i, t, i === fused, text?.spoken ?? null),
       describedBy: fragment.id,
       variant: 'token',
       tint: i % 8,
@@ -539,7 +517,7 @@ function tokenCellsFinal(
       bytePiece: kind === TokenKind.Byte ? bytePiece(utf8[start] ?? 0) : null,
       userDefined: kind === TokenKind.UserDefined,
       special: (flags & TokenFlag.Special) !== 0,
-      text,
+      text: text?.visible ?? null,
       markerText: null,
       marker: null,
       directHit: chunk >= 0 && chunks.directHit[chunk] === 1 && end - start > 1,

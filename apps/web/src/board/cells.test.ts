@@ -99,6 +99,7 @@ describe('spm specifics', () => {
     const [row] = cellsOf(caseResult('xai-grok1', 'en-hello-world'), { K: 34, fusedDummy: true });
     expect(row?.tokens[0]?.label).toContain('includes the dummy prefix (0 bytes)');
     expect(row?.tokens[0]?.text).toBe('▁Hello');
+    expect(row?.tokens[0]?.label).toContain(', ▁ escaped space Hello, ');
     expect(row?.tokens[2]?.text).toBe('▁world');
   });
 
@@ -161,6 +162,30 @@ describe('special-token match, direct hits, graphemes, stand-ins, combining mark
     expect(tab?.chars[1]?.label).toBe('character 2 of 3: tab, U+0009, 1 byte');
     const [space] = cellsOf(caseResult('openai-o200k_base', 'en-hello-world'), { K: 34 });
     expect(space?.chars[6]?.glyph).toBe('␠');
+  });
+
+  it('chip text shows the char tier’s stand-ins (ZWJ, BOM, ⟨U+0085⟩) and the label names each glyph', () => {
+    // One 10-byte token (≥ 4 columns, so its text is shown): a ZWJ b BOM NEL.
+    const text = 'a\u200Db\uFEFF\u0085';
+    const analysis = analyzeText(text);
+    const result = buildResult({
+      tokenizer: 'openai-o200k_base',
+      family: 'bytelevel-bpe',
+      analysis,
+      chunks: { byteStart: [0, 10], kind: [ChunkKind.Regex] },
+      tokens: { id: [4242], byteStart: [0, 10], kind: [TokenKind.Normal] },
+      timeline: null,
+    });
+    const [row] = cellsOf(result, { K: 34 });
+    expect(row?.chars.map((cell) => cell.glyph)).toEqual(['a', 'ZWJ', 'b', 'BOM', '⟨U+0085⟩']);
+    const chip = row?.tokens[0];
+    expect(chip).toMatchObject({ span: 10, text: 'aZWJbBOM⟨U+0085⟩' });
+    expect(chip?.label).toBe(
+      'token 1 of 1, id 4242, a ZWJ zero-width joiner b BOM byte order mark ⟨U+0085⟩ control character U+0085, 10 bytes',
+    );
+    const [hello] = cellsOf(caseResult('openai-o200k_base', 'en-hello-world'), { K: 34 });
+    const world = hello?.tokens.find((cell) => cell.text === '␠world');
+    expect(world?.label).toContain(', ␠ space world, ');
   });
 
   it('draws combining marks and variation selectors on a dotted circle', () => {
