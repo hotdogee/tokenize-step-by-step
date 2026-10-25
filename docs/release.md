@@ -41,20 +41,21 @@ Do this once, before the first deploy.
 5. **Repository variables.**
 
    ```sh
-   gh variable set CONFORMANCE_MODE --body skip-missing-engine   # AD-32; already set on 2026-10-25
+   gh variable set CONFORMANCE_MODE --body strict   # AD-32; set to strict on 2026-10-25 when wave 2 merged both engines
    gh variable set PRODUCTION_URL --body https://tokenize-step-by-step.<subdomain>.workers.dev   # optional fallback
    ```
 
-   `CONFORMANCE_MODE` stays `skip-missing-engine` until both engines exist; the PR that lands the second engine (WP05A or
-   WP05B) sets it to `strict`. The `vocab` job's conformance gate (`pnpm conformance:gate`) fails as soon as both engine
-   factories are exported while the variable is weaker than `strict`; `off` is never accepted in CI. An unset variable
-   means `strict`. `PRODUCTION_URL` is used only if `wrangler deploy` prints no URL.
+   `CONFORMANCE_MODE` was `skip-missing-engine` while only one engine existed (wave 1); the wave 2 integration that merged
+   the second engine set it to `strict` (AD-32), so every asset must pass its fixture inside the converter. The `vocab`
+   job's conformance gate (`pnpm conformance:gate`) fails whenever both engine factories are exported and the variable is
+   weaker than `strict`; `off` is never accepted in CI. An unset variable means `strict`. `PRODUCTION_URL` is used only if
+   `wrangler deploy` prints no URL.
 
 6. **Check the token** from a checkout (nothing is uploaded):
 
    ```sh
    CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… pnpm exec wrangler whoami
-   CONFORMANCE_MODE=skip-missing-engine pnpm build   # ends with wrangler deploy --dry-run
+   pnpm build   # strict conformance (the default); ends with wrangler deploy --dry-run
    ```
 
 7. **Branch protection on `main`**: require the status checks `check`, `vocab`, `unit`, `build`, `e2e (chromium)`,

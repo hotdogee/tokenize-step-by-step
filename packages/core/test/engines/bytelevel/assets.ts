@@ -32,7 +32,7 @@ const MANIFEST = join(DIST, 'vocab-manifest.generated.json');
 /** Null when the built assets exist, else the reason the suites skip. */
 export const SKIP_REASON: string | null = existsSync(MANIFEST)
   ? null
-  : `no built vocabulary (${MANIFEST}); run \`CONFORMANCE_MODE=skip-missing-engine pnpm vocab:build\` first`;
+  : `no built vocabulary (${MANIFEST}); run \`pnpm vocab:build\` first`;
 
 if (SKIP_REASON !== null) console.warn(`[bytelevel] skipping the asset suites: ${SKIP_REASON}`);
 

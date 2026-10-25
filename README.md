@@ -26,7 +26,7 @@ tooling.
 pnpm install
 pnpm dev                                            # http://localhost:5173
 pnpm lint && pnpm typecheck && pnpm format:check && pnpm test
-CONFORMANCE_MODE=skip-missing-engine pnpm build    # vocab:build → vite build → check:dist → wrangler deploy --dry-run
+pnpm build                                          # vocab:build (strict conformance) → vite build → check:dist → wrangler deploy --dry-run
 pnpm --filter @tsbs/web preview                     # the production bundle with the production headers (CSP)
 ```
 

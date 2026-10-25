@@ -27,8 +27,9 @@ permissions:
   contents: read
 
 env:
-  # AD-32: `skip-missing-engine` until WP05A and WP05B have both merged, then `strict` (the conformance gate in the vocab
-  # job fails once both engines exist and the mode is weaker). An unset variable means strict.
+  # AD-32: the repository variable is `strict` since wave 2 merged both engines (WP05A + WP05B); it was
+  # `skip-missing-engine` while one engine factory was missing. The conformance gate in the vocab job fails whenever
+  # both engines exist and the mode is weaker. An unset variable means strict.
   CONFORMANCE_MODE: ${{ vars.CONFORMANCE_MODE }}
   WRANGLER_SEND_METRICS: 'false'
 

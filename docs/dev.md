@@ -14,14 +14,15 @@
 pnpm install
 pnpm dev                       # vite dev on apps/web (CSP omitted so HMR works, PA-2b)
 pnpm lint && pnpm typecheck && pnpm format:check && pnpm test   # lint/typecheck/test first run `pnpm generate` (gitignored apps/web/src/generated/*.json)
-CONFORMANCE_MODE=skip-missing-engine pnpm build   # vocab:build → vite build → check:dist → wrangler deploy --dry-run
+pnpm build                     # vocab:build (strict conformance) → vite build → check:dist → wrangler deploy --dry-run
 pnpm --filter @tsbs/web preview                     # production bundle with every _headers line, CSP included
 ```
 
 `pnpm build` runs `tsbs-vocab build`, which takes its conformance mode from `--conformance`, then from the
-`CONFORMANCE_MODE` environment variable, then defaults to `strict` (AD-32). Until both engines exist, use
-`skip-missing-engine` (CI reads the repository variable of the same name). In PowerShell:
-`$env:CONFORMANCE_MODE = 'skip-missing-engine'; pnpm build`.
+`CONFORMANCE_MODE` environment variable, then defaults to `strict` (AD-32). Both engines exist since wave 2, so every
+asset is checked against its fixture before it is written, and CI's repository variable of the same name is `strict`
+(`pnpm conformance:gate` fails on anything weaker). `skip-missing-engine` only mattered while an engine factory was
+missing from `@tsbs/core`; `--conformance off` is a local-only escape hatch and never allowed in CI.
 
 Package tests live in `packages/<name>/test/` with their own `tsconfig.json` (Node types), so `src/` stays free of DOM and
 Node APIs where `docs/design/02-architecture.md` §4 requires it. `tsc -b` writes declaration output for project

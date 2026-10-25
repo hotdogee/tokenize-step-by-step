@@ -4,7 +4,7 @@ Playwright suites (`docs/design/06-quality-ci-deploy.md` §1, §4). Build first:
 `apps/web/dist`.
 
 ```sh
-CONFORMANCE_MODE=skip-missing-engine pnpm build
+pnpm build
 pnpm --filter @tsbs/e2e exec playwright install chromium   # once
 pnpm e2e           # functional: specs/ on vite preview (+ headersMiddleware), chromium
 pnpm e2e:headers   # headers: headers/ on wrangler dev --assets apps/web/dist
