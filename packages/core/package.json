@@ -1,0 +1,13 @@
+{
+  "name": "@tsbs/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure TypeScript tokenizer core: data model, text analysis, agenda merge loop, engines, TSBV1 reader. No DOM, no Node APIs, zero runtime dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  }
+}

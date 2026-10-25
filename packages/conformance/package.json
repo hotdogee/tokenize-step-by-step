@@ -1,0 +1,15 @@
+{
+  "name": "@tsbs/conformance",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Golden-fixture conformance runner shared by engine tests and tsbs-vocab build (AD-13).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@tsbs/core": "workspace:*"
+  }
+}

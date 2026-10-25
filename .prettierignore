@@ -1,0 +1,30 @@
+# Generated or vendored
+pnpm-lock.yaml
+**/node_modules/
+**/dist/
+.wrangler/
+data/
+apps/web/src/generated/
+apps/web/src/board/grid-classes.css
+e2e/playwright-report/
+e2e/test-results/
+.claude/
+
+# Owned by the Python oracle lane (ruff formats tools/oracle) or byte-exact data
+tools/oracle/
+fixtures/
+docs/licenses/
+docs/research/
+docs/design/
+
+# FROZEN v1 contracts and design copies kept verbatim (layout included) — see the header of each file
+tsconfig.base.json
+wrangler.jsonc
+packages/core/src/model/result.ts
+packages/core/src/model/view-types.ts
+packages/core/src/model/engine.ts
+packages/core/src/format/types.ts
+packages/core/src/format/README.md
+packages/core/src/protocol.ts
+packages/core/src/agenda/types.ts
+packages/registry/src/schema.ts

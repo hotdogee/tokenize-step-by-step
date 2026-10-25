@@ -1,0 +1,22 @@
+# pnpm workspace (docs/design/02-architecture.md §2).
+packages:
+  - apps/*
+  - packages/*
+  - e2e
+
+# Dependency lifecycle scripts are blocked by default; only these may run them (AD-2).
+# `onlyBuiltDependencies` is the pnpm 10/11 spelling named in the design; pnpm 12 (the pinned
+# version, PA-1) reads the `allowBuilds` map instead, so both list the same three packages.
+onlyBuiltDependencies:
+  - esbuild
+  - workerd
+  - '@parcel/watcher'
+allowBuilds:
+  esbuild: true
+  workerd: true
+  '@parcel/watcher': true
+
+# pnpm 12 reads install settings from this file, not from .npmrc; these mirror .npmrc.
+engineStrict: true
+savePrefix: ''
+resolutionMode: highest

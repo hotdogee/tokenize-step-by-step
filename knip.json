@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts"]
+    },
+    "apps/web": {
+      "entry": ["src/app/boot.ts"],
+      "project": ["src/**/*.{ts,svelte}", "plugins/**/*.ts", "*.{js,ts}"],
+      "ignoreDependencies": ["@tsbs/ui-tokens"]
+    },
+    "packages/*": {
+      "entry": ["test/**/*.test.ts"]
+    },
+    "e2e": {
+      "entry": ["test/**/*.test.ts"]
+    }
+  },
+  "ignoreBinaries": ["uv"],
+  "ignoreExportsUsedInFile": true
+}

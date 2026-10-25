@@ -1,0 +1,11 @@
+{
+  "name": "@tsbs/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Playwright end-to-end suites (functional, headers, axe, visual, perf). Skeleton until WP11.",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}
