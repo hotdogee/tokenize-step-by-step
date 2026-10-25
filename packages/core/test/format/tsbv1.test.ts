@@ -203,6 +203,12 @@ const replace = (tag: string, payload: Uint8Array) => (sections: RawSection[]) =
 const withMeta = (family: Family, tables: SyntheticTables, overrides: Record<string, unknown>) =>
   replace('META', utf8(JSON.stringify({ ...tables.meta, ...overrides, family: overrides['family'] ?? family })));
 
+/** `tables` without the single-byte piece `byte`, `META` re-measured (so only the missing byte is wrong). */
+function withoutByte(tables: SyntheticTables, byte: number): SyntheticTables {
+  const pieces = tables.pieces.filter((p) => !(p.length === 1 && p[0] === byte));
+  return { ...tables, pieces, meta: syntheticMeta(tables.family, pieces, tables.specials.length) };
+}
+
 describe('readTsbv1 negative format cases', () => {
   const bl = bytelevelTables();
   const spm = spmTables('int');
@@ -284,6 +290,31 @@ describe('readTsbv1 negative format cases', () => {
       () => mutated(bl, withMeta('bytelevel-bpe', bl, { counts: { pieces: 260, specials: 1 } })),
       'SPCL',
       /META says 1/,
+    ],
+    [
+      'counts.merges in a byte-level asset',
+      () => mutated(bl, withMeta('bytelevel-bpe', bl, { counts: { pieces: 260, specials: 2, merges: 0 } })),
+      'META',
+      /counts\.merges 0 without MRGS/,
+    ],
+    [
+      'counts.merges in a score asset',
+      () => mutated(spm, withMeta('spm-bpe', spm, { counts: { pieces: 17, specials: 2, merges: 3 } })),
+      'META',
+      /counts\.merges 3 without MRGS/,
+    ],
+    [
+      'merge-rank asset without counts.merges',
+      () => mutated(mr, withMeta('spm-bpe', mr, { counts: { pieces: 17, specials: 2 } })),
+      'META',
+      /counts\.merges is required with MRGS/,
+    ],
+    ['PCES without pieces', () => mutated(spm, replace('PCES', Uint8Array.of(0))), 'PCES', /no pieces/],
+    [
+      'byte-level asset without a single-byte piece',
+      () => writeTsbv1(withoutByte(bl, 0x7f)),
+      'PCES',
+      /single-byte piece 0x7F is missing/,
     ],
     ['PCES truncated entry', () => mutated(bl, replace('PCES', Uint8Array.of(1, 5, 0x61))), 'PCES', /truncated entry/],
     [
@@ -402,6 +433,12 @@ describe('readTsbv1 negative format cases', () => {
       () => mutated(bl, replace('SPCL', Uint8Array.from([2, 1, 0, 2, 1, 0x61, 0]))),
       'SPCL',
       /special 0 is empty/,
+    ],
+    [
+      'SPCL duplicate id',
+      () => mutated(bl, replace('SPCL', Uint8Array.from([2, 1, 1, 0x61, 1, 1, 0x62]))),
+      'SPCL',
+      /special 1 repeats id 1/,
     ],
     [
       'SPCL trailing bytes',

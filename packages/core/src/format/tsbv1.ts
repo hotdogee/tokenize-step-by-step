@@ -5,11 +5,14 @@
  * Reader rules beyond the byte layout (each violation throws {@link FormatError}):
  * - header: magic `TSBV`, version 1, family 0/1; sections tile the file exactly (zero padding to 4 bytes, no trailing
  *   bytes); a known tag appears at most once; unknown tags are skipped (forward compatibility);
- * - `META`, `PCES` and `SPCL` are required; `META.family` matches the header; `META.counts` match `PCES`/`SPCL`/`MRGS`;
- *   `META.maxPieceBytes` equals the longest `PCES` entry (it bounds the engines' merge window, 04 §2.1);
+ * - `META`, `PCES` and `SPCL` are required; `META.family` matches the header; `PCES` holds at least one piece;
+ *   `META.counts.pieces` / `.specials` match `PCES` / `SPCL`, and `.merges` is present exactly when `MRGS` is and
+ *   matches it; `META.maxPieceBytes` equals the longest `PCES` entry (it bounds the engines' merge window, 04 §2.1);
  * - spm: `TYPS` is required and holds no UNUSED (5) or unknown type; `META.priority` is required and selects exactly one
- *   of `PRIO`/`SCRF` (`score`) or `MRGS` (`merge-rank`); byte-level: none of `TYPS PRIO SCRF MRGS` may appear;
- * - `MRGS`: result ids in range, split offsets strictly inside the result piece and on a code-point boundary.
+ *   of `PRIO`/`SCRF` (`score`) or `MRGS` (`merge-rank`); byte-level: none of `TYPS PRIO SCRF MRGS` may appear, and all
+ *   256 single bytes are pieces (Engine A's 1-byte direct hits rely on it, 03 §C.1);
+ * - `MRGS`: result ids in range, split offsets strictly inside the result piece and on a code-point boundary;
+ * - `SPCL`: non-empty, valid UTF-8 texts with unique ids.
  *
  * Every table is an own copy: once `readTsbv1` returns, the container `ArrayBuffer` (incl. the 1 MB `MRGS` payload of
  * Gemma 4) is unreferenced and can be collected (03 §C.2).
@@ -192,9 +195,12 @@ function readSpecials(bytes: Uint8Array, section: Section): Tsbv1['specials'] {
   const count = reader.varint();
   if (count * 3 > reader.remaining) throw reader.error(`count ${String(count)} does not fit in the section`);
   const specials: Array<{ id: number; bytes: Uint8Array; text: string }> = [];
+  const ids = new Set<number>();
   for (let i = 0; i < count; i++) {
     const at = reader.pos;
     const id = reader.varint();
+    if (ids.has(id)) throw reader.error(`special ${String(i)} repeats id ${String(id)}`, at);
+    ids.add(id);
     const len = reader.varint();
     if (len === 0) throw reader.error(`special ${String(i)} is empty`, at);
     reader.need(len, `special ${String(i)}`);
@@ -206,6 +212,18 @@ function readSpecials(bytes: Uint8Array, section: Section): Tsbv1['specials'] {
   }
   if (reader.remaining !== 0) throw reader.error(`${String(reader.remaining)} trailing bytes`);
   return specials;
+}
+
+/** Byte-level `PCES` must hold every single byte as a piece (03 §C.1). */
+function assertSingleBytes(vocab: ByteVocab, base: number): void {
+  const one = new Uint8Array(1);
+  for (let b = 0; b < 256; b++) {
+    one[0] = b;
+    if (vocab.indexOf(one, 0, 1) < 0) {
+      const hex = b.toString(16).toUpperCase().padStart(2, '0');
+      throw new FormatError('PCES', base, `single-byte piece 0x${hex} is missing`);
+    }
+  }
 }
 
 function required(sections: Map<string, Section>, tag: string): Section {
@@ -233,6 +251,7 @@ export function readTsbv1(buf: ArrayBuffer): Tsbv1 {
 
   const pcesSection = required(sections, 'PCES');
   const vocab = byteVocabFromBuffer(bytes.subarray(pcesSection.start, pcesSection.end), pcesSection.start);
+  if (vocab.count === 0) throw new FormatError('PCES', pcesSection.start, 'no pieces');
   if (vocab.count !== meta.counts.pieces) {
     throw new FormatError(
       'PCES',
@@ -253,6 +272,7 @@ export function readTsbv1(buf: ArrayBuffer): Tsbv1 {
   let merges: MergeTable | null = null;
   if (family === 'bytelevel-bpe') {
     forbid(sections, ['TYPS', 'PRIO', 'SCRF', 'MRGS'], 'spm only');
+    assertSingleBytes(vocab, pcesSection.start);
   } else {
     types = readTypes(bytes, required(sections, 'TYPS'), vocab.count);
     if (meta.priority === 'score') {
@@ -269,7 +289,9 @@ export function readTsbv1(buf: ArrayBuffer): Tsbv1 {
       const mrgs = required(sections, 'MRGS');
       merges = readMerges(bytes, mrgs, vocab);
       const declared = meta.counts.merges;
-      if (declared !== undefined && declared !== merges.rank.length) {
+      if (declared === undefined)
+        throw new FormatError('META', metaSection.start, 'counts.merges is required with MRGS');
+      if (declared !== merges.rank.length) {
         throw new FormatError(
           'MRGS',
           mrgs.start,
@@ -279,6 +301,9 @@ export function readTsbv1(buf: ArrayBuffer): Tsbv1 {
     } else {
       throw new FormatError('META', metaSection.start, 'spm assets must declare priority');
     }
+  }
+  if (merges === null && meta.counts.merges !== undefined) {
+    throw new FormatError('META', metaSection.start, `counts.merges ${String(meta.counts.merges)} without MRGS`);
   }
 
   const spclSection = required(sections, 'SPCL');
