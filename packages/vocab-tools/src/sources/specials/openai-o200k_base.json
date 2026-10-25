@@ -1,0 +1,19 @@
+{
+  "tokenizer": "openai-o200k_base",
+  "source": {
+    "url": "https://raw.githubusercontent.com/openai/tiktoken/4e71bbe0c078468e00fefbf94b39849389f346e5/tiktoken_ext/openai_public.py",
+    "revision": "4e71bbe0c078468e00fefbf94b39849389f346e5",
+    "tag": "tiktoken 0.14.0",
+    "symbol": "o200k_base() special_tokens"
+  },
+  "specials": [
+    {
+      "id": 199999,
+      "text": "<|endoftext|>"
+    },
+    {
+      "id": 200018,
+      "text": "<|endofprompt|>"
+    }
+  ]
+}
