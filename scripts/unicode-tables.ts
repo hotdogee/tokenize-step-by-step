@@ -4,7 +4,9 @@
  *
  *   node scripts/unicode-tables.ts           write the TypeScript tables (`pnpm unicode:export` runs the Python export first)
  *   node scripts/unicode-tables.ts --check   exit 1 if the committed TypeScript differs from what the JSON gives
- *                                            (`pnpm unicode:check`, which then runs the Python export's own `--check`)
+ *                                            (`pnpm unicode:check`: Node only, so the CI `check` job needs no uv; the
+ *                                            fresh Python export is diffed by `export_unicode_tables.py --check` in
+ *                                            `pnpm oracle:check`, 02 §6)
  *
  * Each table is written as a flat list of `(gap, span)` pairs over its sorted, inclusive `[first, last]` ranges: with
  * `next = 0` initially, a pair decodes to `first = next + gap`, `last = first + span`, then `next = last + 1`. The

@@ -203,7 +203,7 @@ Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esb
 | `pnpm vocab:fetch` | `uv run --project tools/oracle tools/oracle/fetch_vocab.py` |
 | `pnpm vocab:build [--only <id>] [--conformance strict\|skip-missing-engine\|off]` | `tsbs-vocab build` → `data/vocab/dist/tok/**`, `vocab-manifest.generated.json`, `licences.generated.json`, MODIFIED notices; conformance inside (AD-13; `skip-missing-engine` is the CI mode until both engines have merged, AD-32) |
 | `pnpm vocab:verify` | re-decode every `.bin`, check sha256, round-trip against raw |
-| `pnpm unicode:export` / `pnpm unicode:check` | Python export of the Unicode 16.0 tables → `tools/oracle/unicode_tables.json` (WP02 converts it to TS) / diff gate |
+| `pnpm unicode:export` / `pnpm unicode:check` | Python export of the Unicode 16.0 tables → `tools/oracle/unicode_tables.json`, then `scripts/unicode-tables.ts` converts it to TS / Node-only diff gate: `tables.generated.ts` vs the committed JSON (the fresh-export diff is `oracle:check`'s `export_unicode_tables.py --check`) |
 | `pnpm registry:check` | zod validation + cross-refs + negative tests |
 | `pnpm test` | `vitest run` across the workspace (core, conformance, worker, registry, web units/components) |
 | `pnpm test:fuzz` | Node fuzz vs npm oracles (nightly; seed printed) |
