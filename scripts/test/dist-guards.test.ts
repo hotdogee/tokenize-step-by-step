@@ -12,8 +12,10 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { GUARD_LIMITS, runGuard } from '@tsbs/vocab-tools';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  checkWorkerEntries,
   DIST_LIMITS,
   dotfiles,
   isAssetIgnored,
@@ -26,6 +28,13 @@ const HEADERS = readFileSync(new URL('../../apps/web/public/_headers', import.me
 const ASSETSIGNORE = readFileSync(new URL('../../apps/web/public/.assetsignore', import.meta.url), 'utf8');
 const MiB = 1024 * 1024;
 const BOOT = 'assets/boot-0123abcd.js';
+/** The Worker as Vite emits it: a chunk constructs `entry-*.js`, which imports `entry-core-*.js` like the engines do. */
+const WORKER_FILES = {
+  'assets/lazy-entry-AbCd1234.js': 'function r(e){return new Worker("/assets/entry-Ef56Gh78.js",{type:"module"})}',
+  'assets/entry-Ef56Gh78.js': 'import{s as t}from"./entry-core-Ij90Kl12.js";t(self);',
+  'assets/entry-core-Ij90Kl12.js': 'export function s(e){}',
+  'assets/bytelevel-Mn34Op56.js': 'import{s}from"./entry-core-Ij90Kl12.js";export{s};',
+} as const;
 
 /** A page whose <head> starts with the classic boot script (AD-15). */
 const page = (title: string): string =>
@@ -66,6 +75,13 @@ function manifest(assets: Record<string, unknown>): string {
 
 const site = () => runGuards({ mode: 'site', dist, manifest: join(vocab, VOCAB_MANIFEST_FILE) });
 
+/** `pnpm check:dist`: this script's site mode and `tsbs-vocab guard`, on the same directory. */
+async function checkDist(): Promise<{ errors: string[]; warnings: string[] }> {
+  const ours = site();
+  const guard = await runGuard({ dist, manifest: join(vocab, VOCAB_MANIFEST_FILE) });
+  return { errors: [...ours.errors, ...guard.errors], warnings: [...ours.warnings, ...guard.warnings] };
+}
+
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'tsbs-dist-'));
   dist = join(root, 'dist');
@@ -76,6 +92,7 @@ beforeEach(() => {
   write(dist, BOOT, '(()=>{})();');
   write(dist, 'assets/main-AbCd1234.js', 'export {};');
   write(dist, 'assets/main-AbCd1234.js.map', '{}');
+  for (const [file, text] of Object.entries(WORKER_FILES)) write(dist, file, text);
   write(dist, '_headers', HEADERS);
   write(dist, '.assetsignore', ASSETSIGNORE);
   const entry = asset(vocab, 'openai-cl100k_base', randomBytes(4096));
@@ -88,25 +105,12 @@ afterEach(() => {
 });
 
 describe('site guards (check:dist)', () => {
-  it('accept a well-formed dist', () => {
+  it('accept a well-formed dist', async () => {
     const report = site();
     expect(report.errors).toEqual([]);
     // .assetsignore and the source map are not uploaded.
-    expect(report.fileCount).toBe(7);
-  });
-
-  it('fail on a file of 21 MiB (hard limit 20 MiB) and warn above 8 MiB', () => {
-    sparse(dist, 'assets/huge.bin', 21 * MiB);
-    sparse(dist, 'assets/big.bin', 9 * MiB);
-    const report = site();
-    expect(report.errors).toEqual([expect.stringMatching(/^assets\/huge\.bin is 21\.0 MiB \(hard limit 20\.0 MiB/)]);
-    expect(report.warnings).toEqual([expect.stringMatching(/^assets\/big\.bin is 9\.0 MiB/)]);
-  });
-
-  it('fail on dotfiles anywhere except the root .assetsignore', () => {
-    write(dist, '.env', 'SECRET=1');
-    write(dist, 'assets/.hidden/x.js', '');
-    expect(site().errors).toEqual(['dotfile .env would be served', 'dotfile assets/.hidden/x.js would be served']);
+    expect(report.fileCount).toBe(11);
+    expect((await checkDist()).errors).toEqual([]);
   });
 
   it('fail when .assetsignore is missing or incomplete', () => {
@@ -120,11 +124,7 @@ describe('site guards (check:dist)', () => {
     expect(site().errors).toContain('.assetsignore is missing from dist');
   });
 
-  it('cross-check /tok against the manifest both ways, with size and sha256', () => {
-    write(dist, 'tok/stray/000000000000.bin', 'x');
-    expect(site().errors).toEqual(['/tok/stray/000000000000.bin is not listed in the vocab manifest']);
-    rmSync(join(dist, 'tok/stray'), { recursive: true });
-
+  it('check each listed .bin for size, sha256 and path form', () => {
     const [file] = readdirSync(join(dist, 'tok/openai-cl100k_base'));
     write(dist, `tok/openai-cl100k_base/${String(file)}`, randomBytes(4096));
     expect(site().errors).toEqual([
@@ -135,22 +135,13 @@ describe('site guards (check:dist)', () => {
       expect.stringMatching(/\.bin is 10 B but the manifest says 4096 B$/),
       expect.stringMatching(/\.bin does not match its manifest sha256$/),
     ]);
-    rmSync(join(dist, 'tok/openai-cl100k_base'), { recursive: true });
 
     const entry = asset(vocab, 'xai-grok2', randomBytes(64));
+    write(dist, entry.path.slice(1), readFileSync(join(vocab, entry.path.slice(1))));
     write(vocab, VOCAB_MANIFEST_FILE, manifest({ 'xai-grok2': { ...entry, sha256: 'f'.repeat(64) } }));
-    const mismatch = site().errors;
-    expect(mismatch).toContain(`manifest path ${entry.path} for xai-grok2 is not /tok/xai-grok2/<sha256[0:12]>.bin`);
-    expect(mismatch).toContain(`manifest lists ${entry.path} but there is no such file`);
-  });
-
-  it('fail on a vocabulary asset above the per-asset limit', () => {
-    const big = asset(vocab, 'google-gemma4', randomBytes(DIST_LIMITS.assetGzipBytes + 1));
-    write(vocab, VOCAB_MANIFEST_FILE, manifest({ 'google-gemma4': big }));
-    write(dist, big.path.slice(1), readFileSync(join(vocab, big.path.slice(1))));
-    rmSync(join(dist, 'tok/openai-cl100k_base'), { recursive: true });
     expect(site().errors).toEqual([
-      expect.stringMatching(/google-gemma4\/.*\.bin is 1740\.8 KB gzip \(limit 1740\.8 KB/),
+      `manifest path ${entry.path} for xai-grok2 is not /tok/xai-grok2/<sha256[0:12]>.bin`,
+      `${entry.path} does not match its manifest sha256`,
     ]);
   });
 
@@ -159,10 +150,7 @@ describe('site guards (check:dist)', () => {
     expect(site().errors).toEqual([expect.stringMatching(/^missing .*vocab-manifest\.generated\.json/)]);
   });
 
-  it('enforce the _headers rule count and line length', () => {
-    const many = Array.from({ length: 101 }, (_, i) => `/p${String(i)}/*\n  X-Test: ${String(i)}\n`).join('');
-    write(dist, '_headers', many);
-    expect(site().errors).toEqual(['_headers has 101 rules (limit 100)']);
+  it('enforce the _headers syntax and line length', () => {
     write(dist, '_headers', `/*\n  X-Long: ${'a'.repeat(2000)}\n`);
     expect(site().errors).toEqual(['_headers line 2 is 2008 characters (limit 2000)']);
     write(dist, '_headers', '  X-Orphan: 1\n');
@@ -179,29 +167,110 @@ describe('site guards (check:dist)', () => {
     ]);
   });
 
-  it('require the three HTML entries and the index.html brotli budget', () => {
+  it('require the About and 404 pages', () => {
     rmSync(join(dist, '404.html'));
-    write(dist, 'index.html', page(randomBytes(30 * 1024).toString('base64')));
+    rmSync(join(dist, 'about'), { recursive: true });
+    expect(site().errors).toEqual(['about/index.html is missing from dist', '404.html is missing from dist']);
+  });
+
+  it('fail when a chunk imports the Worker entry chunk (WebKit evaluates it twice)', () => {
+    write(dist, 'assets/bytelevel-Mn34Op56.js', 'import{f as z}from"./entry-Ef56Gh78.js";export{z};');
+    write(dist, 'assets/spm-Qr78St90.js', 'const m=import("./entry-Ef56Gh78.js");');
     expect(site().errors).toEqual([
-      '404.html is missing from dist',
-      expect.stringMatching(/^index\.html is \d+\.\d KB brotli \(budget 14\.0 KB\)$/),
+      'assets/bytelevel-Mn34Op56.js imports the Worker entry assets/entry-Ef56Gh78.js (WebKit would evaluate the Worker script twice)',
+      'assets/spm-Qr78St90.js imports the Worker entry assets/entry-Ef56Gh78.js (WebKit would evaluate the Worker script twice)',
+    ]);
+  });
+});
+
+describe('check:dist = site guards + tsbs-vocab guard: every violation is reported once', () => {
+  it('shares the thresholds of vocab mode with tsbs-vocab guard', () => {
+    expect(DIST_LIMITS.fileHardBytes).toBe(GUARD_LIMITS.fileHardBytes);
+    expect(DIST_LIMITS.fileWarnBytes).toBe(GUARD_LIMITS.fileWarnBytes);
+    expect(DIST_LIMITS.tokWarnBytes).toBe(GUARD_LIMITS.tokWarnTotalBytes);
+    expect(Math.floor(GUARD_LIMITS.tokAssetBytes)).toBe(DIST_LIMITS.assetGzipBytes);
+  });
+
+  it.each([
+    [
+      'a 21 MiB file',
+      () => {
+        sparse(dist, 'assets/huge.bin', 21 * MiB);
+      },
+      /huge\.bin is 21\.0 MiB/,
+    ],
+    [
+      'a dotfile',
+      () => {
+        write(dist, '.env', 'SECRET=1');
+      },
+      /dotfile \.env would be served/,
+    ],
+    [
+      'an unlisted /tok file',
+      () => {
+        write(dist, 'tok/stray/000000000000.bin', 'x');
+      },
+      /stray\/000000000000\.bin/,
+    ],
+    [
+      'more than 100 _headers rules',
+      () => {
+        write(dist, '_headers', Array.from({ length: 101 }, (_, i) => `/p${String(i)}/*\n  X-Test: 1\n`).join(''));
+      },
+      /101 rules/,
+    ],
+    [
+      'an index.html above 14 KB brotli',
+      () => {
+        write(dist, 'index.html', page(randomBytes(30 * 1024).toString('base64')));
+      },
+      /index\.html is \d+ B brotli/,
+    ],
+    [
+      'an examples file above 16 KB gzip',
+      () => {
+        write(
+          dist,
+          'examples/openai-o200k_base.0123abcd.json',
+          JSON.stringify({ x: randomBytes(24 * 1024).toString('hex') }),
+        );
+      },
+      /examples\/openai-o200k_base\.0123abcd\.json is \d+ B gzip/,
+    ],
+    [
+      'more than 2,000 files',
+      () => {
+        for (let i = 0; i < 1990; i += 1) write(dist, `assets/f${String(i)}.txt`, '');
+      },
+      /files \(budget 2000\)/,
+    ],
+    [
+      'a missing index.html',
+      () => {
+        rmSync(join(dist, 'index.html'));
+      },
+      /index\.html is missing/,
+    ],
+  ] as const)('%s', async (_name, breakIt, message) => {
+    breakIt();
+    const { errors } = await checkDist();
+    expect(errors).toEqual([expect.stringMatching(message)]);
+  });
+
+  it('a manifest path without its file', async () => {
+    rmSync(join(dist, 'tok/openai-cl100k_base'), { recursive: true });
+    const { errors } = await checkDist();
+    expect(errors).toEqual([
+      expect.stringMatching(/manifest lists \/tok\/openai-cl100k_base\/.*\.bin but dist has no such file/),
     ]);
   });
 
-  it('cap each examples/*.json at 16 KB gzip', () => {
-    write(
-      dist,
-      'examples/openai-o200k_base.0123abcd.json',
-      JSON.stringify({ x: randomBytes(24 * 1024).toString('hex') }),
-    );
-    expect(site().errors).toEqual([
-      expect.stringMatching(/^examples\/openai-o200k_base\.0123abcd\.json is .* KB gzip/),
-    ]);
-  });
-
-  it('count deployable files against the 2,000-file budget', () => {
-    for (let i = 0; i < 1994; i += 1) write(dist, `assets/f${String(i)}.txt`, '');
-    expect(site().errors).toEqual(['2001 deployable files (budget 2000)']);
+  it('warns once above 8 MiB', async () => {
+    sparse(dist, 'assets/big.bin', 9 * MiB);
+    const { errors, warnings } = await checkDist();
+    expect(errors).toEqual([]);
+    expect(warnings).toEqual([expect.stringMatching(/^assets\/big\.bin is 9\.0 MiB/)]);
   });
 });
 
@@ -217,6 +286,26 @@ describe('vocab guards (vocab:guard)', () => {
       '/tok/.DS_Store is not listed in the vocab manifest',
       expect.stringMatching(/aaaaaaaaaaaa\.bin is not listed/),
     ]);
+  });
+
+  it('cross-check the manifest both ways and the per-asset ceiling', () => {
+    const big = asset(vocab, 'google-gemma4', randomBytes(DIST_LIMITS.assetGzipBytes + 1));
+    const missing = {
+      path: '/tok/xai-grok2/aaaaaaaaaaaa.bin',
+      bytesCompressed: 1,
+      sha256: `aaaaaaaaaaaa${'0'.repeat(52)}`,
+    };
+    write(vocab, VOCAB_MANIFEST_FILE, manifest({ 'google-gemma4': big, 'xai-grok2': missing }));
+    expect(runGuards({ mode: 'vocab', dist: vocab }).errors).toEqual([
+      expect.stringMatching(/google-gemma4\/.*\.bin is 1740\.8 KB gzip \(limit 1740\.8 KB/),
+      'manifest lists /tok/xai-grok2/aaaaaaaaaaaa.bin but there is no such file',
+      expect.stringMatching(/^\/tok\/openai-cl100k_base\/.*\.bin is not listed in the vocab manifest$/),
+    ]);
+  });
+
+  it('warn above 8 MiB and above a 12 MiB /tok total', () => {
+    for (const name of ['a', 'b']) sparse(vocab, `tok/x/${name.repeat(12)}.bin`, 6.5 * MiB);
+    expect(runGuards({ mode: 'vocab', dist: vocab }).warnings).toEqual(['/tok totals 13.0 MiB (warn above 12 MiB)']);
   });
 
   it('report a missing output directory', () => {
@@ -244,5 +333,16 @@ describe('helpers', () => {
       '.c/d',
       'g/.assetsignore',
     ]);
+  });
+
+  it('find Worker entries and their importers; a site without a Worker is an error', () => {
+    const errors: string[] = [];
+    checkWorkerEntries(new Map(Object.entries(WORKER_FILES)), errors);
+    expect(errors).toEqual([]);
+    checkWorkerEntries(new Map([['assets/main-AbCd1234.js', 'export {};']]), errors);
+    expect(errors).toEqual([expect.stringMatching(/^no chunk constructs the Worker/)]);
+    errors.length = 0;
+    checkWorkerEntries(new Map([['assets/a.js', 'new Worker("/assets/entry-x.js")']]), errors);
+    expect(errors).toEqual(['the Worker entry assets/entry-x.js is not in dist']);
   });
 });

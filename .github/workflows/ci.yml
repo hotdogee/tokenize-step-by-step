@@ -4,14 +4,19 @@
 #   vocab ──┬─ unit                        uv + raw-vocab cache · vocab:fetch · conformance gate · vocab:build · guard
 #           │                              (unit: registry:check --require-built on the vocab-dist artifact · chromium ·
 #           │                               pnpm test incl. the Vitest browser-mode projects)
-#           ├─ build ──┬─ e2e              vite build · check:dist · wrangler deploy --dry-run → `dist` artifact
+#           ├─ build ──┬─ e2e-matrix → e2e vite build · check:dist · wrangler deploy --dry-run → `dist` artifact
+#           │          │                   e2e-matrix: the full matrix (E2E_FULL_MATRIX=1) as engine × 3 shards — chromium
+#           │          │                   (+ Pixel 5, 320/360/2560, visual), firefox, webkit (+ iPhone 12) — axe, parity,
+#           │          │                   visual; e2e: the gate job, the one required check over all shards
 #           │          ├─ e2e-headers      Playwright on `wrangler dev --assets apps/web/dist` (workerd applies _headers)
-#           │          └─ preview ── lighthouse   PRs only, and only when the Cloudflare secrets exist (cf-secrets)
-#           └─ fuzz-smoke                  engines/agenda/unicode changes, once WP12 ships test:fuzz
+#           │          ├─ preview ── lighthouse   PRs only, and only when the Cloudflare secrets exist (cf-secrets)
+#           │          └─ visual-baselines workflow_dispatch only: renders the Linux baselines → artifact (+ optional PR)
+#           └─ fuzz-smoke                  engines/agenda/unicode/fuzz-lane changes: pnpm test:fuzz --seed 20261025 --n 2000
 #   preview-cleanup                        PR closed: delete the pr-<n> preview
 #
-# PA-5 ramp: e2e runs chromium only; firefox/webkit, the device/viewport projects (E2E_FULL_MATRIX=1), shards and visual
-# baselines arrive with WP11's wave-3 pass. deploy.yml deploys the `dist` artifact of a green run on main (never on push).
+# Wall-time target ≤ 15 min (06 §4): check ∥ vocab → build ∥ unit → the nine e2e shards in parallel. Every job that drives a
+# browser installs it through .github/actions/playwright (cache keyed on the Playwright version). deploy.yml deploys the
+# `dist` artifact of a green push run on main (never on push itself, never a workflow_dispatch run).
 name: ci
 
 on:
@@ -19,9 +24,17 @@ on:
     branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      open_pr:
+        description: visual-baselines also opens a PR that commits the rendered baselines
+        type: boolean
+        default: false
 
+# A workflow_dispatch run (visual-baselines) gets its own group: in the push group it would cancel a pending push run on
+# main (a group keeps one pending run), and that commit would never deploy (deploy.yml takes push runs only).
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.event_name == 'workflow_dispatch' && 'dispatch-' || '' }}${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -142,18 +155,10 @@ jobs:
         run: node packages/registry/scripts/registry-check.ts --require-built
       # `pnpm test` also runs the Vitest browser-mode projects (worker-browser: the real Worker on the built .bin files;
       # web-browser: the board/inspector component tests), which need Playwright's chromium; web-browser fails under CI
-      # without it rather than passing by running nothing. Same cache key as the e2e jobs.
-      - id: playwright
-        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # without it rather than passing by running nothing.
+      - uses: ./.github/actions/playwright
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium
-      - if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install-deps chromium
+          browsers: chromium
       - run: pnpm test
 
   build:
@@ -183,18 +188,22 @@ jobs:
           # main: 30 days, so re-running an older deploy redeploys its tested artifact (docs/release.md § Rollback).
           retention-days: ${{ github.event_name == 'push' && 30 || 7 }}
 
-  e2e:
-    name: e2e (${{ matrix.project }})
+  # The functional matrix (06 §1, §4): one job per engine and shard, each installing only its browser. E2E_ENGINE picks the
+  # engine's projects (e2e/projects.ts): chromium = chromium, pixel-5, chromium-320/360/2560 and visual; firefox; webkit =
+  # webkit and iphone-12 (one retry in CI). Traces and screenshots of failures are uploaded per shard.
+  e2e-matrix:
+    name: e2e (${{ matrix.engine }} ${{ matrix.shard }}/3)
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        # PA-5: chromium only. Wave 3 adds firefox/webkit (and E2E_FULL_MATRIX=1 for the device/viewport projects) + shards.
-        include:
-          - project: chromium
-            browser: chromium
+        engine: [chromium, firefox, webkit]
+        shard: [1, 2, 3]
+    env:
+      E2E_FULL_MATRIX: '1'
+      E2E_ENGINE: ${{ matrix.engine }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -207,26 +216,40 @@ jobs:
         with:
           name: dist
           path: apps/web/dist
-      - id: playwright
-        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/playwright
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browser }}
-      - if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install --with-deps ${{ matrix.browser }}
-      - if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install-deps ${{ matrix.browser }}
-      - run: pnpm e2e --project=${{ matrix.project }}
+          browsers: ${{ matrix.engine }}
+          cjk-fonts: 'true'
+      - name: Visual baselines present?
+        if: matrix.engine == 'chromium' && matrix.shard == 1
+        run: |
+          if ! ls e2e/visual/__screenshots__/*-linux.png > /dev/null 2>&1; then
+            echo "::notice title=Visual baselines absent::the visual project skips until the baselines are committed (run ci with workflow_dispatch → visual-baselines; docs/release.md § Visual baselines)."
+          fi
+      - run: pnpm e2e --shard=${{ matrix.shard }}/3
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: e2e-report-${{ matrix.project }}
+          name: e2e-report-${{ matrix.engine }}-${{ matrix.shard }}
           path: |
             e2e/playwright-report
             e2e/test-results
           retention-days: 7
+
+  # The one required e2e check (06 §4 lists `e2e`): green only when every matrix job succeeded. Branch protection names this
+  # job, never a shard, so changing the shard count renames no required check. `always()`: a skipped required check
+  # counts as passing, so a failed `build` (matrix skipped) must fail here.
+  e2e:
+    needs: e2e-matrix
+    if: always() && github.event.action != 'closed'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - env:
+          RESULT: ${{ needs.e2e-matrix.result }}
+        run: |
+          echo "e2e matrix: ${RESULT}"
+          test "$RESULT" = success
 
   e2e-headers:
     needs: build
@@ -244,17 +267,9 @@ jobs:
         with:
           name: dist
           path: apps/web/dist
-      - id: playwright
-        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/playwright
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium
-      - if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install-deps chromium
+          browsers: chromium
       # Starts `wrangler dev --assets apps/web/dist` (playwright.headers.config.ts) and runs the 06 §7 smoke checks on it.
       - run: pnpm e2e:headers
       - if: failure()
@@ -306,17 +321,9 @@ jobs:
           test -n "$URL" || { echo "::error::wrangler preview printed no preview URL"; exit 1; }
           body="Preview for ${SHA}: ${URL}"
           gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --edit-last --create-if-none --body "$body"
-      - id: playwright
-        run: echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - uses: ./.github/actions/playwright
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install --with-deps chromium
-      - if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm --filter @tsbs/e2e exec playwright install-deps chromium
+          browsers: chromium
       - name: e2e:headers against the preview (real edge)
         run: pnpm e2e:headers
         env:
@@ -341,7 +348,8 @@ jobs:
       # pnpm 12 installs before running a script anyway; @lhci/cli itself comes through `pnpm dlx` (exact version in the
       # root `lhci` script) so its ~140 MB of Lighthouse dependencies stay out of every other job's install.
       - run: pnpm install --frozen-lockfile
-      # lighthouserc.json: mobile preset, Lighthouse "Slow 4G", the 06 §3 budgets as assertions. Never against vite preview.
+      # lighthouserc.json: mobile preset, Lighthouse "Slow 4G", the 06 §3 budgets as assertions. Never against vite preview
+      # or wrangler dev (`pnpm lhci-local` is a local smoke read only): the preview URL is the budget-authoritative target.
       - run: pnpm lhci --collect.url="$URL"
         env:
           URL: ${{ needs.preview.outputs.url }}
@@ -353,6 +361,65 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 14
+
+  # Linux visual baselines (06 §1 "Visual"), on demand only: Actions → ci → Run workflow. Renders the `visual` project with
+  # --update-snapshots=all against the dist this run built (chromium + fonts-noto-cjk, the e2e image), uploads the PNGs as
+  # the `visual-baselines` artifact and, with `open_pr`, pushes them to a `visual-baselines/<sha>` branch and opens a PR
+  # (needs "Allow GitHub Actions to create and approve pull requests"). docs/release.md § Visual baselines.
+  visual-baselines:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      E2E_FULL_MATRIX: '1'
+      E2E_ENGINE: chromium
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: apps/web/dist
+      - uses: ./.github/actions/playwright
+        with:
+          browsers: chromium
+          cjk-fonts: 'true'
+      - run: pnpm e2e --project=visual --update-snapshots=all
+      - name: The 24 baselines exist
+        run: |
+          count=$(ls e2e/visual/__screenshots__/*-linux.png | wc -l)
+          echo "rendered ${count} baselines"
+          test "$count" -eq 24
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: visual-baselines
+          path: e2e/visual/__screenshots__
+          if-no-files-found: error
+          retention-days: 30
+      - name: Open a PR with the baselines
+        if: inputs.open_pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.ref_name }}
+        run: |
+          branch="visual-baselines/${GITHUB_SHA::7}"
+          git switch -c "$branch"
+          git add e2e/visual/__screenshots__
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m "test(e2e): visual baselines rendered on ubuntu-24.04 for ${GITHUB_SHA::7}"
+          git push origin "$branch"
+          gh pr create --repo "$GITHUB_REPOSITORY" --base "$BASE" --head "$branch" \
+            --title "test(e2e): visual baselines for ${GITHUB_SHA::7}" \
+            --body "Rendered by the visual-baselines job of run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} (chromium, fonts-noto-cjk, ubuntu-24.04). Review the images before merging; PRs opened with GITHUB_TOKEN do not trigger ci, so push an empty commit or close/reopen to run it."
 
   # 06 §1/§4: 2,000 strings per tokenizer with the fixed seed against the Python oracle lane (ids + byte spans, PA-9),
   # only when the engine path (packages/core/src/{engines,agenda,unicode}) or the fuzz lane itself changed. Findings are

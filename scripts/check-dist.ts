@@ -8,10 +8,12 @@
  * job on the converter output before it is uploaded. Exit code 1 on any error; warnings never fail.
  *
  * `pnpm check:dist` also runs `tsbs-vocab guard --dist apps/web/dist` (WP03's 03 §C.5/§C.8 CLI, which PD-8 names) on the
- * same directory. The limits overlap on purpose; this script adds the site-only checks (`.assetsignore` contents, HTML
- * boot script and no inline code, required pages). The two file counts differ by design: this one counts the files
- * wrangler uploads (after `.assetsignore`: no `.assetsignore`, `*.map` or `.vite/`), `tsbs-vocab guard` counts every file
- * on disk. Merging the two into one guard is WP11's call (wave-1 review).
+ * same directory. Both stay (the guard is the converter's own deploy check; this script holds the site rules it lacks),
+ * but each rule has one owner, so a violation is reported once: the size, count, dotfile, listing, `_headers` rule-count,
+ * `index.html` and examples budgets are the guard's; `.assetsignore` contents, manifest size/sha256/path form, `_headers`
+ * syntax, the pages' boot script and inline code, and the Worker-entry import rule are this script's
+ * (`lib/dist-guards.ts`). The count printed here is the files wrangler uploads (after `.assetsignore`); the guard's limit
+ * applies to every file on disk.
  */
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';

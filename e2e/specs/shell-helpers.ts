@@ -21,11 +21,17 @@ export async function useTheme(page: Page, theme: Theme): Promise<void> {
   await page.emulateMedia({ colorScheme: theme });
 }
 
-/** Opens `/` in `locale` and waits until the default tokenizer has answered (counts badge "live"). */
+/** How long `openShell` waits for the live result: every fresh context downloads, verifies and builds o200k (1 MB gzip). */
+export const LIVE_READY_TIMEOUT_MS = 15_000;
+
+/**
+ * Opens `/` in `locale` and waits until the default tokenizer has answered (counts badge "live"). The wait is a setup
+ * step, not an assertion: the load budget itself is the perf spec's (06 §3), so it allows for a loaded CI runner.
+ */
 export async function openShell(page: Page, locale: Locale): Promise<void> {
   await page.goto(`/?lang=${locale}`);
   await expect(page.locator('html')).toHaveAttribute('lang', locale);
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
 }
 
 /** Opens `/about/` in `locale`. */

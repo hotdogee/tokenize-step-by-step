@@ -9,7 +9,7 @@
  */
 import { devices, expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
-import { chooseExample, focusBoard, focusedCell, grid, intersects, rectOf } from './board-helpers.ts';
+import { chooseExample, focusBoard, focusedCell, focusRects, grid, intersects } from './board-helpers.ts';
 import { openShell } from './shell-helpers.ts';
 
 for (const width of [320, 360, 768, 1440, 2560]) {
@@ -31,12 +31,12 @@ for (const width of [320, 360, 768, 1440, 2560]) {
 }
 
 test('at 360 px the focused cell is never under the sheet or the header (WCAG 2.4.11)', async ({ page }) => {
+  test.slow(); // 120 key presses with a layout read after each: 15–25 s on WebKit, near the default 30 s timeout
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openShell(page, 'en');
   await chooseExample(page, 'zh-tw-paragraph');
   await focusBoard(page);
-  const header = await rectOf(page, 'header');
   for (const expanded of [false, true]) {
     if (expanded) {
       await page.getByTestId('sheet-handle').click();
@@ -45,15 +45,13 @@ test('at 360 px the focused cell is never under the sheet or the header (WCAG 2.
     }
     for (let i = 0; i < 60; i++) {
       await page.keyboard.press(i % 10 === 9 ? 'PageDown' : 'ArrowRight');
-      const sheet = await rectOf(page, '[data-testid="inspector-host"]');
-      const cell = await page.evaluate(() => {
-        const { top, bottom, left, right } = (document.activeElement as HTMLElement).getBoundingClientRect();
-        return { top, bottom, left, right };
-      });
+      // One round trip per step (120 steps): WebKit's evaluate latency made three per step outrun the test timeout.
+      const { cell, sheet, header } = await focusRects(page);
+      expect(cell, `step ${String(i)}: focused element`).not.toBeNull();
       expect(sheet).not.toBeNull();
+      if (cell === null) continue;
       if (sheet !== null) expect(intersects(cell, sheet), `step ${String(i)}`).toBe(false);
-      const headerNow = await rectOf(page, 'header');
-      if (headerNow !== null && header !== null) expect(intersects(cell, headerNow)).toBe(false);
+      if (header !== null) expect(intersects(cell, header), `step ${String(i)} (header)`).toBe(false);
     }
   }
 });
@@ -65,6 +63,7 @@ for (const [width, height] of [
   test(`at ${String(width)} × ${String(height)} the anchored panel never covers the focused cell while pinned (WCAG 2.4.11)`, async ({
     page,
   }) => {
+    test.slow(); // 16 keys with a polled layout read after each: 12–15 s on WebKit alone, past 30 s under a full matrix
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openShell(page, 'en');
@@ -76,25 +75,32 @@ for (const [width, height] of [
     const host = page.getByTestId('inspector-host');
     await expect(host).toHaveAttribute('data-surface', 'anchored');
     await expect(host).toBeVisible();
-    /** 'ok', or why the focused cell is (partly) under the panel. */
-    const obscured = (): Promise<string> =>
-      page.evaluate(() => {
+    /** One round trip: 'ok' or why the focused cell is (partly) under the panel, the focused cell, the pinned count. */
+    let last = { status: '', cell: '', pinned: 0 };
+    const probe = async (): Promise<string> => {
+      last = await page.evaluate(() => {
         const active = document.activeElement as HTMLElement | null;
         const panel = document.querySelector<HTMLElement>('[data-testid="inspector-host"]');
-        if (active === null || panel === null || panel.hidden) return 'no focused cell or no panel';
+        const pinned = document.querySelectorAll('[data-testid="board-grid"] [data-pinned]').length;
+        const cell = `${active?.dataset['tier'] ?? ''}:${active?.dataset['index'] ?? ''}`;
+        if (active === null || panel === null || panel.hidden)
+          return { status: 'no focused cell or no panel', cell, pinned };
         const a = active.getBoundingClientRect();
         const b = panel.getBoundingClientRect();
         if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom)
-          return `${active.dataset['tier'] ?? ''}:${active.dataset['index'] ?? ''} intersects the panel`;
+          return { status: `${cell} intersects the panel`, cell, pinned };
         const hit = document.elementFromPoint((a.left + a.right) / 2, (a.top + a.bottom) / 2);
-        return hit !== null && active.contains(hit) ? 'ok' : `centre hit ${hit?.className ?? 'nothing'}`;
+        const status = hit !== null && active.contains(hit) ? 'ok' : `centre hit ${hit?.className ?? 'nothing'}`;
+        return { status, cell, pinned };
       });
+      return last.status;
+    };
     const seen = new Set<string>();
     for (let i = 0; i < 16; i++) {
       await page.keyboard.press(i < 10 ? 'PageDown' : i % 2 === 0 ? 'PageUp' : 'ArrowRight');
-      seen.add(await focusedCell(page));
-      await expect.poll(obscured, { message: `after key ${String(i)}` }).toBe('ok');
-      await expect(grid(page).locator('[data-pinned]')).toHaveCount(1);
+      await expect.poll(probe, { message: `after key ${String(i)}` }).toBe('ok');
+      seen.add(last.cell);
+      expect(last.pinned, `after key ${String(i)}: still pinned`).toBe(1);
     }
     expect(seen.size).toBeGreaterThan(4); // focus really moved down the paragraph
   });

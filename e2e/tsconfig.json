@@ -14,6 +14,7 @@
     "headers/**/*.ts",
     "parity/**/*.ts",
     "perf/**/*.ts",
+    "visual/**/*.ts",
     "support/**/*.ts",
     "test/**/*.ts",
     "../scripts/lib/smoke.ts",

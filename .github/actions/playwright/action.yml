@@ -1,0 +1,49 @@
+# Playwright browsers for a CI job (docs/design/06-quality-ci-deploy.md §4 "Caching"). Owned by WP11.
+#
+# One step for every job that drives a browser (unit: Vitest browser mode; e2e; e2e-headers; preview; visual-baselines;
+# nightly-fuzz): restores ~/.cache/ms-playwright keyed on the runner OS, the exact @playwright/test version of
+# e2e/package.json and the browser list; on a miss installs the browsers with their system dependencies, on a hit only
+# the system dependencies (apt packages are not cached). `cjk-fonts` adds fonts-noto-cjk, which the e2e projects and the
+# Linux visual baselines render CJK text with (06 §1). Needs `pnpm install` to have run (the e2e package's Playwright CLI).
+name: Playwright browsers
+description: Restore or install Playwright browsers (cached per Playwright version) and optionally fonts-noto-cjk.
+
+inputs:
+  browsers:
+    description: Space-separated Playwright browsers to install (chromium, firefox, webkit).
+    required: true
+  cjk-fonts:
+    description: "'true' to also install fonts-noto-cjk."
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - id: key
+      shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: |
+        echo "version=$(jq -r '.devDependencies["@playwright/test"]' e2e/package.json)" >> "$GITHUB_OUTPUT"
+        echo "browsers=$(echo "$BROWSERS" | tr -s ' ' '\n' | sort | paste -sd- -)" >> "$GITHUB_OUTPUT"
+    - id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.key.outputs.version }}-${{ steps.key.outputs.browsers }}
+    - if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: pnpm --filter @tsbs/e2e exec playwright install --with-deps $BROWSERS
+    - if: steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: pnpm --filter @tsbs/e2e exec playwright install-deps $BROWSERS
+    - if: inputs.cjk-fonts == 'true'
+      shell: bash
+      run: |
+        sudo apt-get install -y --no-install-recommends fonts-noto-cjk fontconfig
+        fc-list :lang=zh-tw family | grep -q 'Noto Sans CJK' || { echo "::error::fonts-noto-cjk did not install"; exit 1; }
