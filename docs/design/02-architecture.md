@@ -127,7 +127,7 @@ apps/web ──► @tsbs/registry (JSON + types), @tsbs/ui-tokens
 | @lhci/cli | 0.1x | mobile preset |
 | zod | 4.x (dev/build/test only) | registry schemas |
 | zopfli (`@gfx/zopfli`) | optional; falls back to `zlib.gzipSync({level: 9})` | deterministic output asserted |
-| Python (tools/oracle) | unchanged: uv ≥ 0.9, CPython 3.13, `regex==2026.9.29`, tiktoken 0.14.0, sentencepiece 0.2.2, tokenizers 0.23.3 | `export_unicode_tables.py` uses the venv's `regex` |
+| Python (tools/oracle) | unchanged: uv ≥ 0.9, CPython 3.13, `regex==2026.9.29`, tiktoken 0.14.0, sentencepiece 0.2.2, tokenizers 0.23.3 | `export_unicode_tables.py` probes tiktoken's and tokenizers' classes and cross-checks the venv's `regex` (AD-4) |
 
 Test oracles pinned exactly (dev only, Node only): `tiktoken@1.0.22` (WASM), `gpt-tokenizer@4.1.0`, `@huggingface/tokenizers@0.2.0`, `@sctg/sentencepiece-js@1.3.3`, `llama3-tokenizer-js@1.2.0`.
 
@@ -202,7 +202,7 @@ Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esb
 | `pnpm vocab:fetch` | `uv run --project tools/oracle tools/oracle/fetch_vocab.py` |
 | `pnpm vocab:build [--only <id>] [--conformance strict\|skip-missing-engine\|off]` | `tsbs-vocab build` → `data/vocab/dist/tok/**`, `vocab-manifest.generated.json`, `licences.generated.json`, MODIFIED notices; conformance inside (AD-13; `skip-missing-engine` is the CI mode until both engines have merged, AD-32) |
 | `pnpm vocab:verify` | re-decode every `.bin`, check sha256, round-trip against raw |
-| `pnpm unicode:export` / `pnpm unicode:check` | Python export of Unicode 16.0 tables → TS / diff gate |
+| `pnpm unicode:export` / `pnpm unicode:check` | Python export of the Unicode 16.0 tables → `tools/oracle/unicode_tables.json` (WP02 converts it to TS) / diff gate |
 | `pnpm registry:check` | zod validation + cross-refs + negative tests |
 | `pnpm test` | `vitest run` across the workspace (core, conformance, worker, registry, web units/components) |
 | `pnpm test:fuzz` | Node fuzz vs npm oracles (nightly; seed printed) |
@@ -223,7 +223,7 @@ tools/oracle/manifest.json ─┬─► vocab:fetch ─► data/vocab/raw/** (sh
                             │                 (conformance against fixtures/<id>.json before any write)
                             └─► licences.generated.json + MODIFIED-<id>.txt + dist/licenses/<id>/*
 fixtures/*.json ─► examples plugin (fromFixtureCase) ─► generated/examples-default.json, dist/examples/<tok>.<sha>.json
-tools/oracle/export_unicode_tables.py ─► packages/core/src/unicode/tables.generated.ts (committed; unicode:check)
+tools/oracle/export_unicode_tables.py ─► tools/oracle/unicode_tables.json ─► packages/core/src/unicode/tables.generated.ts (both committed; unicode:check)
 packages/registry/data/*.json ─► registry:check ─► imported by web + worker
 apps/web ─► vite build ─► dist/ ─► check:dist ─► wrangler deploy --dry-run ─► deploy
 ```
