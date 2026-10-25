@@ -78,6 +78,9 @@ uv run --project tools/oracle python tools/oracle/gen_fixtures.py --list        
 # Unicode tables for the web app's pre-tokenizer
 uv run --project tools/oracle python tools/oracle/export_unicode_tables.py             # rewrite unicode_tables.json
 
+# Batch oracle for the web app's fuzz run (`pnpm test:fuzz` starts it with --serve)
+uv run --project tools/oracle python tools/oracle/fuzz_oracle.py --input req.json --output res.json
+
 # Full check suite (CI). Every command must exit 0.
 uv run --project tools/oracle python tools/oracle/fetch_vocab.py                       # idempotent: everything "cached"
 uv run --project tools/oracle python tools/oracle/make_corpus.py --check
@@ -601,6 +604,35 @@ script writes nothing outside `tools/oracle/`.
   segments longer, which is always safe, so the tables stay correct for
   browsers on any Unicode version from 15.1 to 18.0.
 
+## Fuzz oracle (`fuzz_oracle.py`)
+
+The web app's `pnpm test:fuzz` (`packages/core/test/fuzz/`, design PA-9)
+generates seeded strings in Node, sends them here and compares the answers
+with its own engines. The script builds each shipped tokenizer's encoder with
+the fixture builders' helpers from `oracles/`, with the same policy as the
+fixtures: special-token strings are text, no BOS/EOS, no NFKC. For every
+string it returns the ids and the per-token UTF-8 byte spans (tiktoken
+`decode_single_token_bytes`, or the section 5.2 cursor walk
+`align_tokens` for SentencePiece). It also returns the ids of an independent
+cross-check where the fixture lane has one: HF tokenizers on the Xenova JSON
+(Llama 3), `oracles.bpe_reference` over `regex` chunks (Grok-2, Claude legacy),
+sentencepiece on the Gemma 3 model (Gemma 4, with `crossNote` explaining a
+Gemma 3 USER_DEFINED literal) and `oracles.spm_bpe_ref` (Gemma 1/2, Grok-1).
+A text the oracle cannot encode returns `{"error": ...}` instead of stopping
+the batch.
+
+- `--input req.json --output res.json`: one batch. The request is
+  `{"<tokenizer-id>": ["text", ...]}`. The answer is
+  `{"results": {...}, "oracles": {...}}`.
+- `--serve`: JSON lines on stdin/stdout, so the tokenizers load once. Node
+  keeps one process for the whole run, including the minimal-repro
+  shrinking.
+- Output is ASCII JSON, so the Windows console code page does not matter.
+
+It writes nothing. Failures are saved by the Node side to
+`fixtures/candidates/<tokenizer>-<seed>.json`, in the fixture case shape plus
+a `classification` field, for review in this lane.
+
 ## Layout
 
 ```text
@@ -615,6 +647,7 @@ tools/oracle/
   make_corpus.py, corpus.json, alphabet.json  golden-fixture corpus and its alphabet (generator and output, committed)
   export_unicode_tables.py, unicode_tables.json  Unicode 16.0 class tables + NFKC tables (committed)
   gen_fixtures.py          build/check fixtures/ from the oracle families
+  fuzz_oracle.py           batch oracle for `pnpm test:fuzz` (ids + byte spans + cross-check per string; --serve)
   oracles/
     common.py              corpus loading, UTF-8 helpers, fixture writer and invariant checks
     tiktoken_family.py     tiktoken-bpe builders;  bpe_reference.py (pure-Python BPE merge)

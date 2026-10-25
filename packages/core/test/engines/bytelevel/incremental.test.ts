@@ -11,6 +11,7 @@ import { firstDifference } from '@tsbs/conformance';
 import { describe, expect, it } from 'vitest';
 import type { EncodeOptions, TokenizationResult } from '../../../src/index.ts';
 import type { ByteLevelTokenizer, EncodeProgress } from '../../../src/engines/bytelevel/engine.ts';
+import { NODE_CEILING_MS } from '../../helpers/ceilings.ts';
 import { PERF_BUDGETS, time } from '../../helpers/perf.ts';
 import { BYTELEVEL_IDS, cjkText, fixtureOf, SKIP_REASON, tokenizerFor } from './assets.ts';
 
@@ -125,7 +126,7 @@ describe.runIf(PERF_BUDGETS && SKIP_REASON === null)('TSBS_PERF=1 engine ceiling
       `[perf] ${id} (node ${process.version}): 10k CJK median ${t10.median.toFixed(2)} ms (cold ${t10.cold.toFixed(2)}), ` +
         `20k CJK median ${t20.median.toFixed(2)} ms (cold ${t20.cold.toFixed(2)})`,
     );
-    expect(t10.median).toBeLessThanOrEqual(15);
-    expect(t20.median).toBeLessThanOrEqual(40);
+    expect(t10.median).toBeLessThanOrEqual(NODE_CEILING_MS.encode10kByteLevel);
+    expect(t20.median).toBeLessThanOrEqual(NODE_CEILING_MS.encode20kByteLevel);
   });
 });

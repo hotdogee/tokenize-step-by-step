@@ -16,6 +16,7 @@ import {
   resolveSpmConfig,
   type SpmEntryLike,
 } from '../../../src/engines/spm/index.ts';
+import { caseOf } from '../../helpers/fixtures.ts';
 import { REPO_ROOT } from '../../helpers/repo.ts';
 
 export const SPM_IDS = ['google-gemma4', 'google-gemma2', 'xai-grok1'] as const satisfies readonly TokenizerId[];
@@ -96,3 +97,9 @@ export const spanOf = (r: TokenizationResult, t: number): [number, number] => [
   r.tokens.byteStart[t] ?? -1,
   r.tokens.byteStart[t + 1] ?? -1,
 ];
+
+/** `count` CJK code points cycling over the Grok-1 `zh-tw-paragraph` text without its spaces (one SentencePiece word). */
+export function spmCjkText(count: number): string {
+  const unit = Array.from(caseOf('xai-grok1', 'zh-tw-paragraph').text).filter((ch) => ch !== ' ');
+  return Array.from({ length: count }, (_, i) => unit[i % unit.length]).join('');
+}
