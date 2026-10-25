@@ -36,7 +36,7 @@
 | `dist/index.html` | ≤ 14 KB brotli | `size-limit`; LHCI `document ≤ 14` |
 | Main JS (Svelte runtime + app shell + board + inspector + rail + motion ≤ 67; i18n chunk ≤ 8; inlined default example ≤ 4; manifest summary ≤ 1 — PA-7; the wave 1 shell alone measured 55.92 KB) | ≤ 80 KB brotli | `size-limit` |
 | Worker core (loader + protocol + host) | ≤ 12 KB brotli | `size-limit` |
-| Engine chunks (lazy inside the Worker; the bytelevel chunk **is** fetched during the Lighthouse trace because o200k starts loading after LCP) | bytelevel ≤ 16 KB br (incl. 5.7 KB Unicode tables); spm ≤ 10 KB br | `size-limit` |
+| Engine chunks (lazy inside the Worker; the bytelevel chunk **is** fetched during the Lighthouse trace because o200k starts loading after LCP) | bytelevel ≤ 16 KB br (incl. 5.7 KB Unicode tables); spm ≤ 10 KB br — each measured together with the shared `assets/engine-core-[hash].js` chunk that loads with the first engine (PA-8 addendum) | `size-limit` |
 | CSS (incl. the ≤ 4 KB stand-in WOFF2 as a separate `font` budget) | ≤ 20 KB brotli; font ≤ 4 KB | `size-limit`; LHCI `stylesheet ≤ 20`, `font ≤ 4` |
 | `boot-[hash].js` | ≤ 0.5 KB | `size-limit` |
 | **Script total in the trace** (main 80 + worker 12 + bytelevel engine 16 + boot 0.5 + slack; PA-7) | ≤ 110 KB | LHCI `budgets.json` `script ≤ 110` |
