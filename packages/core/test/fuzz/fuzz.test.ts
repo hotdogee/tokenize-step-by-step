@@ -9,9 +9,11 @@ import { EXTRA_CODE_POINTS, readAlphabetFile, REPEAT_UNITS } from './alphabet.ts
 import { fixtureTokens, isPartial, toHex } from './candidates.ts';
 import {
   classifyDivergence,
+  foldedContraction,
   jsWhitespaceDifference,
   nativeUnicodeDifference,
   pythonRegexDifference,
+  tieBreakShape,
 } from './classify.ts';
 import { compareWithOracle, firstDifference } from './compare.ts';
 import { GENERATOR_KINDS, generateStrings } from './generators.ts';
@@ -154,6 +156,25 @@ describe('divergence classes', () => {
     expect(classifyDivergence({ ...base, text: '\u{332f9}_Z', engine: 'python-regex' }).class).toBe('unicode-version');
     expect(classifyDivergence({ ...base, text: " I'ſ", engine: 'node-regex' }).class).toBe('case-fold');
     expect(classifyDivergence({ ...base, text: 'plain', engine: 'unicode-16' }).class).toBe('unclassified');
+  });
+
+  it('holds the shape classes to their shape, not to any text', () => {
+    const gemma = (text: string) => classifyDivergence({ ...base, text, engine: 'gemma3-spm' }).class;
+    expect(gemma('ab ==')).toBe('hf-vs-spm-tie-break');
+    expect(gemma(` \t\nword`)).toBe('hf-vs-spm-tie-break');
+    expect(gemma('ab')).toBe('unclassified');
+    expect(gemma('a b')).toBe('unclassified');
+    expect(gemma('12  ')).toBe('unclassified');
+    expect(tieBreakShape('台灣──')).toBe(true);
+    expect(tieBreakShape('')).toBe(false);
+    const fold = (text: string) => classifyDivergence({ ...base, text, engine: 'unicode-16' }).class;
+    expect(fold("don'ſ go")).toBe('case-fold');
+    expect(fold("ſ'")).toBe('unclassified');
+    expect(fold("'xſ")).toBe('unclassified');
+    expect(fold("it's ſ")).toBe('unclassified');
+    expect(foldedContraction(" I'ſ")).toBe("'ſ");
+    expect(foldedContraction("WE'RE IT'S")).toBeNull();
+    expect(foldedContraction("'\u212a")).toBeNull();
   });
 
   it('detects the class differences it relies on', () => {

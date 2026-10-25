@@ -5,14 +5,16 @@
  *
  * - `gemma3-literal-special` / `hf-vs-spm-tie-break` — Gemma 4: HF tokenizers on the JSON vs sentencepiece on the
  *   Gemma 3 model, explained by a Gemma 3 USER_DEFINED literal in the text (fuzz_oracle.py's `crossNote`, the fixture
- *   lane's `_gemma_disagreement`) or not — the latter is the ordering class of 07 §5 risk 2 (04 §8 surfaces it);
+ *   lane's `_gemma_disagreement`), or by the ordering class of 07 §5 risk 2 (04 §8 surfaces it) when the repro has its
+ *   shape — whitespace / repeated-unit runs, possibly with letters (`tieBreakShape`); any other repro is unclassified;
  * - `special-string` — the text contains one of the tokenizer's special-token strings and the second opinion cannot
  *   treat it as text the way the fixture policy does;
  * - `js-whitespace-class` — a JavaScript-regex second opinion and a code point where JavaScript's `\s` differs from
  *   `\p{White_Space}` (U+0085, U+FEFF; the port rule of 04 §2.2);
  * - `unicode-version` — a code point whose class differs between Unicode 16.0 (the id oracles, our tables) and the
  *   second opinion's Unicode (Node's native `\p{…}`, or the Python `regex` module per `unicode_tables.json` `regexModule`);
- * - `case-fold` — a contraction with `ſ` / U+212A, folded differently by the second opinion's `(?i:)`;
+ * - `case-fold` — an apostrophe directly followed by a contraction suffix that writes its ASCII letter as `ſ` / U+212A
+ *   (`'ſ`), folded differently by the second opinion's `(?i:)` (`foldedContraction`);
  * - `opinion-error` — the second opinion threw on the text (a limitation of that library; the oracle answered).
  */
 import { readFileSync } from 'node:fs';
@@ -21,6 +23,7 @@ import process from 'node:process';
 import { classRanges, type UnicodeClass, UNICODE_CLASSES } from '../../src/unicode/classes.ts';
 import { inRanges } from '../../src/unicode/ranges.ts';
 import { REPO_ROOT } from '../helpers/repo.ts';
+import { CONTRACTION_SUFFIXES, REPEAT_UNITS } from './alphabet.ts';
 
 export const DIVERGENCE_CLASSES = [
   'gemma3-literal-special',
@@ -151,16 +154,62 @@ export function pythonRegexDifference(text: string): string | null {
   return null;
 }
 
+const REPEAT_UNIT_SET: ReadonlySet<string> = new Set(REPEAT_UNITS);
+
+/**
+ * True when `text` has the shape of the HF-vs-SentencePiece ordering class (07 §5 risk 2): it holds only whitespace,
+ * the generator's repeated units (`REPEAT_UNITS`) and letters/marks, and at least one run — two whitespace code points
+ * in a row, or one repeated unit twice in a row.
+ */
+export function tieBreakShape(text: string): boolean {
+  const cps = Array.from(text, (ch) => ch.codePointAt(0) ?? 0);
+  const space = (cp: number): boolean => inRanges(classRanges('White_Space'), cp);
+  const unit = (cp: number): boolean => REPEAT_UNIT_SET.has(String.fromCodePoint(cp));
+  const letter = (cp: number): boolean => inRanges(classRanges('L'), cp) || inRanges(classRanges('M'), cp);
+  if (!cps.every((cp) => space(cp) || unit(cp) || letter(cp))) return false;
+  return cps.some((cp, i) => {
+    const next = cps[i + 1];
+    return next !== undefined && ((space(cp) && space(next)) || (unit(cp) && cp === next));
+  });
+}
+
+/** Non-ASCII code points that simple case folding maps onto an ASCII letter: `ſ` → s, U+212A KELVIN SIGN → k. */
+const FOLDS_TO_ASCII: Readonly<Record<string, string>> = { ſ: 's', '\u212a': 'k' };
+
+/**
+ * The first contraction in `text` — `'` directly followed by a suffix of `(?i:'s|'t|'re|'ve|'m|'ll|'d)` — that writes a
+ * suffix letter with a non-ASCII character folding onto it (`'ſ` for `'s`), or null. Only such a contraction is matched
+ * differently by a second opinion whose `(?i:)` does not fold like tiktoken / Rust `regex` (04 §2.2).
+ */
+export function foldedContraction(text: string): string | null {
+  const cps = Array.from(text);
+  for (const [i, cp] of cps.entries()) {
+    if (cp !== "'") continue;
+    for (const suffix of CONTRACTION_SUFFIXES) {
+      const written = cps.slice(i + 1, i + 1 + suffix.length);
+      if (written.length !== suffix.length || !written.some((ch) => ch in FOLDS_TO_ASCII)) continue;
+      if (written.map((ch) => FOLDS_TO_ASCII[ch] ?? ch.toLowerCase()).join('') === suffix) return cp + written.join('');
+    }
+  }
+  return null;
+}
+
 /** Decides the class of one divergence (see the module comment for the order). */
 export function classifyDivergence(input: DivergenceInput): Classification {
   const { text, engine } = input;
   if (engine === 'gemma3-spm') {
-    return input.crossNote !== undefined && input.crossNote !== null
-      ? { class: 'gemma3-literal-special', explanation: input.crossNote }
-      : {
+    if (input.crossNote !== undefined && input.crossNote !== null)
+      return { class: 'gemma3-literal-special', explanation: input.crossNote };
+    return tieBreakShape(text)
+      ? {
           class: 'hf-vs-spm-tie-break',
           explanation:
-            'HF tokenizers (Gemma 4 tokenizer.json, merge ranks) and sentencepiece (Gemma 3 model, piece scores) order equal-priority merges differently; no Gemma 3 USER_DEFINED literal is involved (07 §5 risk 2; 04 §8).',
+            'HF tokenizers (Gemma 4 tokenizer.json, merge ranks) and sentencepiece (Gemma 3 model, piece scores) order equal-priority merges differently on whitespace / repeated-unit runs; no Gemma 3 USER_DEFINED literal is involved (07 §5 risk 2; 04 §8).',
+        }
+      : {
+          class: 'unclassified',
+          explanation:
+            'HF tokenizers and sentencepiece disagree on a repro that is neither a Gemma 3 literal nor whitespace / repeated-unit runs: triage by hand',
         };
   }
   const special = input.specials.find((s) => s !== '' && text.includes(s));
@@ -179,10 +228,11 @@ export function classifyDivergence(input: DivergenceInput): Classification {
     const unicode = pythonRegexDifference(text);
     if (unicode !== null) return { class: 'unicode-version', explanation: unicode };
   }
-  if (/['’][\s\S]*[ſ\u212a]|[ſ\u212a][\s\S]*'/u.test(text))
+  const contraction = foldedContraction(text);
+  if (contraction !== null)
     return {
       class: 'case-fold',
-      explanation: 'a contraction with ſ / U+212A: the second opinion folds (?i:) differently from tiktoken/Rust regex',
+      explanation: `the contraction ${JSON.stringify(contraction)} writes a suffix letter as ſ / U+212A: the second opinion folds (?i:) differently from tiktoken/Rust regex`,
     };
   return { class: 'unclassified', explanation: 'no known cause found on the minimal repro: triage by hand' };
 }
