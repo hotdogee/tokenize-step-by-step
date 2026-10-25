@@ -17,7 +17,9 @@ import { engineRequested, fullMatrixRequested, functionalProjects } from './proj
 
 const CI = process.env['CI'] !== undefined && process.env['CI'] !== '';
 const PORT = Number(process.env['E2E_PORT'] ?? 4173);
-const BASE_URL = `http://localhost:${String(PORT)}`;
+// 127.0.0.1, not localhost: vite preview listens on one address family (::1 for "localhost" on this Node), and a browser
+// that tries the other one gets ERR_CONNECTION_REFUSED (2 failures in 2,880 local runs before this pin).
+const BASE_URL = `http://127.0.0.1:${String(PORT)}`;
 
 export default defineConfig({
   testDir: './specs',
@@ -34,7 +36,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: `pnpm --filter @tsbs/web preview --port ${String(PORT)} --strictPort`,
+    command: `pnpm --filter @tsbs/web preview --host 127.0.0.1 --port ${String(PORT)} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: false,
     timeout: 60_000,

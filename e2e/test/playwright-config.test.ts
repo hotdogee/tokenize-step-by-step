@@ -20,7 +20,7 @@ const names = (projects: ReadonlyArray<{ name?: string }>): Array<string | undef
 describe('functional config (playwright.config.ts)', () => {
   it('runs specs/ against vite preview of the built app and never reuses a running server', () => {
     expect(config.testDir).toBe('./specs');
-    expect(config.use?.baseURL).toBe('http://localhost:4173');
+    expect(config.use?.baseURL).toBe('http://127.0.0.1:4173');
     expect(config.use?.trace).toBe('retain-on-failure');
     const webServer = single(config.webServer);
     expect(webServer?.command).toContain('@tsbs/web preview');
