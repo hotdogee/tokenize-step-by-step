@@ -6,7 +6,8 @@
    * - layout: K = clamp(8, floor((boardWidth − 2·gutter) / cell), 64) from a ResizeObserver on the board column and a
    *   `--cell`/`--row-h` probe (debounced one frame), `packRows` once per (result, K), `withParts` per step;
    * - the APG layout grid: `role="grid"` with `aria-rowcount`/`aria-colcount`, one tab stop (roving tabindex on the
-   *   focused cell, keyed by a byte-offset anchor that survives re-tokenization, a new K and virtual remounts), the
+   *   focused cell, keyed by a byte-offset anchor that survives re-tokenization, a new K, virtual remounts and a long
+   *   input's window moves), the
    *   05 §8 keys, and `scrollIntoView` on every focus move with the sheet height as scroll padding;
    * - arithmetic virtualization (fixed row heights, `content-visibility: auto`), always mounting the focused and pinned
    *   rows and, at stop 5, the row holding the part the current step formed (the motion director marks it and follow
@@ -122,6 +123,8 @@
   });
 
   // ---- focus, pin, hover (anchors are byte offsets, AD-17) ----
+  // Absolute anchors (analysed-text bytes, as AppState keeps them): a long input's board is a window of its whole-text
+  // result (`board.offset`), and moving the window moves the cells under the anchors, never the anchors.
   let focusAnchor: Anchor = $state({ tier: 'char', byte: 0, slot: -1 });
   let pinAnchor: Anchor | null = $state(null);
   let hoverRef: CellRef | null = $state(null);
@@ -136,8 +139,8 @@
   let keysUsed = $state(readStored(HINT_KEY) === 'true');
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const focusRef = $derived(resolveAnchor(focusAnchor));
-  const pinRef = $derived(pinAnchor === null ? null : resolveAnchor(pinAnchor));
+  const focusRef = $derived(resolveAnchor(local(focusAnchor)));
+  const pinRef = $derived(pinAnchor === null ? null : resolvePin(local(pinAnchor)));
   const inspected = $derived(pinRef ?? hoverRef ?? (engaged ? focusRef : null));
   const sliceRef = $derived(pinRef ?? hoverRef ?? (gridFocused ? focusRef : null));
   const interaction: InteractionState = $derived({
@@ -204,6 +207,23 @@
     return resolveAnchorIn(units, tiers, a);
   }
 
+  /** Absolute anchor `a` in the board result's bytes (a long input's window starts at `board.offset`). */
+  function local(a: Anchor): Anchor {
+    return board.offset === 0 ? a : { ...a, byte: a.byte - board.offset };
+  }
+
+  /** The absolute anchor of `ref` (what the board keeps and writes to AppState, AD-17). */
+  function anchorOf(ref: CellRef): Anchor {
+    const a = units.anchorOf(ref);
+    return board.offset === 0 ? a : { ...a, byte: a.byte + board.offset };
+  }
+
+  /** The pinned unit; null while the window does not hold the pinned byte (never clamped onto another cell). */
+  function resolvePin(a: Anchor): CellRef | null {
+    const end = result.utf8.length;
+    return a.byte < 0 || a.byte > end || (a.byte === end && end > 0) ? null : resolveAnchor(a);
+  }
+
   function sameRef(a: CellRef | null, b: CellRef | null): boolean {
     return a !== null && b !== null && a.tier === b.tier && a.index === b.index;
   }
@@ -241,7 +261,7 @@
   /** Moves the roving tab stop to `ref`, mounts its row, focuses it and keeps it clear of the sheet (05 §5, §8). */
   async function moveFocus(ref: CellRef): Promise<void> {
     dropHover();
-    focusAnchor = units.anchorOf(ref);
+    focusAnchor = anchorOf(ref);
     app.focus = { tier: appTier(ref.tier), byte: focusAnchor.byte };
     await tick();
     const element = cellElement(ref);
@@ -272,7 +292,7 @@
   }
 
   function pin(ref: CellRef): void {
-    pinAnchor = units.anchorOf(ref);
+    pinAnchor = anchorOf(ref);
     app.pinned = { byte: pinAnchor.byte, tier: appTier(ref.tier) };
     app.announce(pinnedMessage(ref));
   }
@@ -382,7 +402,7 @@
       return;
     }
     if (!sameRef(ref, focusRef)) {
-      focusAnchor = units.anchorOf(ref);
+      focusAnchor = anchorOf(ref);
       app.focus = { tier: appTier(ref.tier), byte: focusAnchor.byte };
     }
   }
