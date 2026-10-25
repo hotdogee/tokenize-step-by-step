@@ -245,3 +245,22 @@ counts; before, FCP fell later and cut part of it off. A trace of that task on t
 first layout alone is about 75 ms unthrottled (fonts resolved for the first time), a platform cost that the deployed
 preview's Lighthouse run (Linux, brotli, real RTT) measures differently. The CI `lighthouse` job on the preview URL stays
 the budget-authoritative read (06 §3); the budgets were not raised.
+
+**WP13a review fixes (same machine, same harness).** Main JS 79.79 kB of 81.92 (i18n 8.69 of 9.22; one new catalog
+string, the focus and URL fixes). `pnpm lhci-local --runs 3`: performance 0.92–0.93, FCP 1.81–1.83 s, LCP 1.97–2.00 s,
+TBT 260–286 ms, script 135,037–135,047 B — the same misses as above (performance, FCP, TBT, script size on loopback
+gzip). Lighthouse attributes TBT to one startup task of 336 ms (simulated, starting at FCP; `Header-*.js`, the shared
+Svelte/app chunk), and its main-thread breakdown puts style and layout (441 ms) ahead of script evaluation (265 ms).
+
+The budget-authoritative read does not exist yet: the branch has no pull request, so no preview deployment or
+`lighthouse` job ran, and the last production deploy of `main` was skipped because `ci` failed on `main` (`deploy` run
+40236271760; `ci` run 40243655190). **WP13b precondition:** open the WP13a pull request and read its preview `lighthouse`
+job before the launch work starts. If TBT or FCP miss there, mount the non-first-paint UI (the live-check drawer, the
+inspector host, the rail's playback controls) after the first paint in a separate task — reserving their space so CLS
+stays 0 — or apply the AD-16 static-partial fallback. No first-paint change was made on the loopback numbers alone.
+
+**AD-27 memory (CDP heap probe, `e2e/specs/integration-memory.spec.ts`).** Backing store of the page's ArrayBuffers above
+the baseline (270 KB) after a forced GC (kB/MB = 1000 B): 15.8 MB with a 150,000-code-point zh-TW run on screen;
+0.39 MB while the next (capped, 200,000-code-point) run is in flight, so the previous result is gone before the new one
+arrives (before the fix: 15.8 MB); 0.25 MB after the text goes back to 4 characters (before the fix: about 19.7 MB, the
+review's measure).
