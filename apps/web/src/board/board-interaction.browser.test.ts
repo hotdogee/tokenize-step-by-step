@@ -4,12 +4,13 @@
  * Esc back, Esc unpins then returns to the textarea, `c` copies; focus persistence by byte offset across
  * re-tokenization; a tab stop on a lone BOS marker; the inspector region on its three surfaces (the anchored panel below
  * the row, flipped above it near the viewport bottom); hover after 120 ms; keyboard input taking the inspector back from
- * a resting pointer; click pins; textarea selection sync.
+ * a resting pointer; click pins; textarea selection sync; focus scrolls follow the in-app Reduce motion switch.
  */
 import '../theme/base.css';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { packRows } from '@tsbs/core/layout/pack-rows';
+import { motionPrefs } from '../motion/motion-prefs.svelte.ts';
 import {
   appWith,
   expectedColumns,
@@ -147,6 +148,28 @@ describe('keyboard state machine on a 3-row fixture (05 §8)', () => {
     stop?.focus();
     await press('{ArrowUp}');
     expect(focused()).toBe('token:0'); // the char and byte tiers are empty
+  });
+
+  it('scrolls focus moves with behavior "auto" when the in-app switch reduces motion (05 §7)', async () => {
+    await page.viewport(1440, 900);
+    const scrolls: Array<ScrollIntoViewOptions | boolean | undefined> = [];
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation((options) => {
+      scrolls.push(options);
+    });
+    try {
+      expect(motionPrefs.system).toBe(false); // the OS setting is no-preference: only the switch reduces motion
+      const board = await show(fixtureResult('openai-o200k_base', 'ja-text'));
+      board.grid.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
+      await press('{ArrowRight}');
+      expect(scrolls.at(-1)).toMatchObject({ behavior: 'smooth' });
+      motionPrefs.setReduced(true);
+      await press('{ArrowRight}');
+      expect(focused()).toBe('char:2');
+      expect(scrolls.at(-1)).toMatchObject({ behavior: 'auto', block: 'nearest' });
+    } finally {
+      motionPrefs.setReduced(false);
+      vi.restoreAllMocks();
+    }
   });
 });
 

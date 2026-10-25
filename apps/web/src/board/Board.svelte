@@ -27,6 +27,7 @@
   import { i18n } from '../i18n/locale.svelte.ts';
   import { formatPercent } from '../i18n/t.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
+  import { motionPrefs } from '../motion/motion-prefs.svelte.ts';
   import InspectorHost from '../inspector/InspectorHost.svelte';
   import type * as InspectorCatalogModule from '../inspector/i18n/catalogs.ts';
   import type { InspectorTranslate } from '../inspector/i18n/catalogs.ts';
@@ -201,8 +202,9 @@
     );
   }
 
+  /** The system setting and the in-app Reduce motion switch together (05 §7): 'auto' under reduced motion. */
   function scrollBehavior(): ScrollBehavior {
-    return viewport.reducedMotion ? 'auto' : 'smooth';
+    return motionPrefs.scrollBehavior;
   }
 
   /**

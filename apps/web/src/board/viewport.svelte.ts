@@ -2,7 +2,8 @@
  * The viewport facts the board depends on (05 §3.3, §5, §9; AD-34), as reactive `matchMedia` state: the inspector
  * surface by **width only** (≥ 1024 side rail, 768–1023 anchored panel, < 768 bottom sheet — pointer type never selects
  * it), the 480 px breakpoint that moves U+ labels, chunk brackets and narrow-chip ids on/off the board, hex **and** dec rows at
- * ≥ 1024 px, and reduced motion for `scrollIntoView`. Server rendering (tests) gets the desktop defaults.
+ * ≥ 1024 px. Reduced motion for `scrollIntoView` comes from motion/motion-prefs.svelte.ts (the system setting and the
+ * in-app switch together). Server rendering (tests) gets the desktop defaults.
  */
 
 export type InspectorSurface = 'rail' | 'anchored' | 'sheet';
@@ -14,7 +15,6 @@ export class BoardViewport {
   medium = $state(true);
   /** ≥ 480 px: U+ labels, chunk brackets and the ids of narrow chips on the board (05 §3.3). */
   small = $state(true);
-  reducedMotion = $state(false);
   readonly #stops: Array<() => void> = [];
 
   constructor() {
@@ -22,7 +22,6 @@ export class BoardViewport {
     this.#watch('(min-width: 1024px)', (on) => (this.wide = on));
     this.#watch('(min-width: 768px)', (on) => (this.medium = on));
     this.#watch('(min-width: 480px)', (on) => (this.small = on));
-    this.#watch('(prefers-reduced-motion: reduce)', (on) => (this.reducedMotion = on));
   }
 
   /** The inspector surface for the current width (AD-34). */
