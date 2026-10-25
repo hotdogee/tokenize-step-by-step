@@ -37,7 +37,7 @@
     "lhci": "node scripts/pending.ts lhci WP11 --skip",
     "deploy": "wrangler deploy",
     "preview:pr": "node scripts/preview-pr.ts",
-    "oracle:check": "uv run --project tools/oracle tools/oracle/fetch_vocab.py && uv run --project tools/oracle tools/oracle/make_corpus.py --check && uv run --project tools/oracle tools/oracle/gen_fixtures.py --check && uv run --project tools/oracle tools/oracle/render_license_docs.py --check"
+    "oracle:check": "uv run --project tools/oracle tools/oracle/fetch_vocab.py && uv run --project tools/oracle tools/oracle/make_corpus.py --check && uv run --project tools/oracle tools/oracle/gen_fixtures.py --check && uv run --project tools/oracle tools/oracle/render_license_docs.py --check && uv run --project tools/oracle tools/oracle/export_unicode_tables.py --check"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
