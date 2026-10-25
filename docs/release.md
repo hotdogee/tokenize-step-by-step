@@ -149,7 +149,11 @@ JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
       iOS 16.4 smoke on BrowserStack (Playwright WebKit is newer than the floor); one mid-range Android Chrome run timed
       and recorded in `docs/perf-log.md`. A manual macOS Safari morph check: Web Inspector › Timelines while pressing `2`
       then `3` on 150 ideographs (600 cells); record the longest frame and any dropped frames in `docs/perf-log.md` (the
-      06 §3 morph bound is enforced per main-thread task in desktop chromium only, and no Safari number exists). Only a
+      06 §3 morph bound is enforced per main-thread task in desktop chromium only, and no Safari number exists). This is a
+      known risk, not a formality: Playwright WebKit on Windows had 12–13 of 31 rAF intervals above 33 ms (max 74–82 ms,
+      idle max 31 ms) on the same morph in the wave 3 review, against 17–33 ms in chromium. If Safari confirms long frames,
+      fix it before launch in `apps/web/src/motion/choreography.ts`: skip the counter-scaled FLIP above a cell threshold
+      on WebKit, or cross-fade only. Only a
       deployed URL (the PR preview in the `lighthouse` job, or production) is budget-authoritative: `pnpm lhci-local`
       runs the same `lighthouserc.json` against `wrangler dev` on loopback (no edge compression, no HTTP/3, no real RTT)
       as a smoke read and never fails on an assertion.

@@ -184,3 +184,9 @@ The morph row bounds main-thread tasks (the commit frame 22.2–23.5 ms and the 
 serial strict runs, wave 3 review), not presented frames: rAF intervals during the same morph reach 33.5–50 ms in serial
 headless chromium, and Playwright WebKit on Windows (WinCairo, not representative of Safari) showed a 42–46 ms commit
 frame. 06 §3 now says so; a manual macOS Safari morph check is on the release checklist (item 9).
+
+Wave 3 review re-measure (`pnpm e2e:perf`, same machine): the 2,004-cell render has a median of 133.0 ms (max 225.5) from
+the Worker result to the DOM and a 244.3 ms longest main-thread task under a trace; the 1k-character keystroke p95 is
+54.5 ms. Both stay soft nightly misses and do not block wave 3. Finding 1 stays with WP08 / WP13 (virtualize from fewer
+rows than `VIRTUALIZE_ABOVE = 24` or by cell count, and render once per text change); finding 2 waits on the design
+owner's call on whether the debounce counts toward the 1k-character budget.
