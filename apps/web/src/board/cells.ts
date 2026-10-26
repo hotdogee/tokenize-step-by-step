@@ -235,7 +235,7 @@ function tokenStarts(ctx: BoardContext): Uint8Array {
 }
 
 /** The digit count of a chip's id (0: none). */
-function digitsOf(id: number | null): number {
+export function digitsOf(id: number | null): number {
   return id === null ? 0 : String(id).length;
 }
 

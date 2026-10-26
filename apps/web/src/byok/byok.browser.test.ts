@@ -1,7 +1,7 @@
 /**
  * BYOK in chromium (05 §13): the live token tier drawn through the board's extra-tier hook (row-aligned chips under the
  * Grok-2 token tier, hatched cuts exactly at the differing boundaries, one extra 32 px track per row, aria-hidden, never
- * for an unaligned answer, only at stop 6), and the drawer's key lifecycle (lazy body, masked input, exact request
+ * for an unaligned answer, only at stop 6, every fragment's id inside its chip by the board's rule), and the drawer's key lifecycle (lazy body, masked input, exact request
  * headers through `fetch`, the key forgotten on "Forget key", on collapse and on `pagehide`, never in web storage).
  */
 import '../theme/base.css';
@@ -111,6 +111,51 @@ describe('live token tier on the board (extra-tier hook)', () => {
     await frames(2);
     expect(grid.querySelector('[data-testid="extra-tier"]')).toBeNull();
     expect(grid.querySelectorAll('[data-boundary], .lv-cell')).toHaveLength(0);
+  });
+
+  it('puts every fragment’s id inside its chip by the board’s rule (PA-17)', async () => {
+    await page.viewport(1440, 900);
+    const app = appWith(fixtureResult('xai-grok2', 'zh-tw-tainan'));
+    board = await mountBoard(app, 600);
+    const grid = board.grid;
+    const withIds = (tokens: LiveToken[], ids: readonly number[]): LiveToken[] =>
+      tokens.map((token, i) => ({ ...token, id: ids[i] ?? token.id }));
+    /** Each live chip's id: its text, whether it is on two lines, and its glyph run inside the chip's padding box. */
+    const ids = (): Array<[string | undefined, string | undefined, boolean, boolean]> =>
+      [...grid.querySelectorAll<HTMLElement>('.lv-cell')].map((cell) => {
+        const chip = cell.querySelector('.bd-chip') ?? cell;
+        const id = chip.querySelector('.bd-id');
+        const range = document.createRange();
+        range.selectNodeContents(id ?? chip);
+        const run = range.getBoundingClientRect();
+        const box = chip.getBoundingClientRect();
+        const border = Number.parseFloat(getComputedStyle(chip).borderLeftWidth);
+        const inside = run.left >= box.left + border - 0.02 && run.right <= box.right - border + 0.02;
+        return [cell.dataset['liveId'], id?.textContent, id?.classList.contains('two') ?? false, inside];
+      });
+
+    // K = 8: rows 台灣 | 台南. Grok-2's boundaries with longer ids: 灣's last byte is a 1-column chip.
+    showAnswer(withIds(cutAt([3, 5, 6, 9]), [15721, 7489, 236778, 15721, 12048]));
+    await frames(2);
+    expect(grid.querySelector('.lv-id')).toBeNull();
+    expect(ids()).toEqual([
+      ['15721', '15721', false, true],
+      ['7489', '7489', false, true],
+      ['236778', '236778', true, true],
+      ['15721', '15721', false, true],
+      ['12048', '12048', false, true],
+    ]);
+    expect(grid.querySelector('.lv-cell[data-live-id="236778"] > .bd-chip.stacked')).not.toBeNull();
+
+    // A token across the row end shows its id on both fragments, continuation included.
+    showAnswer(withIds(cutAt([3, 9]), [15721, 654321, 12048]));
+    await frames(2);
+    expect(ids()).toEqual([
+      ['15721', '15721', false, true],
+      ['654321', '654321', false, true],
+      ['654321', '654321', false, true],
+      ['12048', '12048', false, true],
+    ]);
   });
 
   it('disappears when the text changes or the answers are cleared', async () => {
