@@ -230,5 +230,6 @@ All five questions in `07-implementation-plan.md` §6 were answered by the owner
 | 4 | `@anthropic-ai/tokenizer` licence metadata conflict | Ship both the MIT and the Apache-2.0 text plus the modification notice. |
 | 5 | Native-speaker review | The owner reviews the zh-TW catalog at the launch checkpoint; ja ships as drafted with an invitation for corrections on About. |
 | 6 | Project licence and repository | Our own code is MIT (`LICENSE`, © 2026 Han Lin); public GitHub repository `hotdogee/tokenize-step-by-step`; GitHub Actions is the CI/CD (AD-3). Git commits and `wp/` branches are authorised (PA-3). |
+| 7 | Launch checkpoint (2026-10-26) | Production at the custom domain **`tokens.hanlin.uk`** (zone `hanlin.uk` on the same Cloudflare account; `wrangler.jsonc` route with `custom_domain: true`; the CI token gained Zone › Zone › Read, DNS › Edit and Workers Routes › Edit on that zone); workers.dev stays for pull-request previews. The owner reviewed the zh-TW catalog side by side and ships it as is; the owner runs the mid-range Android check (docs/release.md); branch protection on `main` is enabled after the release push. |
 
 Everything else raised in the review round was decidable by the architect and is recorded in AD-31 … AD-39, the reviewer notes above and the planner amendments in §E.

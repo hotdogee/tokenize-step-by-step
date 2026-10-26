@@ -39,6 +39,8 @@
   <section aria-labelledby="notice-gemma">
     <h3 id="notice-gemma">{at('about.notices.gemma')}</h3>
     <p class="prose" lang="en">{legal('gemma-notice')}</p>
+    <!-- The §3.2 use restrictions pass through verbatim (registry notice gemma-terms); the localized line summarises them. -->
+    <p class="prose" lang="en">{noticeText(notice('gemma-terms'), 'en')}</p>
     <p class="prose">{at('about.notices.gemmaRestrictions')}</p>
     <p class="links">
       <a href={gemmaPolicy} rel="noopener noreferrer">{at('about.notices.policy')}</a>

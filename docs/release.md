@@ -169,7 +169,7 @@ BIN=$(jq -r '.assets | to_entries | max_by(.value.bytesCompressed) | .value.path
 JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
 ```
 
-- [ ] **6. Largest vocabulary file.** `curl -sI -H 'Accept-Encoding: zstd, br, gzip' "$BASE$BIN"` → `200`, **no**
+- [ ] **6. Largest vocabulary file.** `curl -s -D - -o /dev/null -H 'Accept-Encoding: zstd, br, gzip' "$BASE$BIN"` (a GET; the edge answers HEAD without `Content-Length`) → `200`, **no**
       `Content-Encoding`, `Content-Length` equal to the manifest's `bytesCompressed`, `Content-Type` exactly
       `application/octet-stream` (one value), `Cache-Control: public, max-age=31536000, immutable`,
       `X-Content-Type-Options: nosniff`, `Cross-Origin-Resource-Policy: same-origin`. Record the transferred bytes and the

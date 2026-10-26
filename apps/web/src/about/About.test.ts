@@ -83,6 +83,10 @@ describe('About page (server-rendered)', () => {
     expect(body).toContain(
       'Gemma is provided under and subject to the Gemma Terms of Use found at ai.google.dev/gemma/terms',
     );
+    // Gemma Terms §3.2 pass-through: the registry's verbatim restrictions, both limbs and Google's reservation.
+    expect(body).toContain('Use restrictions (Gemma Terms of Use, Section 3.2)');
+    expect(body).toContain('(2) in violation of applicable laws and regulations');
+    expect(body).toContain('Google reserves the right to restrict');
   });
 
   it('links both an MIT and an Apache-2.0 text in the legacy Claude block (00 §D answer 4)', () => {

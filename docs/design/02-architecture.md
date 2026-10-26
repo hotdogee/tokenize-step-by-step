@@ -213,7 +213,7 @@ Rules: no top-level `await` in entries. **Boot script**: `bootScript()` runs esb
 | `pnpm lint` / `pnpm typecheck` / `pnpm format:check` / `pnpm knip` | `pnpm generate &&` eslint · `pnpm generate &&` `tsc -b` + `svelte-check` · prettier · dead code |
 | `pnpm build` | `vocab:build` (cached by manifest + tools hash) → `vite build` → `check:dist` → `wrangler deploy --dry-run` |
 | `pnpm check:dist` | `size-limit`, 25 MiB / 20,000-file guards, dotfile guard, manifest ↔ files cross-check, `_headers` rule count |
-| `pnpm lhci -- --url <preview url>` | `@lhci/cli autorun` (mobile preset) against the **deployed preview URL** (real edge compression, `_headers`, HTTP/3); `vite preview` serves uncompressed bytes and is never a budget target |
+| `pnpm lhci --collect.url=<preview url>/` | `@lhci/cli autorun` (mobile preset) against the **deployed preview URL** (real edge compression, `_headers`, HTTP/3); `vite preview` serves uncompressed bytes and is never a budget target |
 | `pnpm deploy` / `pnpm preview:pr -- <n>` | `wrangler deploy` / `wrangler preview --name pr-<n>` (CI only) |
 | `pnpm oracle:check` | `fetch_vocab.py` (idempotent) · `make_corpus.py --check` · `gen_fixtures.py --check` · `render_license_docs.py --check` · `export_unicode_tables.py --check` |
 
