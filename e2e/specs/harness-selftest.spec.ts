@@ -40,18 +40,20 @@ test('the page-error guard keeps a replaced document’s errors apart and record
   // Two navigations back to back, the second while the first page still loads its Worker and lazy chunks.
   await page.goto('/?lang=en');
   await page.goto('/?lang=en&t=openai-cl100k_base');
-  // A third whose document is held back: the old document is still alive and throws while it is being replaced.
+  // A third whose document is held back: the old document is still alive and throws while it is being replaced. The
+  // throw comes 1.5 s after goto() is called, past the guard's event flush (at most 1 s, page-guards.ts) that precedes
+  // the navigation, and the document is held 3 s, so the error is raised mid-navigation even on a loaded machine.
   await page.route(
     (url) => url.searchParams.get('t') === 'xai-grok2',
     async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 3_000));
       await route.continue();
     },
   );
   await page.evaluate(() => {
     setTimeout(() => {
       throw new Error('replaced document');
-    }, 200);
+    }, 1_500);
   });
   await page.goto('/?lang=en&t=xai-grok2');
   expect(guards.teardownErrors()).toContain('Error: replaced document');
