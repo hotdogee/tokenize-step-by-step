@@ -20,6 +20,7 @@ for (const { path, title } of PAGES) {
 
     await page.waitForLoadState('load');
     expect(await guards.cspViolations()).toEqual([]);
+    expect(guards.pageErrors()).toEqual([]);
     await expectNoAxeViolations(page, testInfo, path === '/' ? 'home' : path.replaceAll('/', ''));
   });
 }

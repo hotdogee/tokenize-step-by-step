@@ -4,7 +4,7 @@
  * a stop change and a scrub through the merge replay (checked against the fixture replay), the inspector following
  * board focus, a tokenizer switch, typed text tokenized live, and the drawer's xAI panel on a mocked route drawing its
  * live tier under the Grok-2 tier at stop 6. Keyboard input leaves the textarea by `blur()`, never by clicking a button
- * (WebKit does not focus buttons on click). Zero CSP violations throughout.
+ * (WebKit does not focus buttons on click). Zero CSP violations and no uncaught page errors throughout.
  */
 import { expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
@@ -104,4 +104,5 @@ test('shell, board, rail, inspector and drawer work together on the live Worker'
   await expect(page.getByTestId('live-check-toggle')).toHaveAttribute('aria-expanded', 'false');
   await expect(page.getByTestId('extra-tier')).toHaveCount(0);
   expect(await guards.cspViolations()).toEqual([]);
+  expect(guards.pageErrors()).toEqual([]);
 });

@@ -16,6 +16,7 @@ export const BOARD_TRANSITION_NAME = 'tsbs-board';
 
 interface ViewTransitionLike {
   readonly finished: Promise<void>;
+  readonly ready: Promise<void>;
   readonly updateCallbackDone: Promise<void>;
 }
 type StartViewTransition = (callback: () => Promise<void>) => ViewTransitionLike;
@@ -29,6 +30,8 @@ export function startViewTransitionOf(doc: Document = document): StartViewTransi
 /**
  * Applies `update` with a crossfade of `target`: a View Transition, else (no API) the update and then a 220 ms opacity
  * fade-in of the target, else (reduced motion, or no target) the plain update. Resolves once the DOM shows the new state.
+ * A transition skipped by the next one (quick switches) rejects its `ready` and `finished` with an `AbortError`; both are
+ * handled here, so a skip is never an unhandled rejection.
  */
 export function crossfade(target: HTMLElement | null, update: () => void, reduced: boolean): Promise<void> {
   if (reduced || target === null) {
@@ -43,6 +46,7 @@ export function crossfade(target: HTMLElement | null, update: () => void, reduce
         update();
         await tick();
       });
+      void transition.ready.catch(() => undefined);
       void transition.finished
         .catch(() => undefined)
         .then(() => {

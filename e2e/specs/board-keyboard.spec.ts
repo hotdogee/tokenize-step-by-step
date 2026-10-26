@@ -81,6 +81,7 @@ test.describe('desktop layout', () => {
     await expect(grid(page).locator('[data-pinned]')).toHaveCount(0);
     await press('Escape', 'text-input:');
     expect(await guards.cspViolations()).toEqual([]);
+    expect(guards.pageErrors()).toEqual([]);
   });
 });
 

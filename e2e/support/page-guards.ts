@@ -1,7 +1,9 @@
 /**
  * Page instrumentation shared by the suites: CSP violations (console messages and `securitypolicyviolation` events, so a
- * blocked inline style is caught in every engine) and the `<html>` attributes as they were at `DOMContentLoaded` — the proof
- * that the classic boot script ran before first paint (AD-15, AD-29).
+ * blocked inline style is caught in every engine), uncaught page errors (Playwright's `pageerror`: an uncaught exception
+ * or, in WebKit, an unhandled promise rejection such as a skipped View Transition's `AbortError`) and the `<html>`
+ * attributes as they were at `DOMContentLoaded` — the proof that the classic boot script ran before first paint (AD-15,
+ * AD-29).
  */
 import type { Page } from '@playwright/test';
 
@@ -15,6 +17,8 @@ export interface BootSnapshot {
 export interface PageGuards {
   /** Every CSP violation seen so far (console text or `<directive> <blocked URI>`). */
   cspViolations(): Promise<string[]>;
+  /** Every uncaught page error seen so far (`name: message`). */
+  pageErrors(): string[];
   bootSnapshot(): Promise<BootSnapshot | null>;
 }
 
@@ -25,6 +29,10 @@ export async function watchPage(page: Page): Promise<PageGuards> {
   const consoleViolations: string[] = [];
   page.on('console', (message) => {
     if (CSP_CONSOLE.test(message.text())) consoleViolations.push(message.text());
+  });
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => {
+    pageErrors.push(`${error.name}: ${error.message}`);
   });
   await page.addInitScript(() => {
     const store = window as unknown as Record<string, unknown>;
@@ -48,6 +56,9 @@ export async function watchPage(page: Page): Promise<PageGuards> {
         () => (window as unknown as Record<string, string[] | undefined>)['__tsbsCsp'] ?? [],
       );
       return [...consoleViolations, ...events];
+    },
+    pageErrors() {
+      return [...pageErrors];
     },
     bootSnapshot() {
       return page.evaluate(() => (window as unknown as Record<string, BootSnapshot | undefined>)['__tsbsBoot'] ?? null);

@@ -91,6 +91,7 @@ test.describe('Anthropic count_tokens panel', () => {
     expect(page.url()).not.toContain(ANTHROPIC_KEY);
     expect(consoleLines.join('\n')).not.toContain(ANTHROPIC_KEY);
     expect(await guards.cspViolations()).toEqual([]);
+    expect(guards.pageErrors()).toEqual([]);
   });
 
   test('x-api-key option: the key goes in x-api-key, never in Authorization; no workspace header when empty', async ({
@@ -238,6 +239,7 @@ test.describe('xAI tokenize-text panel', () => {
     await expect(page.locator('[data-boundary]')).toHaveCount(0);
     await expect(page.getByTestId('live-token-list').locator('li')).toHaveCount(5);
     expect(await guards.cspViolations()).toEqual([]);
+    expect(guards.pageErrors()).toEqual([]);
   });
 
   test('a crafted divergent answer: the differing boundaries (5 and 9) are hatched and counted', async ({ page }) => {

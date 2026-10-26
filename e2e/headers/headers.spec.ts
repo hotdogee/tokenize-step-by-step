@@ -24,6 +24,7 @@ for (const { path } of PAGES) {
     await page.goto(path);
     await page.waitForLoadState('load');
     expect(await guards.cspViolations()).toEqual([]);
+    expect(guards.pageErrors()).toEqual([]);
     const boot = await guards.bootSnapshot();
     expect(boot?.lang).toMatch(LANG_PATTERN);
     expect(boot?.theme).toMatch(THEME_PATTERN);
@@ -39,6 +40,7 @@ test('/ tokenizes typed text live in the Worker with zero CSP violations', async
   await page.locator('#text-input').fill('こんにちは台灣 123 abc');
   await expect(page.getByTestId('counts')).toContainText('6 tokens'); // o200k: 95839 3735 133072 220 7633 75094
   expect(await guards.cspViolations()).toEqual([]);
+  expect(guards.pageErrors()).toEqual([]);
 });
 
 // The deploy smoke checks of 06 §7 items 6–8 (scripts/lib/smoke.ts): /index.html → 307 /, /nope → 404.html with 404,

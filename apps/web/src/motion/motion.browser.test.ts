@@ -370,6 +370,45 @@ describe('switch crossfades (View Transition with an opacity fallback)', () => {
     target.remove();
   });
 
+  it('handles a transition skipped by the next one: its rejected ready and finished are never unhandled', async () => {
+    const target = document.createElement('section');
+    document.body.append(target);
+    const unhandled: unknown[] = [];
+    const onUnhandled = (event: PromiseRejectionEvent): void => {
+      unhandled.push(event.reason);
+    };
+    window.addEventListener('unhandledrejection', onUnhandled);
+    // What Chromium and WebKit hand back when a new transition starts before this one is ready.
+    const skipped = (): Promise<void> =>
+      Promise.reject(new DOMException('Transition was skipped. New ViewTransition started', 'AbortError'));
+    vi.spyOn(document, 'startViewTransition').mockImplementation((callback) => {
+      const done = Promise.resolve(typeof callback === 'function' ? callback() : undefined).then(() => undefined);
+      return {
+        finished: skipped(),
+        updateCallbackDone: done,
+        ready: skipped(),
+        skipTransition: () => undefined,
+      } as unknown as ViewTransition;
+    });
+    try {
+      let applied = false;
+      await crossfade(
+        target,
+        () => {
+          applied = true;
+        },
+        false,
+      );
+      expect(applied).toBe(true);
+      await frames(2);
+      expect(unhandled).toEqual([]);
+      expect(target.style.getPropertyValue('view-transition-name')).toBe('');
+    } finally {
+      window.removeEventListener('unhandledrejection', onUnhandled);
+      target.remove();
+    }
+  });
+
   it('wraps the byte-view, tokenizer and locale switches and restores them', async () => {
     const proto = Document.prototype as unknown as { startViewTransition?: unknown };
     const original = proto.startViewTransition;

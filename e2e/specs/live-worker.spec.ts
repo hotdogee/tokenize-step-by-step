@@ -2,7 +2,8 @@
  * Wave 2 integration (PA-8): the page's default client is the Worker `TokenizerClient` with the real engines, so typed
  * text that is no example chip is tokenized live and the board shows the oracle's ids; the Worker's host chunk and the
  * byte-level engine chunk load after first paint; the picker's wire-size column comes from the Worker's `ready.assets`;
- * `?mock=1` keeps the precomputed-examples client (free text then waits for the tokenizer). Zero CSP violations.
+ * `?mock=1` keeps the precomputed-examples client (free text then waits for the tokenizer). Zero CSP violations, no
+ * page errors.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
@@ -44,6 +45,7 @@ test('typed text is tokenized live in the Worker: こんにちは台灣 123 abc 
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
   await expect.poll(() => boardIds(page)).toEqual(O200K_IDS);
   expect(await guards.cspViolations()).toEqual([]);
+  expect(guards.pageErrors()).toEqual([]);
 });
 
 test("the picker's wire sizes come from the Worker's asset summary", async ({ page }) => {

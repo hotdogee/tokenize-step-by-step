@@ -29,6 +29,7 @@ for (const width of [320, 360, 768, 1440, 2560]) {
     const surface = await page.getByTestId('inspector-host').getAttribute('data-surface');
     expect(surface).toBe(width >= 1024 ? 'rail' : width >= 768 ? 'anchored' : 'sheet');
     expect(await guards.cspViolations()).toEqual([]);
+    expect(guards.pageErrors()).toEqual([]);
   });
 }
 
