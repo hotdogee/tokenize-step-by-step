@@ -506,15 +506,9 @@ function tokenCellsFinal(
     const text = f.first && f.colSpan >= 4 ? chipText(result, start, end, t, spm, i === fused) : null;
     const partial = (flags & TokenFlag.Partial) !== 0;
     const special = (flags & TokenFlag.Special) !== 0;
-    // Nothing shares the chip with the id: no continuation mark, hatch, lock, badge, byte piece or text.
-    const bare =
-      f.first &&
-      f.last &&
-      text === null &&
-      !partial &&
-      !special &&
-      kind !== TokenKind.Byte &&
-      kind !== TokenKind.UserDefined;
+    // Nothing shares the chip with the id: no continuation mark, hatch, lock, badge or byte piece (a chip shows its text
+    // from 4 columns only, and idLines wants one).
+    const bare = f.first && f.last && !partial && !special && kind !== TokenKind.Byte && kind !== TokenKind.UserDefined;
     out.push({
       index: i,
       start: f.byteStart,

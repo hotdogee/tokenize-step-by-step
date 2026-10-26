@@ -29,11 +29,14 @@
   );
 </script>
 
-<!-- The chip's marks and text in reading order, the id between the lock and the text when they share its line. -->
-{#snippet marks(withId: boolean)}
+<!-- The chip's marks in reading order: these before its id, … -->
+{#snippet lead()}
   {#if !cell.first}<BoardIcon name="continued" size={10} />{/if}
   {#if cell.userDefined}<BoardIcon name="lock" size={11} />{/if}
-  {#if withId && cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={cell.idLines} />{/if}
+{/snippet}
+
+<!-- … these after it (a stacked chip draws both on the line under its id). -->
+{#snippet trail()}
   {#if cell.text !== null}<span class={cell.variant === 'part' ? 'bd-part-text mono' : 'bd-chip-text'}>{cell.text}</span
     >{/if}
   {#if hatchMark}<BoardIcon name="hatch" size={10} />{/if}
@@ -72,15 +75,11 @@
     class:has-lock={cell.userDefined}
     aria-hidden="true"
   >
-    {#if cell.bytePiece !== null}
-      <!-- One byte, one column: never a fragment, never hatched; the `<0x…>` notation says it is a byte. -->
-      {#if cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={null} />{/if}
-      <span class="bd-piece mono">{cell.bytePiece}</span>
-    {:else if stacked}
-      {#if cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={cell.idLines} />{/if}
-      {#if marked}<span class="bd-chip-line">{@render marks(false)}</span>{/if}
-    {:else}
-      {@render marks(true)}
-    {/if}
+    <!-- A byte-fallback piece is one byte in one column: never a fragment, never hatched; `<0x…>` says it is a byte. -->
+    {#if !stacked}{@render lead()}{/if}
+    {#if cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={cell.idLines} />{/if}
+    {#if cell.bytePiece !== null}<span class="bd-piece mono">{cell.bytePiece}</span>
+    {:else if !stacked}{@render trail()}
+    {:else if marked}<span class="bd-chip-line">{@render lead()}{@render trail()}</span>{/if}
   </div>
 </div>

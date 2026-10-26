@@ -108,7 +108,7 @@ describe('spm specifics', () => {
     const [final] = cellsOf(caseResult('google-gemma2', 'cjk-ext-g-biang'), { K: 9 });
     // The chip shows its id over <0xF0> (PA-17): the name says the piece right after the id (WCAG 2.5.3).
     expect(final?.tokens[0]?.label).toMatch(/^token 1 of \d+, id \d+, <0xF0>, 1 byte, byte-fallback piece, /);
-    expect(row?.tokens[0]?.label).toMatch(/^part 1 of 4, id \d+, <0xF0>, 1 byte, byte-fallback piece, /);
+    expect(row?.tokens[0]?.label).toMatch(/^part 1 of 4, id \d+, <0xF0>, 1 byte, partial: /);
   });
 
   it('USER_DEFINED symbols are locked (Grok-1 digits, Gemma 2 <start_of_turn>)', () => {

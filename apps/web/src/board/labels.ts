@@ -292,8 +292,8 @@ export function firstSpanToken(result: TokenizationResult): number {
 }
 
 /**
- * `aria-label` of live part `index` (stops 4–5). The id comes before the hex — or a byte-fallback part's `piece`
- * (`<0xF0>`) — the order the chip shows them in, so the visible label is part of the name (WCAG 2.5.3; PA-17 put the id
+ * `aria-label` of live part `index` (stops 4–5). The id comes before the hex — a byte-fallback part's `piece` (`<0xF0>`)
+ * instead — in the order the chip shows them, so the visible label is part of the name (WCAG 2.5.3; PA-17 put the id
  * inside the chip).
  */
 export function partLabel(
@@ -316,7 +316,6 @@ export function partLabel(
       id >= 0 && t('a11y.cell.id', { id }),
       piece ?? hex.join(' '),
       t('counts.bytes', { n: end - start }),
-      piece !== null && t('a11y.cell.byteFallback'),
       cutsChar(result, start, end) && t('a11y.cell.partial', { list: coverageList(result, start, end, t, spoken) }),
     ],
     t,

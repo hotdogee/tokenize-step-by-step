@@ -13,10 +13,6 @@
   let { id, digits, lines }: Props = $props();
 </script>
 
-{#if lines === null}
-  <span class={`bd-id d${String(digits)}`}>{id}</span>
-{:else}
-  <span class={`bd-id two d${String(Math.max(3, lines[0].length))}`}
-    ><span>{lines[0]}</span><span>{lines[1]}</span></span
-  >
-{/if}
+<span class="bd-id d{lines === null ? digits : Math.max(3, lines[0].length)}" class:two={lines !== null}
+  >{#if lines === null}{id}{:else}<span>{lines[0]}</span><span>{lines[1]}</span>{/if}</span
+>
