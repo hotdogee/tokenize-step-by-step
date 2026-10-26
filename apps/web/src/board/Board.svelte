@@ -599,6 +599,16 @@
     else document.documentElement.style.setProperty('--sheet-height', height);
   });
 
+  // Expanding the sheet brings the inspected cell back into view above it (the scroll padding lifts it clear).
+  $effect(() => {
+    if (viewport.surface !== 'sheet' || !sheetExpanded) return;
+    const ref = untrack(() => pinRef ?? focusRef);
+    if (ref === null) return;
+    void tick().then(() => {
+      cellElement(ref)?.scrollIntoView({ block: 'nearest', behavior: scrollBehavior() });
+    });
+  });
+
   /** Reads its arguments so an effect re-runs when they change (explicit dependency list). */
   function track(..._values: unknown[]): void {
     // dependencies only

@@ -11,7 +11,7 @@
  */
 import { devices, expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
-import { chooseExample, focusBoard, focusedCell, focusRects, grid, intersects } from './board-helpers.ts';
+import { chooseExample, focusBoard, focusedCell, focusRects, grid, intersects, type Rect } from './board-helpers.ts';
 import { openShell } from './shell-helpers.ts';
 
 for (const width of [320, 360, 768, 1440, 2560]) {
@@ -133,6 +133,45 @@ for (const [width, height] of [
     expect(seen.size).toBeGreaterThan(4); // focus really moved down the paragraph
   });
 }
+
+test.describe('touch: expanding the sheet over a pinned cell', () => {
+  test.skip(({ hasTouch }) => !hasTouch, 'touch projects only (pixel-5, iphone-12)');
+
+  test('brings the pinned cell back into view above the expanded sheet', async ({ page }) => {
+    await openShell(page, 'en');
+    await expect(grid(page)).not.toHaveAttribute('data-pending', '');
+    // Token 2 of the default example in the lower half of the viewport, just above the collapsed sheet, so the tap does
+    // not scroll and the expanded sheet (40vh) would cover it.
+    const cell = grid(page).locator('[data-tier="token"][data-index="1"][data-first]');
+    await cell.evaluate((element) => {
+      window.scrollBy({ top: element.getBoundingClientRect().bottom - (innerHeight - 56 - 12), behavior: 'instant' });
+    });
+    const before = await cell.boundingBox();
+    const viewport = page.viewportSize();
+    expect(before !== null && viewport !== null && before.y > viewport.height / 2).toBe(true);
+    await cell.tap();
+    await expect(page.getByTestId('status')).toContainText('pinned: token 2 of 4');
+    const handle = page.getByTestId('sheet-handle');
+    await handle.tap();
+    await expect(handle).toHaveAttribute('aria-expanded', 'true');
+    const sheet = page.getByTestId('inspector-host');
+    await expect
+      .poll(async () => {
+        const [a, b] = await Promise.all([cell.boundingBox(), sheet.boundingBox()]);
+        if (a === null || b === null) return 'missing';
+        if (a.y < 0) return 'above the viewport';
+        const rect = (box: typeof a): Rect => ({
+          top: box.y,
+          bottom: box.y + box.height,
+          left: box.x,
+          right: box.x + box.width,
+        });
+        return intersects(rect(a), rect(b)) ? 'under the sheet' : 'clear';
+      })
+      .toBe('clear');
+    await expect(cell).toHaveAttribute('data-pinned', '');
+  });
+});
 
 /** Pixel 5 emulation without its browser choice, so the project's chromium (or webkit) runs it. */
 const { defaultBrowserType: _browser, ...pixel5 } = devices['Pixel 5'];
