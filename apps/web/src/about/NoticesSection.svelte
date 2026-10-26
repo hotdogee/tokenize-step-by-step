@@ -3,12 +3,13 @@
    * About › Required notices (05 §14 item 4), rendered prominently and exactly: xAI (Agreement, the exact notice, "Powered
    * by xAI" as a heading-sized line), Meta Llama 3 ("Built with Meta Llama 3", the Notice sentence, Agreement and Use
    * Policy), Gemma 1/2 (Notice, Prohibited Use Policy, Terms copy, the §3.2 restrictions statement), the Apache-2.0 and MIT
-   * vocabularies (with the rank-file basis disclosure). Legal strings come verbatim from the registry.
+   * vocabularies (with the rank-file basis disclosure) and the Noto Sans digits of the token ids (SIL OFL 1.1, PA-17).
+   * Legal strings come verbatim from the registry.
    */
   import { notice, noticeText } from '../app/registry.ts';
   import { at } from '../i18n/about/t.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
-  import { licenceTextUrl } from './licences.ts';
+  import { FONT_LICENCE_URL, licenceTextUrl } from './licences.ts';
 
   /** The exact legal string of a notice (licences.json `verbatim`, identical in every locale). */
   const legal = (
@@ -57,6 +58,12 @@
     <h3 id="notice-mit">{at('about.notices.mit')}</h3>
     <p class="prose">{at('about.notices.mitBody')}</p>
     <p class="prose">{noticeText(notice('tiktoken-rank-file-basis'), i18n.current)}</p>
+  </section>
+
+  <section aria-labelledby="notice-fonts">
+    <h3 id="notice-fonts">{at('about.notices.fonts')}</h3>
+    <p class="prose">{at('about.notices.fontsBody')}</p>
+    <p><a href={FONT_LICENCE_URL} lang="en">SIL Open Font License 1.1</a></p>
   </section>
 </div>
 

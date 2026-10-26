@@ -57,6 +57,9 @@ export const aboutZhTW = {
     'Gemma 4、Muse Glimmer 與 Grok-1 的詞彙表以 Apache License 2.0 發布，全文見上方各自的授權區塊。舊版 Claude 套件也在 package.json 中宣告 Apache-2.0，因此其授權區塊同樣收錄 Apache-2.0 全文。',
   'about.notices.mitBody':
     'OpenAI 的 rank 檔案適用上方收錄的 MIT 授權。舊版 Claude 套件（@anthropic-ai/tokenizer 0.0.4）同時宣告兩種授權：LICENSE 檔案為 MIT，package.json 則為 Apache-2.0，因此其授權區塊收錄兩份全文，並同時遵守兩者。',
+  'about.notices.fonts': '字型',
+  'about.notices.fontsBody':
+    '對照圖上的詞元 ID 使用 Noto Sans 的純數字子集，© 2022 The Noto Project Authors，依 SIL Open Font License 1.1 授權使用（只保留十個數字，保留寬度軸並內建等寬數字）。',
   'about.engine.heading': '引擎',
   'about.engine.unicode': '預分詞規則使用 Unicode {version} 資料表，與參考分詞器一致。',
   'about.engine.browserUnicode': '你的瀏覽器支援 Unicode {version} 或更新版本。',
