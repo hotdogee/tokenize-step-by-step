@@ -294,3 +294,39 @@ the baseline (270 KB) after a forced GC (kB/MB = 1000 B): 15.8 MB with a 150,000
 0.39 MB while the next (capped, 200,000-code-point) run is in flight, so the previous result is gone before the new one
 arrives (before the fix: 15.8 MB); 0.25 MB after the text goes back to 4 characters (before the fix: about 19.7 MB, the
 review's measure).
+
+## 2026-10-26 — wave 4a integration (vite preview, pre-launch)
+
+**Where:** the same machine as the baseline; `main` at the WP13a merge `8db8d6b` (WP13a on top of `0babe49`, which
+carries the Linux CI fixes and PA-14); `pnpm build`, then one run of `pnpm e2e:perf` against `vite preview` of the
+production bundle (chromium 1440 × 900, desktop, no CPU throttling), no other test run in parallel.
+
+| Metric                                                                                      | Measured             | 06 §3 budget    |     |
+| ------------------------------------------------------------------------------------------- | -------------------- | --------------- | --- |
+| o200k load, `loaded.ms` (CDP Fast 4G; layer gzip, 1,048,023 B transferred)                  | 1,174 ms             | ≤ 2.5 s desktop | ✓   |
+| o200k load, navigation → live result (CDP Fast 4G)                                          | 2,839 ms             | (recorded)      |     |
+| keystroke → board update at 1k chars, p95, encode request → frame (PA-12)                   | 30.3 ms              | ≤ 50 ms         | ✓   |
+| keystroke → board update at 1k chars, p95, keystroke → frame (incl. the debounce; recorded) | 79.7 ms (p50 49.0)   | (recorded)      |     |
+| keystroke → encode request (the 40 ms debounce), median                                     | 41.5 ms              | (recorded)      |     |
+| keystroke → board update at 10k CJK, p95, encode request → frame (PA-12)                    | 26.5 ms              | ≤ 120 ms        | ✓   |
+| keystroke → board update at 10k CJK, p95, keystroke → frame (recorded)                      | 68.1 ms              | (recorded)      |     |
+| longest main-thread task while typing into 10k CJK (trace)                                  | 8.2 ms; 0 long tasks | ≤ 50 ms         | ✓   |
+| paste 10k CJK → board update                                                                | 102.0 ms             | (recorded)      |     |
+| render a 2,000-cell board (K 51, 15 rows), wall time result → DOM, median of 5              | 15.2 ms (max 19.0)   | ≤ 50 ms script  | ✓   |
+| render a 2,000-cell board, result → next frame, median                                      | 31.7 ms              | (recorded)      |     |
+| render a 2,000-cell board, cells mounted (virtualized, PA-11)                               | 938                  | (recorded)      |     |
+| render a 2,000-cell board, longest main-thread task under a trace                           | 15.5 ms              | (recorded)      |     |
+| scrub one merge step at stop 5, keydown → frame, p95                                        | 19.7 ms              | (recorded)      |     |
+| longest main-thread task while scrubbing (trace)                                            | 11.7 ms              | ≤ 50 ms         | ✓   |
+
+All asserted budgets are met in this single run; the 1k-character PA-12 p95 (30.3 ms) is above the branch's three-run
+range (9.0–19.4 ms) and inside the budget.
+
+**Startup bundle (`pnpm build`, size-limit, brotli-11, kB = 1000 B):** Main JS **80.35 kB** of 81.92 (main 42.68 +
+Header 19.46 + registry 9.37 + i18n 8.84; i18n 8.84 of 9.22), Worker entry + entry-core 11.40 of 12.29 (entry-core
+11.19), bytelevel + engine-core 15.20 of 16.38 (bytelevel 10.39, engine-core 4.81), spm + engine-core 8.75 of 10.24
+(spm 3.94), CSS 11.83 of 20.48, font 0.91 of 4.1, boot 0.32 of 0.5, `index.html` 0.33 kB. Lazy chunks: LiveCheckBody
+10.19, examples (the "why" sentences) 4.96, registry-details 4.62, choreography 3.70, inspector model 3.37,
+examples-client 2.70, PickerDialog 2.45, catalogs 2.35, client 2.33, window-slice 1.87, MergeList 1.21,
+SingleKeySetting 0.91, LongInputBanner 0.62, HelpDialog 0.59, Dialog 0.46 kB. No Lighthouse run in this entry: the
+budget-authoritative read is the CI `lighthouse` job on a preview or production deploy (PA-14), still open for WP13b.
