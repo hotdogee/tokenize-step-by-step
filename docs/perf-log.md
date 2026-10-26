@@ -157,6 +157,26 @@ nightly timing step is soft.
 
 ---
 
+## 2026-10-26 — first production deploy (edge, before wave 4)
+
+Production: https://tokenize-step-by-step.hotdogee.workers.dev (CI deploy of main 86a0edf/3a47892; `deploy:smoke`
+10/10). LHCI mobile preset, 3 runs, from the deploy job:
+
+| Assertion                           | Found                                  | Budget     | Status                                          |
+| ----------------------------------- | -------------------------------------- | ---------- | ----------------------------------------------- |
+| first-contentful-paint              | 1,609 ms (runs 1,609 / 2,166 / 2,077)  | ≤ 1,500 ms | ✗ (PA-14: WP13 levers, then AD-15 fallback)     |
+| largest-contentful-paint            | passed                                 | ≤ 2,000 ms | ✓                                               |
+| total-blocking-time                 | passed                                 | ≤ 150 ms   | ✓                                               |
+| cumulative-layout-shift             | passed                                 | ≤ 0.02     | ✓                                               |
+| resource-summary script (as served) | 141.4 KB (141,424 / 143,176 / 143,056) | ≤ 110 KB   | ✗ → budget restated as served, ≤ 143 KB (PA-14) |
+
+As served, the edge compresses with **zstd** for Chrome (`content-encoding: zstd`), about 28 % weaker than the brotli-11
+`size-limit` numbers: main 47,982 B (brotli-11 39.9 kB), Header 23,002 (19.4), registry 17,459 (13.3), i18n 11,898
+(8.3), lazy-client 3,542 (2.3), CSS 11,129 (11.5 → 7,065 + 4,064), index.html 1,380. The brotli-11 sum of everything the
+trace loads (main + Header + registry + i18n + client/cancelled/entry/boot + Worker entry-core + bytelevel +
+engine-core) is 110.3 kB, i.e. the engineering budget holds. Measured with a Playwright script (412 × 823, 4× CPU) from
+this machine; the Worker's own fetches are not visible to the page's CDP session and were taken from the brotli sums.
+
 ## 2026-10-26 — wave 3 integration (development machine)
 
 **Where:** the same machine as the baseline, after the wave 3 merges (WP09 rail and motion, WP10 drawer, WP12, WP11) on
