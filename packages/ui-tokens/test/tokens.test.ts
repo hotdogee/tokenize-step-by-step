@@ -58,6 +58,7 @@ describe('font stacks (05 §10)', () => {
     expect(stack('--font-ko')).toMatch(/^'Apple SD Gothic Neo', 'Noto Sans KR'/);
     expect(stack('--font-mono')).toMatch(/^ui-monospace,/);
     expect(stack('--font-standin')).toBe("'TSBS Stand-ins', var(--font-mono)");
+    expect(stack('--font-digits')).toBe("'TSBS Digits', var(--font-mono)");
   });
 });
 

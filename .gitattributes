@@ -10,3 +10,5 @@ data/** binary
 
 # Licence snapshots are verbatim upstream bytes (all LF today); never rewrite them.
 docs/licenses/** -text
+packages/ui-tokens/fonts/NotoSans-OFL.txt -text
+apps/web/public/licenses/** -text

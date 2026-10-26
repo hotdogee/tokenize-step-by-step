@@ -1,6 +1,6 @@
 /**
  * @tsbs/ui-tokens — the custom-property names defined by `tokens.css` (docs/design/05-ui-ux.md §3.3, §10, §11). Import the
- * stylesheet as `@tsbs/ui-tokens/tokens.css` (and `@tsbs/ui-tokens/fonts.css` for the stand-in subset font); use these
+ * stylesheet as `@tsbs/ui-tokens/tokens.css` (and `@tsbs/ui-tokens/fonts.css` for the stand-in and digits subset fonts); use these
  * names from TypeScript (e.g. `element.style.setProperty`) to stay typo-free.
  */
 
@@ -36,6 +36,7 @@ export const FONT_TOKENS = [
   '--font-mono',
   '--font-emoji',
   '--font-standin',
+  '--font-digits',
 ] as const;
 
 /** Layout tokens (05 §3.3); `--cell-*-base` are the breakpoint sizes before the coarse-pointer floor. */
