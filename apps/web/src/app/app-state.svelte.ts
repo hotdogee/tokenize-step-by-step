@@ -437,7 +437,8 @@ export class AppState {
    * The counts line's tokens · partial: the current result's; in an on-demand tier the last on-demand run's on this
    * tokenizer and token options, even when the text has changed since (shown with the "stale" badge, AD-27) and while
    * the next run is in flight; while an IME composition is open, the last result's on this tokenizer and token options
-   * (the provisional text is not encoded, 05 §6; also shown "stale").
+   * (the provisional text is not encoded, 05 §6; also shown "stale"); while the loaded tokenizer encodes a newer text,
+   * the last result's on this tokenizer and token options, as the board keeps it (PA-11; `countsSuperseded`).
    */
   get tokenCounts(): TokenCounts | null {
     if (isOnDemand(this.longInput)) {
@@ -446,7 +447,17 @@ export class AppState {
     }
     const result = this.result;
     if (result?.tokenizer !== this.tokenizer || !sameTokenOptions(result.options, this.options)) return null;
-    return this.composing || result.input.text === this.analysed ? result.stats : null;
+    return this.composing || this.resident === this.tokenizer || result.input.text === this.analysed
+      ? result.stats
+      : null;
+  }
+
+  /**
+   * The counts line's tokens are the last result's for the debounce plus the encode of a newer text on the loaded
+   * tokenizer: shown muted, without the "stale" badge (`resultStale` stays false), so a keystroke swaps nothing.
+   */
+  get countsSuperseded(): boolean {
+    return !isOnDemand(this.longInput) && !this.composing && this.tokenCounts !== null && !this.#isCurrent(this.result);
   }
 
   /**
@@ -677,7 +688,11 @@ export class AppState {
 
   #encodeFailed(error: unknown, seq: number, phase: ErrorPhase): void {
     if (seq !== this.#seq || isCancelledError(error)) return;
-    if (isNoPrecomputedResult(error)) return; // ?mock=1 has no result for free text: tokens wait
+    // ?mock=1 has no result for free text: tokens wait, and the board shows the text alone instead of the last result.
+    if (isNoPrecomputedResult(error)) {
+      this.#release();
+      return;
+    }
     this.error = toUiError(error, this.tokenizer, null, phase);
   }
 

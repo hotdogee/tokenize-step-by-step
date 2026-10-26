@@ -11,6 +11,7 @@ import { defaultResult } from './bootstrap.ts';
 import { errorView } from './errors.ts';
 import { FakeClient, flush, syntheticResult } from './fake-client.test-helper.ts';
 import { ANALYSED_MAX, ON_DEMAND_MAX_STEPS, RELEASE_ABOVE_BYTES, resultBytes } from './long-input.ts';
+import { NoPrecomputedResultError } from './no-precomputed.ts';
 import type { PrecomputedSource } from './precomputed.ts';
 import { DEFAULT_TOKENIZER, EXAMPLES, tokenizerEntry } from './registry.ts';
 import { STORAGE_KEYS } from './storage.ts';
@@ -143,6 +144,60 @@ describe('the board: final, stale, text (PA-11, AD-19, 05 §12)', () => {
     await flush();
     expect(app.board.kind).toBe('final');
     expect(app.board.result.input.text).toBe('台灣台南!');
+  });
+
+  it('keeps the counts through keystrokes on the loaded tokenizer: never null, muted, not stale, until the result', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const client = new FakeClient();
+      const app = await (async () => {
+        vi.useRealTimers();
+        const loaded = await loadedApp(client);
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        return loaded;
+      })();
+      const shown = app.result;
+      expect(app.countsSuperseded).toBe(false);
+      let text = app.text;
+      for (const key of ['!', '台', 'a', ' ']) {
+        text += key;
+        app.setText(text);
+        // Every keystroke inside the debounce and while the encode is in flight: the last result's counts stay.
+        expect(app.tokenCounts).toBe(shown?.stats);
+        expect(app.countsSuperseded).toBe(true);
+        expect(app.resultStale).toBe(false);
+        vi.advanceTimersByTime(ENCODE_DEBOUNCE_MS / 2);
+        expect(app.tokenCounts).toBe(shown?.stats);
+      }
+      vi.advanceTimersByTime(ENCODE_DEBOUNCE_MS);
+      expect(client.encodes.at(-1)?.text).toBe(text);
+      expect(app.tokenCounts).toBe(shown?.stats);
+      vi.useRealTimers(); // `flush` waits on a real timer
+      client.encodes.at(-1)?.answer();
+      await flush();
+      expect(app.tokenCounts).toBe(app.result?.stats);
+      expect(app.result?.input.text).toBe(text);
+      expect(app.countsSuperseded).toBe(false);
+      expect(app.resultStale).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('waits for the tokenizer (no counts) on another tokenizer, other options, or a text the mock cannot answer', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    app.setOption('specialTokens', app.options.specialTokens === 'match' ? 'as-text' : 'match');
+    expect(app.tokenCounts).toBeNull(); // the last result answers other token options
+    client.encodes.at(-1)?.answer();
+    await flush();
+    expect(app.tokenCounts).not.toBeNull();
+    app.setText('not an example', true);
+    client.encodes.at(-1)?.reject(new NoPrecomputedResultError('no precomputed result'));
+    await flush();
+    expect(app.tokenCounts).toBeNull(); // ?mock=1: no answer is on its way
+    expect(app.board.kind).toBe('text');
+    expect(app.error).toBeNull();
   });
 
   it('shows the text-only board while no tokenizer is loaded for the text, and while an IME composition is open', async () => {

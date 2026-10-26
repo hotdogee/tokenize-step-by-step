@@ -63,11 +63,25 @@ describe('counts line', () => {
     expect(root.querySelector('[data-source]')?.getAttribute('data-source')).toBe('precomputed');
     await loaded(app, client);
     expect(root.querySelector('[data-source]')?.getAttribute('data-source')).toBe('live');
+    const tokens = root.querySelector('[data-testid="counts"] li:nth-child(4)');
     app.setText('台灣台南!');
     flushSync();
-    // Code points are live at once; tokens wait for the debounced encode.
+    // Code points are live at once; the last result's tokens stay (muted after 300 ms, no badge) for the debounced
+    // encode, so a keystroke swaps neither the tokens nor the live badge (PA-11).
     expect(text(root, '[data-testid="counts"]')).toContain('5 code points');
-    expect(text(root, '[data-testid="counts"]')).toContain('tokens: waiting for the tokenizer');
+    expect(root.querySelector('[data-testid="counts"] li:nth-child(4)')).toBe(tokens);
+    expect(tokens?.textContent).toBe('4 tokens');
+    expect(tokens?.classList.contains('superseded')).toBe(true);
+    expect(tokens && getComputedStyle(tokens).transitionDelay).toBe('0.3s');
+    expect(root.querySelector('[data-testid="tokens-pending"]')).toBeNull();
+    expect(root.querySelector('[data-testid="stale-badge"]')).toBeNull();
+    expect(root.querySelector('[data-source]')?.getAttribute('data-source')).toBe('live');
+    for (let i = 0; i < 200 && client.encodes.at(-1)?.text !== '台灣台南!'; i++) await flush();
+    client.encodes.at(-1)?.answer();
+    await flush();
+    flushSync();
+    expect(tokens?.textContent).toBe('5 tokens');
+    expect(tokens?.classList.contains('superseded')).toBe(false);
   });
 
   it('keeps the last on-demand run’s tokens with a "stale" badge once the text changes (AD-27)', async () => {

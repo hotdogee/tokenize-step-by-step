@@ -7,7 +7,8 @@
    * (precomputed or live badge) and wait for the tokenizer otherwise. In an on-demand tier they are the last run's values,
    * with a "stale" badge once the text has changed since, and before any run on this tokenizer and options the line
    * points at the banner's "Tokenize now" instead of the tokenizer (WP13). During an IME composition they are the last
-   * result's, also with the "stale" badge, until the committed text is tokenized (05 §6).
+   * result's, also with the "stale" badge, until the committed text is tokenized (05 §6). After a keystroke on the loaded
+   * tokenizer they stay the last result's, muted after 300 ms and without a badge, until the new result arrives (PA-11).
    */
   import { appState } from '../app/context.ts';
   import { textStats } from '../app/text-stats.ts';
@@ -17,6 +18,7 @@
   const stats = $derived(textStats(app.analysed, 0));
   const counts = $derived(app.tokenCounts);
   const stale = $derived(counts !== null && app.resultStale);
+  const superseded = $derived(app.countsSuperseded);
 </script>
 
 <div class="counts">
@@ -25,8 +27,8 @@
     <li>{i18n.t('counts.graphemes', { n: stats.graphemes })}</li>
     <li>{i18n.t('counts.bytes', { n: stats.bytes })}</li>
     {#if counts !== null}
-      <li class:stale>{i18n.t('counts.tokens', { n: counts.tokens })}</li>
-      <li class:stale>{i18n.t('counts.partial', { n: counts.partialTokens })}</li>
+      <li class:stale class:superseded>{i18n.t('counts.tokens', { n: counts.tokens })}</li>
+      <li class:stale class:superseded>{i18n.t('counts.partial', { n: counts.partialTokens })}</li>
     {:else}
       <li class="pending" data-testid="tokens-pending">
         {i18n.t(app.awaitingRun ? 'counts.tokensOnDemand' : 'counts.tokensPending')}
@@ -69,8 +71,14 @@
   }
 
   .pending,
-  .stale {
+  .stale,
+  .superseded {
     color: var(--fg-muted);
+  }
+
+  /* Muted only when the new result takes longer than a keystroke's encode: no flash at typing speed. */
+  .superseded {
+    transition: color 0s 300ms;
   }
 
   .badge {
