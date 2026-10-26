@@ -220,6 +220,7 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
       CSS: '20 KiB',
       'Stand-in font': '4 KiB',
       'boot-[hash].js': '0.5 KiB',
+      'first-paint-[hash].js': '0.5 KiB',
     });
     expect(entries.find((entry) => entry.name.includes('bytelevel'))?.limit).toBe('16 KiB');
   });

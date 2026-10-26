@@ -52,7 +52,10 @@ async function go(board: MountedRail, change: { stage?: 1 | 2 | 3 | 4 | 5 | 6; s
   await frames(change.stage === undefined ? 1 : 4);
 }
 
-/** Each char box's `--dx` / `--w` as the board wrote them. */
+/**
+ * Each char box's `--dx` / `--w` as the board wrote them; an empty side is the CSS default the board leaves unwritten (no
+ * shift; the cell's span — CharCell.svelte, so the server-rendered first paint carries no `style` attribute, PA-15).
+ */
 function boxVars(grid: HTMLElement): string[] {
   return [...grid.querySelectorAll<HTMLElement>('.bd-box')].map(
     (box) => `${box.style.getPropertyValue('--dx')}/${box.style.getPropertyValue('--w')}`,
@@ -74,7 +77,7 @@ describe('stop 2 → 3 (the "aha" morph, AD-17)', () => {
   it('keeps the First state through the commit frame, then starts the animations', async () => {
     const board = await showDefault(2);
     const first = boxVars(board.grid);
-    expect(first).toEqual(['0/1', '-2/1', '-4/1', '-6/1']); // uniform cells left-packed over 3-byte columns
+    expect(first).toEqual(['/1', '-2/1', '-4/1', '-6/1']); // uniform cells left-packed over 3-byte columns
     board.app.setStage(3);
     flushSync(); // the board committed stop 3 ...
     expect(board.grid.querySelectorAll('.bd-cell-byte')).toHaveLength(12);
@@ -82,7 +85,9 @@ describe('stop 2 → 3 (the "aha" morph, AD-17)', () => {
     expect(document.getAnimations()).toEqual([]);
     expect(heldCount()).toBe(1);
     await frames(2); // the frame after: the boxes at their byte spans under the inverted transform, still no animation
-    expect(boxVars(board.grid)).toEqual(['0/3', '0/3', '0/3', '0/3']);
+    expect(boxVars(board.grid)).toEqual(['/', '/', '/', '/']);
+    for (const box of board.grid.querySelectorAll<HTMLElement>('.bd-box'))
+      expect(box.offsetWidth).toBe((box.parentElement?.offsetWidth ?? 0) - 2); // the defaults: as wide as the 3 columns
     expect(document.getAnimations()).toEqual([]);
     const box = board.grid.querySelector<HTMLElement>('.bd-box');
     expect(box?.style.getPropertyValue('transform')).toMatch(/translateX\(.+px\) scaleX\(0\.3/);
@@ -99,7 +104,7 @@ describe('stop 2 → 3 (the "aha" morph, AD-17)', () => {
     board.app.setStage(4);
     flushSync(); // cancelled while held: the board's stop-3 values come back before it commits stop 4
     await frames(4);
-    expect(boxVars(board.grid)).toEqual(['0/3', '0/3', '0/3', '0/3']);
+    expect(boxVars(board.grid)).toEqual(['/', '/', '/', '/']);
     await drained();
     expect(heldCount()).toBe(0);
     for (const box of board.grid.querySelectorAll<HTMLElement>('.bd-box')) expect(box.style.transform).toBe('');

@@ -4,6 +4,9 @@
    * and sized: uniform and left-packed at stops 1–2, byte-proportional from stop 3; AD-17) holding the background sliced
    * per byte column into the owning tokens' tints with a hatched rule at each cut, and the glyph drawn once (stand-ins in
    * the subset font, combining marks on a dotted-circle base). `lang` is the resolved text language (Han glyph forms).
+   * `--dx` / `--w` are written only where they differ from the box's CSS defaults (0, and the cell's span from its `.s<n>`
+   * class): from stop 3 on the box is unshifted and as wide as its cell, so the server-rendered first paint (PA-15, stop 6)
+   * carries no `style` attribute, which the strict CSP would block.
    */
   import type { ResolvedTextLang } from '@tsbs/core';
   import type { CharCellModel } from './cells.ts';
@@ -33,7 +36,12 @@
   data-selected={state.selected ? '' : undefined}
   {lang}
 >
-  <div class="bd-vis bd-box" style:--dx={cell.dx} style:--w={cell.w} aria-hidden="true">
+  <div
+    class="bd-vis bd-box"
+    style:--dx={cell.dx === 0 ? undefined : cell.dx}
+    style:--w={cell.w === cell.span ? undefined : cell.w}
+    aria-hidden="true"
+  >
     <span class="bd-slices">
       {#each cell.slices as slice, k (k)}
         <span class={`bd-slice ${tintClass(slice.tint)}`} class:bd-cut={slice.cut}></span>

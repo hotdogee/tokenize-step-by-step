@@ -4,7 +4,11 @@
  * it), the 480 px breakpoint that moves U+ labels, chunk brackets and narrow-chip ids on/off the board, hex **and** dec rows at
  * ≥ 1024 px. Reduced motion for `scrollIntoView` comes from motion/motion-prefs.svelte.ts (the system setting and the
  * in-app switch together). Server rendering (tests) gets the desktop defaults.
+ *
+ * A hydrated static first paint (PA-15, app/first-paint.ts) starts from the facts its board variant was rendered with, so
+ * the first render matches the server's; the board then calls `watch()` once mounted and the real facts take over.
  */
+import type { FirstPaintView } from '../app/first-paint.ts';
 
 export type InspectorSurface = 'rail' | 'anchored' | 'sheet';
 
@@ -16,9 +20,23 @@ export class BoardViewport {
   /** ≥ 480 px: U+ labels, chunk brackets and the ids of narrow chips on the board (05 §3.3). */
   small = $state(true);
   readonly #stops: Array<() => void> = [];
+  #watching = false;
 
-  constructor() {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+  /** `initial`: the facts of a hydrated first paint (watching starts with `watch()`); else the media queries, now. */
+  constructor(initial: Pick<FirstPaintView, 'wide' | 'medium' | 'small'> | null = null) {
+    if (initial === null) {
+      this.watch();
+      return;
+    }
+    this.wide = initial.wide;
+    this.medium = initial.medium;
+    this.small = initial.small;
+  }
+
+  /** Follows the media queries from now on (idempotent; a no-op without `matchMedia`, e.g. server rendering). */
+  watch(): void {
+    if (this.#watching || typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    this.#watching = true;
     this.#watch('(min-width: 1024px)', (on) => (this.wide = on));
     this.#watch('(min-width: 768px)', (on) => (this.medium = on));
     this.#watch('(min-width: 480px)', (on) => (this.small = on));

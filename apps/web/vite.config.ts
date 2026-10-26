@@ -6,6 +6,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig, type Rollup } from 'vite';
 import { bootScript } from './plugins/boot-script.ts'; // esbuild src/app/boot.ts → IIFE assets/boot-[hash].js, injected first in <head>
 import { examples } from './plugins/examples.ts'; // fixtures → precomputed example results (WP03)
+import { firstPaint } from './plugins/first-paint.ts'; // PA-15: build only — the static first paint of / in index.html
 import { gridClasses } from './plugins/grid-classes.ts'; // writes src/board/grid-classes.css (.c1..c64 / .s1..s64)
 import { headersMiddleware } from './plugins/headers.ts'; // dev/preview only: replays public/_headers (dev omits the CSP, PA-2b)
 import { lazyChunks } from './plugins/lazy-chunks.ts'; // chunks / does not load at startup → assets/lazy-*.js (06 §3 Main JS)
@@ -67,6 +68,7 @@ export default defineConfig({
     licences(),
     gridClasses(),
     bootScript(),
+    firstPaint(),
     headersMiddleware(),
     lazyChunks(page('./index.html')),
     registryTrim(),

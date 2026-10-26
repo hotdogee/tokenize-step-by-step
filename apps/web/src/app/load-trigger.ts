@@ -70,6 +70,14 @@ function frame(env: TriggerEnv): Promise<void> {
   });
 }
 
+/**
+ * Resolves with the browser's first paint entry (or after the cap; at once without paint timing or a document): the
+ * moment main.ts hydrates a static first paint (PA-15), so the hydration task never runs before that paint is presented.
+ */
+export function afterPaintEntry(env: TriggerEnv | null = browserEnv()): Promise<void> {
+  return env === null ? Promise.resolve() : firstPaint(env);
+}
+
 /** Resolves once the page has painted (see the module comment); immediately where there is no document (SSR, tests). */
 export async function afterFirstPaint(env: TriggerEnv | null = browserEnv()): Promise<void> {
   if (env === null) return;

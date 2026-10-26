@@ -14,7 +14,10 @@ import { fileURLToPath } from 'node:url';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { playwright } from '@vitest/browser-playwright';
 import { chromium } from 'playwright';
+import type { BrowserCommand } from 'vitest/node';
 import { defineConfig } from 'vitest/config';
+import { compileBoot } from './plugins/boot-script.ts';
+import { BOARD_VARIANTS, type BoardView } from './plugins/first-paint.ts';
 import { gridClasses } from './plugins/grid-classes.ts';
 
 /** True when Playwright's chromium for the pinned version is installed. */
@@ -38,6 +41,19 @@ if (!enabled) {
   console.warn(`[web-browser] Playwright chromium is not installed: component tests are skipped (${INSTALL}).`);
 }
 
+/**
+ * `renderFirstPaint(locale, view)`: the static first paint's markup (src/app/prerender.ts), server-rendered by this
+ * project's Vite server with the same Svelte plugin, so `first-paint.browser.test.ts` can hydrate it in chromium.
+ */
+const renderFirstPaint: BrowserCommand<[locale: string, view: BoardView], string> = async (context, locale, view) => {
+  const server = context.project.browser?.vite;
+  if (server === undefined) throw new Error('renderFirstPaint: no browser Vite server');
+  const prerender = (await server.ssrLoadModule('/src/app/prerender.ts')) as {
+    renderFirstPaint(locale: string, view: BoardView): string;
+  };
+  return prerender.renderFirstPaint(locale, view);
+};
+
 export default defineConfig({
   // `pnpm test:browser` runs from the repository root; the app directory is the Vite root (svelte.config.js, src/).
   root: fileURLToPath(new URL('.', import.meta.url)),
@@ -53,6 +69,13 @@ export default defineConfig({
       instances: [{ browser: 'chromium' }],
       viewport: { width: 1440, height: 900 },
       screenshotFailures: false,
+      commands: {
+        renderFirstPaint,
+        firstPaintVariants: () => BOARD_VARIANTS,
+        // The clone script as the build emits it (first-paint-script.browser.test.ts runs it against a test DOM).
+        compileFirstPaintScript: () =>
+          compileBoot(fileURLToPath(new URL('src/app/first-paint-script.ts', import.meta.url))),
+      },
     },
   },
 });

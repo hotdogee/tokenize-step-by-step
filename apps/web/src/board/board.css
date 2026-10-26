@@ -3,8 +3,8 @@
  *
  * Grid model: each packed row is a CSS grid of fixed-height tracks per breakpoint (05 §3.3 row heights; tiers absent at a
  * stage leave their track empty, so nothing shifts), and each tier inside it is a grid of K uniform `--cell` columns
- * (`--k` is set once on the board through the CSSOM). Cells are placed with the generated `.c<n>`/`.s<n>` classes (AD-15),
- * never with inline styles. Gridcells span their full columns (the touch target); the visible box/chip is inset 1 px so
+ * (`--k` comes from the board's generated `.k<n>` class). Cells are placed with the generated `.c<n>`/`.s<n>` classes
+ * (AD-15), never with inline styles. Gridcells span their full columns (the touch target); the visible box/chip is inset 1 px so
  * neighbours keep a 2 px gap. Non-colour cues: the 1 px `--border`, the two-tone hatch and the brackets (AD-35).
  */
 
@@ -270,7 +270,7 @@
 .bd-box {
   left: calc(var(--dx, 0) * var(--cell) + 1px);
   right: auto;
-  width: calc(var(--w, 1) * var(--cell) - 2px);
+  width: calc(var(--w, var(--span, 1)) * var(--cell) - 2px);
   display: grid;
   place-items: center;
   overflow: hidden;

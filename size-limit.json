@@ -12,6 +12,7 @@
       "!apps/web/dist/assets/notFound-*.js",
       "!apps/web/dist/assets/lazy-*.js",
       "!apps/web/dist/assets/boot-*.js",
+      "!apps/web/dist/assets/first-paint-*.js",
       "!apps/web/dist/assets/entry-*.js",
       "!apps/web/dist/assets/bytelevel-*.js",
       "!apps/web/dist/assets/spm-*.js",
@@ -52,6 +53,11 @@
   {
     "name": "boot-[hash].js",
     "path": "apps/web/dist/assets/boot-*.js",
+    "limit": "0.5 KiB"
+  },
+  {
+    "name": "first-paint-[hash].js (the static first paint's clone script, PA-15; classic, after #app in index.html)",
+    "path": "apps/web/dist/assets/first-paint-*.js",
     "limit": "0.5 KiB"
   }
 ]

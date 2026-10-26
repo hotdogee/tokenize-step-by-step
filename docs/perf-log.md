@@ -364,3 +364,53 @@ so no critical-CSS split can bring it under 1.5 s; the 150–300 ms that `lhci-l
 gap between this machine and the CI runner (1.52 s vs 1.61–2.17 s against the same production files) is CPU time under
 the 4× slowdown plus real connection latency. AD-15 was therefore **not** applied; the lever left is the JS on the first
 paint path or the AD-16 static partial (contentful HTML before the main JS runs).
+
+## 2026-10-26 — PA-15: the static first paint (first-paint engineer round 1)
+
+**What changed.** `index.html` now carries the server-rendered first state of `/` for each UI locale (header, input
+panel with the default text, counts line, rail at stop 6, the precomputed o200k board of 台灣台南 in five width
+variants, notices and footer, the live-check drawer); a 345 B classic clone script right after `#app` puts the visitor's
+locale and width into `#app` before anything paints; the entry module is an `async`, `fetchpriority="low"` script after
+it and hydrates the markup once the browser reports the first paint (PA-15 in 00-decisions.md §E has the design).
+
+**Where:** this machine (Lighthouse `benchmarkIndex` 3,644), `main` at `c1ff708` (before) and the PA-15 commit (after),
+`pnpm build` each, mobile preset of `lighthouserc.json` (Lighthouse 12.6.1, simulated Slow 4G, CPU ×4), 3 runs each. Two
+servers: `pnpm lhci-local` (wrangler dev, HTTP/1.1, gzip) and the pre-launch fixer's production-like HTTPS + HTTP/2 +
+zstd-3 server (`h2/serve.mjs`, the same `_headers` CSP).
+
+| Metric (simulated)            | HTTP/2 before         | HTTP/2 after          | lhci-local before     | lhci-local after          | Budget     |
+| ----------------------------- | --------------------- | --------------------- | --------------------- | ------------------------- | ---------- |
+| first-contentful-paint        | 1,350 / 1,350 / 1,351 | **949 / 943 / 947**   | 1,809 / 1,810 / 1,810 | **1,414 / 1,414 / 1,413** | ≤ 1,500    |
+| largest-contentful-paint      | 1,432 / 1,424 / 1,429 | 1,350 / 1,351 / 1,351 | 1,966 / 1,969 / 1,963 | 1,965 / 1,965 / 1,965     | ≤ 2,000    |
+| total-blocking-time           | 114 / 97 / 106        | 18 / 17 / 16          | 264 / 267 / 257       | 21 / 22 / 24              | ≤ 150      |
+| cumulative-layout-shift       | 0                     | 0                     | 0                     | 0                         | ≤ 0.02     |
+| performance score             | 0.99                  | **1.00**              | 0.93                  | 0.99                      | ≥ 0.95     |
+| document transfer (as served) | 821 B                 | 13,179 B (zstd-3)     | 1,227 B               | 20,694 B (gzip)           | ≤ 14,336 B |
+
+FCP moves by **−401 to −407 ms** on HTTP/2 and −396 ms on wrangler dev. The document grows to 241,232 B raw, 9,012 B
+brotli-11 (size-limit budget 14 KiB), 12,862 B zstd-3 / 12,202 B zstd-4: the edge served the production JS at about
+zstd 3–4 plus ≈ 0.8 KB of headers (run 40248086957: main 48,040 B against 47,468 / 46,317 at zstd 3 / 4), so the LHCI
+document assertion (≤ 14 KB as served) should hold with ≈ 0.6–1.3 KB to spare. wrangler dev only gzips (32 KB window,
+no reach across the three locale templates): 19,949 B, so **`lhci-local` now fails `resource-summary:document:size`**
+(report-only by design; the edge run decides). If the edge ever serves this page gzip-only, or the markup grows, the
+lever is to trim the static paint below the fold (the footer, notices and drawer are ≈ 1.7 KB of zstd).
+
+**Real browser, same h2 server** (Playwright chromium, Pixel 5 at 412 × 823 @ 1.75, CPU ×4, 5 runs; loopback, so the JS
+arrives at once): FCP = LCP 692 / 648 / 668 / 644 / 680 ms before, 568 / 528 / 532 / 564 / 564 ms after; the app has
+hydrated at 686–801 ms; CLS 0 in every run. Most of the remaining time to first paint is the page's first style + layout
+(≈ 75–100 ms unthrottled: system-font fallback for the CJK, Japanese, emoji and Ext-G glyphs of the example chips and the
+board — measured by removing regions: the chips alone cost ≈ 37 ms, the board ≈ 23 ms).
+
+**Why a separate clone script.** Cloning from boot.js (on `readystatechange`) gave the same observed paint, but Lantern
+counted that first style + layout (≈ 100 ms observed, × 2 for a layout task) as a task after FCP, because the page had
+already laid out an empty frame while the 241 KB document was parsed: TBT 151–167 ms on HTTP/2 (FCP 900–930, LCP
+1,425–1,479). With the clone in a parser-blocking script after `#app`, the layout happens in the task that evaluated a
+render-blocking script, which Lantern puts on the FCP path: FCP 943–949, TBT 16–24. The entry module had to leave the
+parser's last task too (a deferred module that has already arrived runs there and ties that task to the JS downloads):
+it is an `async` script after the clone script, and its modulepreloads are `fetchpriority="low"`.
+
+**Startup bundle (size-limit, brotli-11, kB = 1000 B):** Main JS **81.73 kB** of 81.92 (main 43.68 + Header 20.65 +
+registry 8.56 + i18n 8.84). `hydrate()` keeps Svelte's hydration paths in the runtime (+1.2 kB Header, +0.3 kB main);
+moving the help dialog's shortcut table (`shell/shortcut-groups.ts`) and the `?mock=1` client's feature probe out of the
+startup chunks recovered 0.55 kB. `first-paint-[hash].js` 345 B of 512 (new budget), `boot-[hash].js` 320 B (unchanged),
+CSS 12.08 kB (the 57 `.k8…k64` column-count classes), `index.html` 9.01 kB of 14.34.

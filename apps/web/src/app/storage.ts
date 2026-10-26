@@ -10,6 +10,8 @@ export const STORAGE_KEYS = {
   graphemes: 'tsbs:graphemes',
   cellSize: 'tsbs:cellSize',
   singleKeyShortcuts: 'tsbs:singleKeyShortcuts',
+  /** The board keys have been used: the keyboard hint under the board is no longer shown (05 §8). */
+  boardKeysUsed: 'tsbs:boardKeysUsed',
   /** sessionStorage: the last `loaded` diagnostics, shown on About › Diagnostics (05 §14). */
   lastLoaded: 'tsbs:lastLoaded',
   /** sessionStorage: the Worker's `ready.features`, shown on About › Diagnostics next to the main thread's own probe. */

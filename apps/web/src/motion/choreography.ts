@@ -109,13 +109,16 @@ function columnsOf(cell: HTMLElement | null): { readonly col: number; readonly s
   return col >= 0 && span > 0 ? { col, span } : null;
 }
 
-/** A char box: its gridcell's columns, shifted and sized by the box's `--dx` / `--w` (board.css `.bd-box`). */
+/**
+ * A char box: its gridcell's columns, shifted and sized by the box's `--dx` / `--w` (board.css `.bd-box`); an unset one
+ * is the CSS default — no shift, the cell's span (CharCell.svelte writes only the values that differ).
+ */
 function boxGeometry(column: number): Geometry {
   return (el) => {
     const at = columnsOf(cellOf(el));
     if (at === null) return null;
     const dx = Number(el.style.getPropertyValue('--dx') || 0);
-    const w = Number(el.style.getPropertyValue('--w') || 1);
+    const w = Number(el.style.getPropertyValue('--w') || at.span);
     return { left: (at.col + dx) * column + INSET, width: w * column - 2 * INSET };
   };
 }

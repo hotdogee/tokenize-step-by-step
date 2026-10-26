@@ -32,7 +32,8 @@
   import { hexByte } from '@tsbs/core/text/utf8';
   import { appState } from '../app/context.ts';
   import { tokenizerEntry } from '../app/registry.ts';
-  import { readStored, writeStored } from '../app/storage.ts';
+  import { firstPaintView } from '../app/first-paint.ts';
+  import { readStored, STORAGE_KEYS, writeStored } from '../app/storage.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { formatPercent } from '../i18n/t.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
@@ -47,7 +48,7 @@
   import type { InteractionState } from './cell-state.ts';
   import { nfkcSource, type BoardContext } from './cells.ts';
   import { extraTier, extraTierFor } from './extra-tier.svelte.ts';
-  import { appTier, columnsFor, GUTTER, tiersFor, tokenMode, type BoardTier } from './geometry.ts';
+  import { appTier, columnsFor, GUTTER, MIN_COLUMNS, tiersFor, tokenMode, type BoardTier } from './geometry.ts';
   import { spokenGlyph } from './labels.ts';
   import { navigate, navKeyOf, resolveAnchor as resolveAnchorIn } from './navigation.ts';
   import Row from './Row.svelte';
@@ -61,8 +62,6 @@
 
   /** Hover delay on fine pointers (05 §5, WCAG 1.4.13). */
   const HOVER_MS = 120;
-  /** localStorage: the keyboard hint under the board is shown until the board keys have been used (05 §8). */
-  const HINT_KEY = 'tsbs:boardKeysUsed';
   /**
    * The first of these anywhere on the page loads the inspector catalog and the inspector model (PA-7: neither is part of
    * the startup JS; WP13 moved the model out of it too); a `pointermove` only once the pointer has really moved
@@ -71,7 +70,9 @@
   const ENGAGE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'focusin'] as const;
 
   const app = appState();
-  const viewport = new BoardViewport();
+  /** A hydrated static first paint (PA-15): the first render uses its variant's K and viewport facts, then measures. */
+  const first = firstPaintView();
+  const viewport = new BoardViewport(first);
 
   let layout: HTMLDivElement | undefined = $state();
   let main: HTMLDivElement | undefined = $state();
@@ -96,7 +97,7 @@
   const view = $derived(viewOf(result, lang));
   const stage = $derived(app.stage);
   const step = $derived(Math.min(Math.max(0, app.step), view.stepCount));
-  const K = $derived(columnsFor(contentWidth + 2 * GUTTER, cellPx));
+  const K = $derived(cellPx > 0 ? columnsFor(contentWidth + 2 * GUTTER, cellPx) : (first?.k ?? MIN_COLUMNS));
   const baseRows = $derived(packRows(result, K));
   const parts = $derived(!pending && tokenMode(stage) === 'parts' ? view.partsAt(stage === 4 ? 0 : step) : null);
   const rows = $derived(parts === null ? baseRows : withParts(baseRows, result, parts));
@@ -137,7 +138,8 @@
   let sheetExpanded = $state(false);
   let selected: Span | null = $state(null);
   let anchor: { top: number; left: number } | null = $state(null);
-  let keysUsed = $state(readStored(HINT_KEY) === 'true');
+  /** The keyboard hint under the board is shown until the board keys have been used (05 §8). */
+  let keysUsed = $state(readStored(STORAGE_KEYS.boardKeysUsed) === 'true');
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
   const focusRef = $derived(resolveAnchor(local(focusAnchor)));
@@ -339,7 +341,7 @@
   function markKeysUsed(): void {
     if (keysUsed) return;
     keysUsed = true;
-    writeStored(HINT_KEY, 'true');
+    writeStored(STORAGE_KEYS.boardKeysUsed, 'true');
   }
 
   /** The inspector model module (lazy, PA-7), imported once. */
@@ -511,7 +513,11 @@
   }
 
   onMount(() => {
-    measure();
+    viewport.watch();
+    // After hydrating a static first paint the ResizeObserver's first notification measures, a frame later: the K change
+    // re-renders in its own task, not in the hydration task (PA-15; TBT). Mounted from scratch it measures now, before the
+    // first paint.
+    if (first === null) measure();
     // A resting pointer is no interaction: browsers also send `pointermove` at its unchanged position when the page
     // appears or the content under it changes (headless chromium on Linux: one at (0, 0) during startup), so a move
     // counts only at a position other than the previous move's.
@@ -677,7 +683,7 @@
       <div class="probe" aria-hidden="true" bind:this={probe}></div>
       <!-- svelte-ignore a11y_interactive_supports_focus (the grid's single tab stop is its active gridcell, APG layout grid) -->
       <div
-        class="bd-grid"
+        class={`bd-grid k${String(K)}`}
         class:nfkc={nfkc !== null}
         class:extra={extra !== null}
         role="grid"
@@ -690,7 +696,6 @@
         data-composing={app.composing ? '' : undefined}
         data-cells={cellCount}
         data-window={board.window === null ? undefined : `${String(board.window.start)}-${String(board.window.end)}`}
-        style:--k={K}
         bind:this={grid}
         onkeydown={onKeydown}
         onfocusin={onFocusIn}
