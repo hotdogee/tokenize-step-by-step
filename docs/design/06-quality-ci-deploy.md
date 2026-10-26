@@ -27,7 +27,7 @@
 2. The default example shows the full pipeline with scrubbing before any vocabulary byte arrives; the chips 灣/cl100k, 👩‍👩‍👧/o200k, 台灣台南/Grok-1, 𰻝/Gemma 4, ー+メ/Grok-2 exercise partial, multi-fragment, zero-width, byte-fallback and crossing rendering.
 3. Keyboard-only and screen-reader walkthroughs pass the checklist; touch works on a 360 px device; dark/light; zh-TW/ja/en complete and reviewed.
 4. Licence notices and fidelity badges render from data; About lists every shipped asset with verbatim text, sha256 and MODIFIED statements; "Powered by xAI" and "Built with Meta Llama 3" appear per the selection rule.
-5. Deployed on workers.dev with the §7 checklist signed off; budgets in §3 met on production.
+5. Deployed on workers.dev and the production custom domain (`tokens.hanlin.uk`, §5) with the §7 checklist signed off; budgets in §3 met on production.
 
 ## 3. Performance budgets (enforced, not aspirational)
 
@@ -84,7 +84,7 @@ oracle.yml  (paths: tools/oracle/**, fixtures/**, docs/licenses/**)   pnpm oracl
 reverify.yml (cron monthly)   open "Re-verify inferred mappings" issue listing models.json rows with checkedOn > 90 days (GPT-6, Gemini 4 Argon, Muse Wonder, Grok 4.x) and the research §9 watch list
 ```
 
-Caching: pnpm store (`pnpm-lock.yaml`), Playwright browsers (`~/.cache/ms-playwright` keyed on the Playwright version), raw vocab (manifest hash), uv cache. Required status checks on `main`: `check`, `vocab`, `unit`, `build`, `e2e`, `e2e-headers`, `lighthouse`. Target wall time ≤ 15 min. Secrets: `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit only), `CLOUDFLARE_ACCOUNT_ID`; repository variable `CONFORMANCE_MODE` (`skip-missing-engine` → `strict`); Dependabot weekly grouped for npm, `pnpm audit` in `check`. **Interim gate (AD-32):** until both engines have merged, `vocab`/`unit`/`build` are green with the skipped-conformance warning, so `main` is deployable from wave 1 (the shell plus precomputed examples ship with whatever `/tok` assets already pass).
+Caching: pnpm store (`pnpm-lock.yaml`), Playwright browsers (`~/.cache/ms-playwright` keyed on the Playwright version), raw vocab (manifest hash), uv cache. Required status checks on `main`: `check`, `vocab`, `unit`, `build`, `e2e`, `e2e-headers`, `lighthouse`. Target wall time ≤ 15 min. Secrets: `CLOUDFLARE_API_TOKEN` (Account › Workers Scripts: Edit, plus Zone › Zone: Read, Zone › DNS: Edit and Zone › Workers Routes: Edit on `hanlin.uk` for the §5 custom domain), `CLOUDFLARE_ACCOUNT_ID`; repository variable `CONFORMANCE_MODE` (`skip-missing-engine` → `strict`); Dependabot weekly grouped for npm, `pnpm audit` in `check`. **Interim gate (AD-32):** until both engines have merged, `vocab`/`unit`/`build` are green with the skipped-conformance warning, so `main` is deployable from wave 1 (the shell plus precomputed examples ship with whatever `/tok` assets already pass).
 
 ## 5. Deployment configuration
 
@@ -100,12 +100,13 @@ Caching: pnpm store (`pnpm-lock.yaml`), Playwright browsers (`~/.cache/ms-playwr
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
+  "routes": [{ "pattern": "tokens.hanlin.uk", "custom_domain": true }],
   "workers_dev": true,
   "preview_urls": true
 }
 ```
 
-Custom domain later: `routes: [{ "pattern": "<domain>", "custom_domain": true }]` (zone must be on Cloudflare, §6.2). `.assetsignore`: `*.map`, `.vite/`, `.DS_Store`, `Thumbs.db`.
+Custom domain (owner decision 2026-10-26, WP13b): `tokens.hanlin.uk` on the `hanlin.uk` zone of the same account (research §6.2). CI's `wrangler deploy` creates the DNS record and certificate and binds it, which needs the zone permissions of §4's token; `workers_dev` stays `true` for the PR preview URLs and as the fallback. `PRODUCTION_URL` moves to `https://tokens.hanlin.uk` once a CI deploy has attached it (docs/release.md § Custom domain). `.assetsignore`: `*.map`, `.vite/`, `.DS_Store`, `Thumbs.db`.
 
 ## 6. `_headers` (`apps/web/public/_headers`; 5 path blocks / 12 header lines, limit 100 rules)
 
@@ -142,9 +143,9 @@ The `/tok/*` block removes any `Content-Type` the asset server derived from `.bi
 5. Anthropic: `anthropic-version` current value, `Authorization: Bearer` primary, still-callable v3-reference models (Opus 4.6 / Sonnet 4.6) in `byok.json`.
 
 **One-time account setup** (before the first deploy; `docs/release.md`):
-5a. Register the `tokenize-step-by-step.<account>.workers.dev` subdomain in the Cloudflare dashboard (Workers & Pages → account subdomain); create an API token with **Workers Scripts: Edit** (account-scoped) and add `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` as repository secrets; set the repository variable `CONFORMANCE_MODE`; confirm `wrangler whoami` with the token in a dry run.
+5a. Register the `tokenize-step-by-step.<account>.workers.dev` subdomain in the Cloudflare dashboard (Workers & Pages → account subdomain); create an API token with **Workers Scripts: Edit** (account-scoped; plus the zone permissions of §4 on `hanlin.uk` for the §5 custom domain) and add `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` as repository secrets; set the repository variable `CONFORMANCE_MODE`; confirm `wrangler whoami` with the token in a dry run.
 
-**Deploy verification** (curl against the workers.dev URL):
+**Deploy verification** (curl against the production URL: `https://tokens.hanlin.uk` once attached, the workers.dev URL before):
 6. `curl -sI -H 'Accept-Encoding: zstd, br, gzip' <largest /tok/*.bin>` → `200`, **no** `Content-Encoding`, `Content-Length` = `bytesCompressed`, `Content-Type` **exactly** `application/octet-stream` (one value, §6), `Cache-Control: … immutable`, `X-Content-Type-Options: nosniff` (research §6.5 item 7; record transferred bytes and the loader's `layer`/`contentEncoding` diagnostics in `docs/perf-log.md`).
 7. `/assets/*.js` and `/examples/*.json` → `Content-Encoding` present (zstd/br/gzip), strong or weak ETag, `304` on `If-None-Match`.
 8. `/` → CSP header exactly as §6; `/index.html` → 307 to `/`; `/nope` → `404.html` with status 404; no dotfile reachable (`/.env` → 404).

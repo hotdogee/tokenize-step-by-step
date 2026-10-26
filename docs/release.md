@@ -1,8 +1,9 @@
 # Release and deployment
 
-How the site gets from a pull request to `https://tokenize-step-by-step.<subdomain>.workers.dev`, what has to be set up
-once, and the checklist signed off before the first production deploy and re-run for every release
-(`docs/design/06-quality-ci-deploy.md` §4–§7; AD-3, AD-32).
+How the site gets from a pull request to production — `https://tokens.hanlin.uk` (a Workers Custom Domain, below) and the
+Worker's own `https://tokenize-step-by-step.hotdogee.workers.dev`, which stays on for the PR previews and as the fallback —
+what has to be set up once, and the checklist signed off before the first production deploy and re-run for every release
+(`docs/design/06-quality-ci-deploy.md` §4–§7; AD-3, AD-32). The signed releases are at the end (§ Release 1.0.0).
 
 ## How a change ships
 
@@ -27,7 +28,9 @@ once, and the checklist signed off before the first production deploy and re-run
      on a Windows workstation with 8 workers, is 431 s for chromium, 160 s for firefox and 600 s for webkit: per shard at
      the runner's two Playwright workers ≈ 1.2, 0.5 and 1.7 min of tests plus the setup (browser from cache, CJK fonts,
      `vite preview`). WebKit, not chromium, is the long pole, and the firefox shards are mostly setup. The Linux wall
-     time is not measured yet; record it here from the first full CI run. If a shard grows past ≈ 8 min, raise that
+     time, measured on the green push run of c1ff708 (run 40285194863, 2026-10-26, warm caches): 7 min 27 s end to end —
+     check 1.5, vocab 0.7, build 0.6, unit 2.2 min; shards chromium 4.8 / 4.6 / 6.0, firefox 1.7 / 2.3 / 1.8, webkit
+     5.1 / 4.1 / 4.1 min, e2e-headers 1.4 min. If a shard grows past ≈ 8 min, raise that
      matrix's shard count (`shard: [1, 2, 3, 4]`, `/4` in the job name and `--shard=${{ matrix.shard }}/4`) rather than
      add workers per runner; the shard checks are not required by name (item 7), so branch protection stays as it is.
 2. **Merge to `main` → `ci`** runs again on the merge commit.
@@ -48,7 +51,9 @@ Do this once, before the first deploy.
    (`<subdomain>.workers.dev`) if the account has none yet. The Worker name comes from `wrangler.jsonc`
    (`tokenize-step-by-step`), so production is `https://tokenize-step-by-step.<subdomain>.workers.dev`.
 2. **API token.** _My Profile → API Tokens → Create Token → Create Custom Token_: permission **Account › Workers Scripts ›
-   Edit**, account resources limited to this one account, no zone permissions. Copy the token once.
+   Edit**, account resources limited to this one account, plus — for the custom domain (§ Custom domain) — **Zone › Zone ›
+   Read**, **Zone › DNS › Edit** and **Zone › Workers Routes › Edit**, zone resources limited to `hanlin.uk`. Copy the token
+   once.
 3. **Account ID.** _Workers & Pages_ → the account ID in the right-hand column.
 4. **Repository secrets** (_Settings → Secrets and variables → Actions_, or the CLI):
 
@@ -61,7 +66,7 @@ Do this once, before the first deploy.
 
    ```sh
    gh variable set CONFORMANCE_MODE --body strict   # AD-32; set to strict on 2026-10-25 when wave 2 merged both engines
-   gh variable set PRODUCTION_URL --body https://tokenize-step-by-step.<subdomain>.workers.dev   # optional fallback
+   gh variable set PRODUCTION_URL --body https://tokenize-step-by-step.hotdogee.workers.dev   # fallback; https://tokens.hanlin.uk once attached
    ```
 
    `CONFORMANCE_MODE` was `skip-missing-engine` while only one engine existed (wave 1); the wave 2 integration that merged
@@ -84,6 +89,36 @@ Do this once, before the first deploy.
    shard count never leaves a required check that no longer reports; remove the `e2e (chromium)` check of waves 1–2 if
    it is still listed. The `production` environment is created
    by the first deploy; adding required reviewers to it pauses every deploy until approved.
+
+## Custom domain
+
+Production is served at `https://tokens.hanlin.uk` (owner decision, 2026-10-26; the `hanlin.uk` zone is on the same
+Cloudflare account). `wrangler.jsonc` declares it as a Workers Custom Domain:
+
+```jsonc
+"routes": [{ "pattern": "tokens.hanlin.uk", "custom_domain": true }],
+"workers_dev": true,   // the workers.dev URL and the PR preview URLs stay on
+```
+
+Nothing is attached from a developer machine: the next CI `wrangler deploy` (`deploy.yml`) creates the proxied DNS record
+and the edge certificate and binds the hostname to the Worker. That needs the API token's zone permissions on `hanlin.uk`
+(**Zone › Zone › Read**, **Zone › DNS › Edit**, **Zone › Workers Routes › Edit**, § One-time account setup item 2). Without
+them the deploy step fails when wrangler publishes the triggers, after the new version has been uploaded, with a
+Cloudflare API authentication or permission error on the zone or Workers-domains request, and the smoke checks do not
+run — add the permissions and re-run the `deploy` run (Actions → the failed run → _Re-run failed jobs_); nothing else
+changes. A DNS record already present for `tokens.hanlin.uk` (other than one Workers created) also fails it: remove
+that record first.
+
+Verify once the deploy is green:
+
+```sh
+curl -sI https://tokens.hanlin.uk/ | grep -iE '^(HTTP|content-security-policy)'
+pnpm deploy:smoke --url https://tokens.hanlin.uk
+gh variable set PRODUCTION_URL --body https://tokens.hanlin.uk   # the final launch step: deploy.yml falls back to it
+```
+
+Until then `PRODUCTION_URL` stays on the workers.dev address. The certificate can take a few minutes after the first
+deploy; a `525`/`526` or a TLS error in that window is not a failure.
 
 ## Visual baselines
 
@@ -129,7 +164,7 @@ whose `checkedOn` is older than 90 days), re-check and then update `checkedOn` (
 deploy, and `e2e-headers` runs it against `wrangler dev` on every PR. By hand:
 
 ```sh
-BASE=https://tokenize-step-by-step.<subdomain>.workers.dev
+BASE=https://tokens.hanlin.uk   # or https://tokenize-step-by-step.hotdogee.workers.dev before the domain is attached
 BIN=$(jq -r '.assets | to_entries | max_by(.value.bytesCompressed) | .value.path' data/vocab/dist/vocab-manifest.generated.json)
 JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
 ```
@@ -155,10 +190,30 @@ JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
       every trace. This is a known risk, not a formality: Playwright WebKit on Windows had 12–13 of 31 rAF intervals above 33 ms (max 74–82 ms,
       idle max 31 ms) on the same morph in the wave 3 review, against 17–33 ms in chromium. If Safari confirms long frames,
       fix it before launch in `apps/web/src/motion/choreography.ts`: skip the counter-scaled FLIP above a cell threshold
-      on WebKit, or cross-fade only. Only a
+      on WebKit, or cross-fade only. The Android run follows the script below (§ Mid-range Android check). Only a
       deployed URL (the PR preview in the `lighthouse` job, or production) is budget-authoritative: `pnpm lhci-local`
       runs the same `lighthouserc.json` against `wrangler dev` on loopback (no edge compression, no HTTP/3, no real RTT)
       as a smoke read and never fails on an assertion.
+
+### Mid-range Android check (2 minutes, owner)
+
+One run on a mid-range Android phone (Chrome, the phone's usual network; 06 §3 budgets: o200k loaded ≤ 4 s on a mid
+phone, keystroke → board update p95 ≤ 50 ms at 1k characters). Record the numbers in the open row of `docs/perf-log.md`
+(§ production, 2026-10-26).
+
+1. **0:00** — Chrome → ⋮ → _New Incognito tab_ (empty HTTP cache and Cache API, as a first visit). Have a stopwatch ready.
+2. **0:10** — type `tokens.hanlin.uk` (or `tokenize-step-by-step.hotdogee.workers.dev` until the domain is attached)
+   and start the stopwatch as you tap _Go_. Note **A** when the board first shows 台灣台南 and **B** when the counts line's
+   badge turns to **LIVE** (o200k downloaded, verified and resident).
+3. **0:40** — tap the text box, put the cursor after 台南 and type `hello 東京` at normal speed. Note whether the board
+   keeps up with each keystroke (**C**: "keeps up" or the longest visible lag, in tenths of a second).
+4. **1:00** — tap the rail's **5 Merges** stop, then drag the scrubber from end to end and back. Note **D**: smooth, or
+   visible stutter.
+5. **1:20** — tap the **3 UTF-8 bytes** stop, then **6 Tokens** (the morph). Note **E**: smooth, or visible stutter.
+6. **1:35** — footer → _About_ → _Diagnostics_. Copy the "last load" line (**F**: ms, network or cache, KB transferred,
+   layer, content encoding) and the feature list.
+7. **1:50** — note the phone model, Android and Chrome versions (Chrome → ⋮ → _Settings_ → _About Chrome_) and the
+   network (Wi-Fi / 4G / 5G).
 
 ## Legal and content
 
@@ -171,6 +226,19 @@ JS=/assets/$(ls -S apps/web/dist/assets/*.js | head -1 | xargs basename)
       `docs/a11y-checklist.md` complete.
 - [ ] **13.** `oracle:check` and `unicode:check` green on the release commit; `vocab-manifest.generated.json` matches the
       deployed `/tok/*` listing (`check:dist` cross-checks it at build time); `CONFORMANCE_MODE` is `strict`.
+
+## Known issues
+
+- **Dependabot's npm job fails with an unknown error** on pnpm 12.14.0 (the `packageManager` pin, PA-1): every
+  `npm_and_yarn` run since the first (2026-10-25) failed, while the `github_actions` runs succeed. No fix in v1.0.0:
+  re-check when Dependabot's pnpm support catches up, and meanwhile run `pnpm outdated -r` / `pnpm audit --prod` by hand
+  (`check` runs the audit on every PR).
+- **Slow Azure Ubuntu mirror on CI runners.** `playwright install-deps` (`.github/actions/playwright`) fetches ≈ 52 MB of
+  WebKit / Firefox system packages from `azure.archive.ubuntu.com`; on 2026-10-26 (dispatched run 40300681611) two shards
+  downloaded at ≈ 40 KB/s and hit the job's 20-minute limit before any test ran (7 of 9 shards passed). If a shard is
+  cancelled at 20 min inside _Run ./.github/actions/playwright_, re-run the failed jobs; a deploy waits for a green `ci`.
+- **The pipeline-trace 64 ms parallel ceiling** (`e2e/specs/pipeline-trace.spec.ts`) can flake only when every engine
+  runs in one container at once; the CI shards are green and the ceiling stays as it is.
 
 ## Rollback
 
