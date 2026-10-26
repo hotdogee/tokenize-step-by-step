@@ -330,3 +330,37 @@ Header 19.46 + registry 9.37 + i18n 8.84; i18n 8.84 of 9.22), Worker entry + ent
 examples-client 2.70, PickerDialog 2.45, catalogs 2.35, client 2.33, window-slice 1.87, MergeList 1.21,
 SingleKeySetting 0.91, LongInputBanner 0.62, HelpDialog 0.59, Dialog 0.46 kB. No Lighthouse run in this entry: the
 budget-authoritative read is the CI `lighthouse` job on a preview or production deploy (PA-14), still open for WP13b.
+
+## 2026-10-26 — pre-launch fixer round 1: first-contentful-paint and the AD-15 bound
+
+**Production LHCI** (the newest deploy whose deploy job ran: run 40248086957, `main` at 3a47892, i.e. before WP13a; the
+two later deploy runs skipped their deploy job because CI failed). Mobile preset, 3 runs, optimistic aggregation:
+
+| Assertion                           | Found (runs)                                | Budget      | Status                                    |
+| ----------------------------------- | ------------------------------------------- | ----------- | ----------------------------------------- |
+| first-contentful-paint              | 1,608.9 ms (1,608.9 / 2,165.8 / 2,076.8)    | ≤ 1,500 ms  | ✗                                         |
+| resource-summary script (as served) | 141,424 B (141,424 / 143,176 / 143,056)     | ≤ 112,640 B | ✗ at 3a47892; ≤ 146,432 B since PA-14 → ✓ |
+| categories:performance              | 0.95 (0.87 / 0.95 / 0.95)                   | ≥ 0.95      | ✓                                         |
+| largest-contentful-paint            | 1,903.9 ms (1,903.9 / 2,264.3 / 2,177.3)    | ≤ 2,000 ms  | ✓                                         |
+| total-blocking-time                 | 147 ms (465 / 147 / 151)                    | ≤ 150 ms    | ✓                                         |
+| render-blocking savings (FCP)       | 0 ms (Lighthouse's own estimate, every run) | —           |                                           |
+
+**Is critical CSS (AD-15) able to move FCP?** `/` paints nothing before the main JS has run (`<div id="app">` is empty
+until Svelte mounts), so FCP waits for main + Header + registry + i18n (≈ 100 KB as served) and their evaluation. Measured
+on this machine with the same `lighthouserc.json` (3 runs each, simulated FCP):
+
+| Target                                                                          | FCP (ms)              |
+| ------------------------------------------------------------------------------- | --------------------- |
+| production, from this machine (3a47892 on the edge)                             | 1,525 / 1,522 / 1,519 |
+| HTTPS + HTTP/2 + zstd-3 local server, production files mirrored (3a47892)       | 1,380 / 1,351 / 1,350 |
+| same server, `main` with the round-1 fixes                                      | 1,380 / 1,350 / 1,351 |
+| same server, `main` with **no stylesheet at all** (the most AD-15 could remove) | 1,380 / 1,380 / 1,380 |
+| `pnpm lhci-local` (wrangler dev, HTTP/1.1), `main` with the round-1 fixes       | 1,817 / 1,813 / 1,812 |
+| wrangler dev (HTTP/1.1), `main` with no stylesheet at all                       | 1,510 / 1,659 / 1,662 |
+
+On the protocol production serves (HTTP/2 or 3), removing every stylesheet from the critical path changes FCP by 0 ms,
+so no critical-CSS split can bring it under 1.5 s; the 150–300 ms that `lhci-local` shows is an HTTP/1.1 artifact
+(seven parallel requests on six connections). WP13a did not move FCP either (same server: 3a47892 and `main` agree). The
+gap between this machine and the CI runner (1.52 s vs 1.61–2.17 s against the same production files) is CPU time under
+the 4× slowdown plus real connection latency. AD-15 was therefore **not** applied; the lever left is the JS on the first
+paint path or the AD-16 static partial (contentful HTML before the main JS runs).
