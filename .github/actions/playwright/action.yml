@@ -63,7 +63,11 @@ runs:
       run: |
         ARCHIVES="$HOME/.cache/apt-archives"
         mkdir -p "$ARCHIVES/partial"
-        PKGS=$(pnpm --filter @tsbs/e2e exec playwright install-deps --dry-run $BROWSERS 2>/dev/null | grep -o 'apt-get install[^"]*' | sed 's/apt-get install//; s/-y//; s/--no-install-recommends//' | tr -s ' \n' ' ')
+        # The dry run prints the apt command Playwright would run (stdout or stderr depending on the version); an
+        # unparseable output must not abort the step under `set -e`, so every stage tolerates an empty result.
+        DRY=$(pnpm --filter @tsbs/e2e exec playwright install-deps --dry-run $BROWSERS 2>&1 || true)
+        echo "$DRY" | head -5
+        PKGS=$( (echo "$DRY" | grep -o 'apt-get install[^"]*' || true) | sed 's/apt-get install//; s/ -y//; s/--no-install-recommends//' | tr -s '[:space:]' ' ' || true)
         if [ -z "$PKGS" ]; then
           echo "::warning::could not read the dependency list from install-deps --dry-run; running install-deps directly"
           timeout 600 pnpm --filter @tsbs/e2e exec playwright install-deps $BROWSERS
