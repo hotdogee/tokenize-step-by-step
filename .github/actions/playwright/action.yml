@@ -45,5 +45,11 @@ runs:
     - if: inputs.cjk-fonts == 'true'
       shell: bash
       run: |
-        sudo apt-get install -y --no-install-recommends fonts-noto-cjk fontconfig
+        # The 61 MB fonts-noto-cjk download has stalled for 20 minutes on the Azure mirror twice; give apt a stall
+        # timeout and retry instead of letting the job hit its own timeout.
+        for attempt in 1 2 3; do
+          timeout 420 sudo apt-get install -y --no-install-recommends -o Acquire::http::Timeout=30 -o Acquire::Retries=3 fonts-noto-cjk fontconfig && break
+          echo "::warning::fonts-noto-cjk install attempt ${attempt} failed or stalled; retrying"
+          sleep 10
+        done
         fc-list :lang=zh-tw family | grep -q 'Noto Sans CJK' || { echo "::error::fonts-noto-cjk did not install"; exit 1; }
