@@ -259,6 +259,16 @@ job before the launch work starts. If TBT or FCP miss there, mount the non-first
 inspector host, the rail's playback controls) after the first paint in a separate task — reserving their space so CLS
 stays 0 — or apply the AD-16 static-partial fallback. No first-paint change was made on the loopback numbers alone.
 
+**WP13a second review round (same machine, same harness).** The reviewer's independent `pnpm lhci-local` (1 run):
+performance 0.93, FCP 1,814 ms, LCP within budget, TBT 273 ms, script 135,037 B. After this round's fixes (on-demand run
+state, quota notice, tier announcement, copy-link and error-recovery copy: three new catalog strings): Main JS 80.21 kB
+of 81.92 (i18n 8.84 of 9.22); `pnpm lhci-local --runs 3`: performance 0.93, FCP 1.81–1.83 s, LCP 1.97–1.99 s, TBT
+251–259 ms, script 135,538–135,548 B — the same four loopback misses (performance, FCP, TBT, script size); LCP passes.
+The budgets were not raised. The WP13 row's "LHCI budgets met on production" stays **open**, and the WP13b precondition
+above stands unchanged: the preview `lighthouse` job of the WP13a pull request is read before any launch work, and a
+TBT or FCP miss there is answered with the levers above (drawer, inspector host and rail playback mounted after first
+paint, or the AD-16 static partial).
+
 **AD-27 memory (CDP heap probe, `e2e/specs/integration-memory.spec.ts`).** Backing store of the page's ArrayBuffers above
 the baseline (270 KB) after a forced GC (kB/MB = 1000 B): 15.8 MB with a 150,000-code-point zh-TW run on screen;
 0.39 MB while the next (capped, 200,000-code-point) run is in flight, so the previous result is gone before the new one
