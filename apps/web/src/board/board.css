@@ -43,13 +43,14 @@
   content-visibility: visible;
 }
 
-/* 480–767: the 120 px --row-h holds U+ labels and chunk brackets (05 §3.3), so the tiers sit flush. Token ids sit inside
-   their chips at every width (PA-17): no row has an id track. */
+/* 480–767: the 132 px --row-h holds U+ labels and chunk brackets (05 §3.3), so the tiers sit flush. Token ids sit inside
+   their chips at every width (PA-17); from 480 px the last track, an empty 12 px gap, keeps the chips farther from the
+   next row's characters than from their own bytes (18 / 22 / 21 px against 14 / 18 / 41 at 600 / 800 / 1440). */
 @media (min-width: 480px) {
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] 48px [bytes1] 24px [bytes2] 0 [chunk] 14px
-      [token] 28px;
+      [token] 28px [gap] 12px;
   }
 }
 
@@ -57,7 +58,7 @@
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] 56px [bytes1] 26px [bytes2] 0 [chunk] 16px
-      [token] 30px;
+      [token] 30px [gap] 12px;
   }
 }
 
@@ -65,7 +66,7 @@
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] 55px [bytes1] 25px [bytes2] 25px [chunk] 15px
-      [token] 29px;
+      [token] 29px [gap] 12px;
   }
 }
 
@@ -634,13 +635,14 @@
   color: var(--bg);
 }
 
-/* ---- ≥ 2560 px (05 §3.3): --row-h = 3.5·cell + 44 px; tracks, cells and type scale from --cell (type via clamp()) ---- */
+/* ---- ≥ 2560 px (05 §3.3): --row-h = 3.5·cell + 56 px; tracks, cells and type scale from --cell (type via clamp()) ---- */
 
 @media (min-width: 2560px) {
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] calc(var(--cell) + 22px) [bytes1] calc(var(--cell) / 2 + 8px)
-      [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px);
+      [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px)
+      [gap] 12px;
   }
 
   .bd-cell-char {

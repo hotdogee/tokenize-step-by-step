@@ -238,15 +238,25 @@ describe('row tracks by breakpoint (05 §3.3)', () => {
   const rectIn = (board: MountedBoard, selector: string): DOMRect | undefined =>
     board.grid.querySelector('.bd-row')?.querySelector(selector)?.getBoundingClientRect();
 
-  for (const width of [600, 1440]) {
-    it(`fits the token tier in the fixed row height with no id line at ${String(width)} px (PA-17)`, async () => {
+  for (const [width, height, gap] of [
+    [600, 132, 18],
+    [800, 148, 22],
+    [1440, 169, 21],
+  ] as const) {
+    it(`ends the ${String(height)} px row with a 12 px gap under the token tier at ${String(width)} px (PA-17)`, async () => {
       await page.viewport(width, 900);
-      const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+      const board = await show(fixtureResult('openai-o200k_base', 'ja-paragraph'));
       expect(board.target.querySelector('.bd-ids, .bd-idl')).toBeNull();
-      const row = board.grid.querySelector('.bd-row')?.getBoundingClientRect();
+      const first = board.grid.querySelector('[data-row="0"]');
+      const row = first?.getBoundingClientRect();
       const rowHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--row-h'));
+      expect(rowHeight).toBe(height);
       expect(row?.height).toBe(rowHeight);
-      expect(rectIn(board, '.bd-cell-token')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
+      const token = first?.querySelector('.bd-cell-token')?.getBoundingClientRect();
+      expect((token?.bottom ?? Number.POSITIVE_INFINITY) + 12).toBeLessThanOrEqual(row?.bottom ?? 0);
+      // No id track (ids sit inside the chips); the gap keeps the chips clear of the next row's characters.
+      const next = board.grid.querySelector('[data-row="1"] .bd-cell-char')?.getBoundingClientRect();
+      expect((next?.top ?? 0) - (token?.bottom ?? 0)).toBeCloseTo(gap, 0);
     });
   }
 
@@ -256,10 +266,12 @@ describe('row tracks by breakpoint (05 §3.3)', () => {
     const cell = cellPx();
     expect(cell).toBeGreaterThan(40);
     const row = board.grid.querySelector('.bd-row')?.getBoundingClientRect();
-    expect(row?.height).toBeCloseTo(cell * 3.5 + 44, 0);
+    expect(row?.height).toBeCloseTo(cell * 3.5 + 56, 0);
     expect(rectIn(board, '.bd-cell-char')?.height).toBeCloseTo(cell + 21, 0);
     expect(rectIn(board, '.bd-cell-token')?.height).toBeCloseTo(cell * 0.75 + 5, 0);
-    expect(rectIn(board, '.bd-cell-token')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
+    expect((rectIn(board, '.bd-cell-token')?.bottom ?? Number.POSITIVE_INFINITY) + 12).toBeLessThanOrEqual(
+      row?.bottom ?? 0,
+    );
     const glyph = board.grid.querySelector('.bd-glyph.cjk');
     expect(Number.parseFloat(getComputedStyle(glyph ?? board.grid).fontSize)).toBeGreaterThan(22);
   });

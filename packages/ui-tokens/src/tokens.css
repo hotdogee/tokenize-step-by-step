@@ -135,7 +135,7 @@
 
 @media (min-width: 480px) {
   :root {
-    --row-h: 120px;
+    --row-h: 132px;
   }
 }
 
@@ -144,7 +144,7 @@
     --cell-s-base: 29px;
     --cell-m-base: 32px;
     --cell-l-base: 37px;
-    --row-h: 136px;
+    --row-h: 148px;
   }
 }
 
@@ -153,7 +153,7 @@
     --cell-s-base: 27px;
     --cell-m-base: 30px;
     --cell-l-base: 35px;
-    --row-h: 157px;
+    --row-h: 169px;
     --rail-w: 320px;
   }
 }
@@ -172,7 +172,7 @@
     --cell-m-base: clamp(32px, 1.6vw, 44px);
     --cell-s-base: calc(var(--cell-m-base) * 0.9);
     --cell-l-base: calc(var(--cell-m-base) * 1.15);
-    --row-h: calc(var(--cell) * 3.5 + 44px);
+    --row-h: calc(var(--cell) * 3.5 + 56px);
     --rail-w: 420px;
     --board-max: 2400px;
   }
