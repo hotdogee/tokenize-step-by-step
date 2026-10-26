@@ -41,11 +41,48 @@ export async function openAbout(page: Page, locale: Locale): Promise<void> {
   await expect(page.getByTestId('licences')).toBeVisible();
 }
 
-/** Selects a tokenizer through the picker dialog by (part of) its display name. */
-export async function pickTokenizer(page: Page, name: string): Promise<void> {
+/**
+ * The board as one snapshot: the displayed result's tokenizer, its source, whether it is pending, and the board's
+ * `view-transition-name` (set while a switch or result crossfade runs, removed once it has finished; motion/
+ * view-transition.ts). While a View Transition runs, clicks hit its pseudo-elements, not the page.
+ */
+function boardState(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const grid = document.querySelector('[data-testid="board-grid"]');
+    const source = document.querySelector('[data-source]')?.getAttribute('data-source') ?? '';
+    const crossfading = document.getElementById('board')?.style.getPropertyValue('view-transition-name') ?? '';
+    const pending = String(grid?.hasAttribute('data-pending') ?? true);
+    return [grid?.getAttribute('data-tokenizer') ?? '', source, pending, crossfading].join('|');
+  });
+}
+
+/** Waits until no crossfade runs on the board (one already started has finished). */
+export async function crossfadeDone(page: Page): Promise<void> {
+  await expect.poll(async () => (await boardState(page)).split('|')[3], { timeout: 5_000 }).toBe('');
+}
+
+/**
+ * Selects a tokenizer through the picker dialog by (part of) its display name and waits for the switch crossfade to end
+ * (not for the vocabulary: callers check loads, errors and held downloads themselves). Returns the tokenizer id.
+ */
+export async function pickTokenizer(page: Page, name: string): Promise<string> {
   await page.getByTestId('picker-button').click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  await dialog.getByRole('option', { name: new RegExp(name.replace(/[()]/g, '\\$&')) }).click();
+  const option = dialog.getByRole('option', { name: new RegExp(name.replace(/[()]/g, '\\$&')) });
+  const id = (await option.getAttribute('data-id')) ?? '';
+  await option.click();
   await expect(dialog).toBeHidden();
+  await crossfadeDone(page);
+  return id;
+}
+
+/**
+ * `pickTokenizer`, then waits for the new tokenizer's live result on a settled board (no crossfade left), so the next
+ * click on a chip or on the picker lands on the page, not on a View Transition (the switch, then the precomputed → live
+ * swap).
+ */
+export async function switchTokenizer(page: Page, name: string): Promise<void> {
+  const id = await pickTokenizer(page, name);
+  await expect.poll(() => boardState(page), { timeout: LIVE_READY_TIMEOUT_MS }).toBe(`${id}|live|false|`);
 }

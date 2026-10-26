@@ -4,15 +4,15 @@
  * help dialog, and "Single-key shortcuts: off" disables both while Esc keeps closing dialogs.
  */
 import { expect, test } from '@playwright/test';
-import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer, switchTokenizer } from './shell-helpers.ts';
 
 test('"Powered by xAI" is visible iff Grok-2 is selected', async ({ page }) => {
   await openShell(page, 'en');
   await expect(page.getByText('Powered by xAI')).toHaveCount(0);
-  await pickTokenizer(page, 'Grok-2');
+  await switchTokenizer(page, 'Grok-2');
   await expect(page.getByText('Powered by xAI')).toBeVisible();
   await expect(page.getByTestId('notices')).toHaveAttribute('aria-label', /Grok-2/);
-  await pickTokenizer(page, 'o200k_base');
+  await switchTokenizer(page, 'o200k_base');
   await expect(page.getByText('Powered by xAI')).toHaveCount(0);
   await pickTokenizer(page, 'Llama 3');
   await expect(page.getByText('Built with Meta Llama 3')).toBeVisible();

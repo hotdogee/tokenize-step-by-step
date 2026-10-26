@@ -692,6 +692,7 @@
         aria-colcount={K}
         data-testid="board-grid"
         data-stage={stage}
+        data-tokenizer={result.tokenizer}
         data-pending={board.kind === 'final' ? undefined : ''}
         data-composing={app.composing ? '' : undefined}
         data-cells={cellCount}

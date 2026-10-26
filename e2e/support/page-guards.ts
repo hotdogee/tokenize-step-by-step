@@ -11,6 +11,10 @@
  * and dynamic imports when a navigation starts and reports them as uncaught ("Cannot load …/assets/entry-*.js due to
  * access control checks", "Importing a module script failed"; 6 parallel WebKit contexts walking the nine tokenizers
  * by `page.goto` raised them about once per 80 navigations, always between the navigation request and the commit).
+ * The flag is filed by when an error was raised, not when its event arrives: before raising it, the navigation helpers
+ * flush the events already on the wire (a main-frame round trip, whose response is ordered after them), so an error the
+ * current document raised before the call — in Firefox a `DOMContentLoaded` error can arrive after `load` resolved the
+ * previous `goto` — still counts as the current document's.
  */
 import type { Page, Request } from '@playwright/test';
 
@@ -33,6 +37,23 @@ export interface PageGuards {
 
 const CSP_CONSOLE = /Content[- ]Security[- ]Policy/i;
 const NAVIGATIONS = ['goto', 'reload', 'goBack', 'goForward'] as const;
+/** Upper bound on the flush round trip (a page between documents answers once the next one has a context). */
+const FLUSH_MS = 1000;
+
+/** Resolves once the events the page sent before this call have been dispatched; never throws, never waits past FLUSH_MS. */
+async function flushEvents(page: Page): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    page
+      .mainFrame()
+      .evaluate(() => 0)
+      .catch(() => undefined),
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, FLUSH_MS);
+    }),
+  ]);
+  clearTimeout(timer);
+}
 
 /** Installs the instrumentation; call before `page.goto`. */
 export async function watchPage(page: Page): Promise<PageGuards> {
@@ -57,11 +78,13 @@ export async function watchPage(page: Page): Promise<PageGuards> {
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) navigating = false;
   });
-  // The navigation helpers raise the flag before the protocol call, ahead of the request event.
+  // The navigation helpers raise the flag before the protocol call, ahead of the request event — after flushing the events
+  // already in flight, which belong to the current document.
   for (const name of NAVIGATIONS) {
     const navigate = page[name].bind(page) as (...args: unknown[]) => Promise<unknown>;
     Object.assign(page, {
       [name]: async (...args: unknown[]) => {
+        await flushEvents(page);
         navigating = true;
         try {
           return await navigate(...args);

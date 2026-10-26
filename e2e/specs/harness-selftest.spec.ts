@@ -62,3 +62,25 @@ test('the page-error guard keeps a replaced document’s errors apart and record
   });
   await expect.poll(() => guards.pageErrors()).toEqual(['Error: current document']);
 });
+
+// Filed by when the error was raised, not when its event arrives: an error the current document raised just before a
+// navigation call (its event still on the wire, as a Firefox DOMContentLoaded error can be after `load` resolved the
+// previous goto) is the current document's, not teardown.
+test('the page-error guard files an error raised just before a navigation call under the document that raised it', async ({
+  page,
+}) => {
+  const guards = await watchPage(page);
+  await page.goto('/?lang=en');
+  // The task is due before reload() is called and holds the main thread for 100 ms, so its error event is still on the
+  // wire when the navigation helper is entered.
+  await page.evaluate(() => {
+    setTimeout(() => {
+      const end = performance.now() + 100;
+      while (performance.now() < end);
+      throw new Error('before the reload');
+    }, 0);
+  });
+  await page.reload();
+  expect(guards.pageErrors()).toEqual(['Error: before the reload']);
+  expect(guards.teardownErrors()).not.toContain('Error: before the reload');
+});

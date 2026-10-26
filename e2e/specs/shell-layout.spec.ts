@@ -4,7 +4,7 @@
  * zh-TW a UI label and a glyph cell resolve to the same TC font family (05 §10).
  */
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { openAbout, openShell, pickTokenizer } from './shell-helpers.ts';
+import { openAbout, openShell, pickTokenizer, switchTokenizer } from './shell-helpers.ts';
 
 const pageOverflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -23,7 +23,7 @@ for (const locale of ['zh-TW', 'ja'] as const) {
     test('the page, the notices strip and the help dialog have no horizontal overflow', async ({ page }) => {
       await openShell(page, locale);
       expect(await pageOverflow(page)).toBe(0);
-      await pickTokenizer(page, 'Grok-2');
+      await switchTokenizer(page, 'Grok-2');
       const notices = page.getByTestId('notices');
       await expect(notices).toContainText('Powered by xAI');
       expect(await elementOverflow(notices)).toBe(0);

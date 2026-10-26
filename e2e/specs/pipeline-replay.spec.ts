@@ -19,12 +19,12 @@ import {
   withLookupIds,
   type Part,
 } from './pipeline-helpers.ts';
-import { openShell, pickTokenizer } from './shell-helpers.ts';
+import { openShell, switchTokenizer } from './shell-helpers.ts';
 
 /** Opens `/`, selects the tokenizer (unless it is the default) and the chip, and waits for the live result. */
 async function show(page: Page, tokenizer: string | null, chip: string): Promise<void> {
   await openShell(page, 'en');
-  if (tokenizer !== null) await pickTokenizer(page, tokenizer);
+  if (tokenizer !== null) await switchTokenizer(page, tokenizer);
   await chooseExample(page, chip);
   await expect(page.locator('[data-source="live"]')).toBeVisible();
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
@@ -166,7 +166,7 @@ test('Grok-1 shatters 灣 at stop 5; Gemma 4 shows 𰻝 already shattered at sto
   await expect(scrubber(page)).toHaveAttribute('aria-valuetext', 'step 1 / 1 · E7 81 A3 split into bytes (灣)');
   await expect(grid(page).locator('[data-tier="token"] .bd-piece')).toHaveText(['<0xE7>', '<0x81>', '<0xA3>']);
 
-  await pickTokenizer(page, 'Gemma 4');
+  await switchTokenizer(page, 'Gemma 4');
   await chooseExample(page, 'cjk-ext-g-biang');
   await expect(page.locator('[data-source="live"]')).toBeVisible();
   await page.keyboard.press('Digit4');
