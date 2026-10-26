@@ -1,8 +1,8 @@
 /**
  * WP13 integration — URL state (05 §1.1): `?t=…&q=…&s=<stage>.<step>&b=…&lang=…&tl=…` read once at load; invalid values
  * fall back to the defaults; `history.replaceState` (500 ms debounce) writes everything but the text; "Copy link" alone
- * writes the text (≤ 2,000 code points) and confirms it visibly; a `q` that no longer equals the text leaves the address
- * bar after the next edit.
+ * writes the text (≤ 2,000 code points) and confirms it visibly — or says the link is in the address bar when the
+ * clipboard refuses; a `q` that no longer equals the text leaves the address bar after the next edit.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { grid } from './board-helpers.ts';
@@ -15,6 +15,32 @@ const byteView = (page: Page): Promise<string> =>
   page.locator('input[name="byte-view"]:checked').evaluate((radio) => (radio as HTMLInputElement).value);
 
 const params = (page: Page): URLSearchParams => new URL(page.url()).searchParams;
+
+/**
+ * Replaces `navigator.clipboard` with one that accepts every write (kept in `window.__copied`) or refuses it, so "Copy
+ * link" is checked the same on every project: headless Chromium refuses a write without a permission grant, which
+ * Firefox does not support.
+ */
+async function stubClipboard(page: Page, accept: boolean): Promise<void> {
+  await page.addInitScript((ok) => {
+    const copied: string[] = [];
+    Object.assign(window, { __copied: copied });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (text: string): Promise<void> => {
+          if (!ok) return Promise.reject(new DOMException('denied', 'NotAllowedError'));
+          copied.push(text);
+          return Promise.resolve();
+        },
+      },
+    });
+  }, accept);
+}
+
+/** The last text the stubbed clipboard accepted. */
+const lastCopied = (page: Page): Promise<string | undefined> =>
+  page.evaluate(() => (window as unknown as { __copied: string[] }).__copied.at(-1));
 
 test('a deep link restores tokenizer, text, stage and step, byte view, UI locale and text language', async ({
   page,
@@ -48,6 +74,7 @@ test('invalid URL values are ignored and the defaults stay', async ({ page }) =>
 test('state changes reach the URL after 500 ms, never the text; "Copy link" writes the text with a confirmation', async ({
   page,
 }) => {
+  await stubClipboard(page, true);
   await openShell(page, 'en');
   expect(page.url()).not.toContain('?t=');
   await page.locator('#text-input').fill('熱鬧');
@@ -62,6 +89,7 @@ test('state changes reach the URL after 500 ms, never the text; "Copy link" writ
   await expect(page.getByTestId('copy-link-status')).toHaveText('Link copied');
   expect(params(page).get('q')).toBe('熱鬧');
   expect(params(page).get('s')).toBe('3');
+  expect(await lastCopied(page)).toBe(page.url());
 
   // A text over 2,000 code points is left out, and the confirmation says so.
   await page.locator('#text-input').fill('a'.repeat(2001));
@@ -72,7 +100,16 @@ test('state changes reach the URL after 500 ms, never the text; "Copy link" writ
   expect(params(page).has('q')).toBe(false);
 });
 
+test('"Copy link" says the link is in the address bar when the clipboard refuses it', async ({ page }) => {
+  await stubClipboard(page, false);
+  await openShell(page, 'en');
+  await page.getByTestId('copy-link').click();
+  await expect(page.getByTestId('copy-link-status')).toHaveText('Could not copy — the link is in the address bar');
+  expect(params(page).get('q')).toBe('台灣台南');
+});
+
 test('a q from a deep link or from "Copy link" leaves the address bar once the text is edited', async ({ page }) => {
+  await stubClipboard(page, true);
   await page.goto(`/?${new URLSearchParams({ q: RAMEN, lang: 'en' }).toString()}`);
   await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   expect(params(page).get('q')).toBe(RAMEN);

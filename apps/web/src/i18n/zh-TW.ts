@@ -280,4 +280,6 @@ export const zhTW = {
   'link.copy': '複製連結',
   'link.copied': '已複製連結',
   'link.copiedWithoutText': '已複製連結，但不含文字（超過 {n} 個字元）',
+  'link.inAddressBar': '無法複製，連結已在網址列中',
+  'link.inAddressBarWithoutText': '無法複製，連結已在網址列中，但不含文字（超過 {n} 個字元）',
 } as const satisfies Catalog;

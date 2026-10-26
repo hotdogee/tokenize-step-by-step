@@ -284,6 +284,9 @@ export const en = {
   'link.copy': 'Copy link',
   'link.copied': 'Link copied',
   'link.copiedWithoutText': 'Link copied without the text (longer than {n} characters)',
+  'link.inAddressBar': 'Could not copy — the link is in the address bar',
+  'link.inAddressBarWithoutText':
+    'Could not copy — the link is in the address bar, without the text (longer than {n} characters)',
 } as const satisfies Readonly<Record<string, Message>>;
 
 /** Every message key (the typed `t()` key union). */

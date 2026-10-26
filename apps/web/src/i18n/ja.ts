@@ -284,4 +284,7 @@ export const ja = {
   'link.copy': 'リンクをコピー',
   'link.copied': 'リンクをコピーしました',
   'link.copiedWithoutText': 'テキストなしでリンクをコピーしました（{n} 文字を超えています）',
+  'link.inAddressBar': 'コピーできませんでした。リンクはアドレスバーにあります',
+  'link.inAddressBarWithoutText':
+    'コピーできませんでした。リンクはテキストなしでアドレスバーにあります（{n} 文字を超えています）',
 } as const satisfies Catalog;
