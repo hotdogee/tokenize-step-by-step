@@ -9,8 +9,8 @@
  *   code point.
  * - Chunk and token/part cells: one per fragment; fragments of a span share its index (one logical cell for the keyboard)
  *   and each references a visually hidden `frag-…` description; zero-width tokens are full-column marker cells (AD-25).
- *   Every token/part chip with an id carries it inside, on every fragment and at any width (PA-17: no id line beneath);
- *   byte-fallback chips and markers show their piece instead.
+ *   Every chip with an id carries it inside, on every fragment and at any width (PA-17: no id line beneath): markers and
+ *   byte-fallback chips over their `▁`/`BOS` or `<0xNN>`, and a bare 1-column chip's id of ≥ 5 digits on two lines.
  */
 import type { PartsAt, ResolvedTextLang, RowModel, TokenizationResult } from '@tsbs/core';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
@@ -113,10 +113,12 @@ export interface ChunkCellModel extends FragmentModel {
 export interface TokenCellModel extends FragmentModel {
   readonly variant: 'token' | 'part' | 'marker';
   readonly tint: number;
-  /** Shown inside the chip at every width (PA-17), except on byte-fallback chips and markers (the label and inspector). */
+  /** Shown inside every chip at every width (PA-17). */
   readonly id: number | null;
   /** Digit count of `id` (0 for none): the chip's CSS narrows, then shrinks, the id to fit (`.d<n>`, board.css). */
   readonly digits: number;
+  /** The id set on two lines (`idLines`), or null for one line. */
+  readonly idLines: readonly [string, string] | null;
   readonly hatchStart: boolean;
   readonly hatchEnd: boolean;
   readonly partial: boolean;
@@ -235,6 +237,22 @@ function tokenStarts(ctx: BoardContext): Uint8Array {
 /** The digit count of a chip's id (0: none). */
 function digitsOf(id: number | null): number {
   return id === null ? 0 : String(id).length;
+}
+
+/**
+ * The two lines of a bare 1-column chip's id (PA-17, 05 §4): an id of ≥ 5 digits that has the chip to itself (`bare`:
+ * no mark, lock, hatch, badge or text shares it) is split thousands-style, the last three digits on the second line, so
+ * each line keeps the full size where one line would shrink to ~8 px; null otherwise. Same rule at every breakpoint.
+ */
+export function idLines(
+  id: number | null,
+  digits: number,
+  span: number,
+  bare: boolean,
+): readonly [string, string] | null {
+  if (id === null || digits < 5 || span !== 1 || !bare) return null;
+  const text = String(id);
+  return [text.slice(0, -3), text.slice(-3)];
 }
 
 function descriptionId(kind: 'chunk' | 'token' | 'part', index: number, part: number): string {
@@ -463,6 +481,7 @@ function tokenCellsFinal(
       tint: -1,
       id,
       digits: digitsOf(id),
+      idLines: null,
       hatchStart: false,
       hatchEnd: false,
       partial: false,
@@ -485,6 +504,17 @@ function tokenCellsFinal(
     const id = tokens.id[i] ?? 0;
     const chunk = tokens.chunk[i] ?? -1;
     const text = f.first && f.colSpan >= 4 ? chipText(result, start, end, t, spm, i === fused) : null;
+    const partial = (flags & TokenFlag.Partial) !== 0;
+    const special = (flags & TokenFlag.Special) !== 0;
+    // Nothing shares the chip with the id: no continuation mark, hatch, lock, badge, byte piece or text.
+    const bare =
+      f.first &&
+      f.last &&
+      text === null &&
+      !partial &&
+      !special &&
+      kind !== TokenKind.Byte &&
+      kind !== TokenKind.UserDefined;
     out.push({
       index: i,
       start: f.byteStart,
@@ -499,12 +529,13 @@ function tokenCellsFinal(
       tint: i % 8,
       id,
       digits: digitsOf(id),
+      idLines: idLines(id, digitsOf(id), f.colSpan, bare),
       hatchStart: kind !== TokenKind.Byte && f.first && (flags & TokenFlag.StartsMidChar) !== 0,
       hatchEnd: kind !== TokenKind.Byte && f.last && (flags & TokenFlag.EndsMidChar) !== 0,
-      partial: (flags & TokenFlag.Partial) !== 0,
+      partial,
       bytePiece: kind === TokenKind.Byte ? bytePiece(utf8[start] ?? 0) : null,
       userDefined: kind === TokenKind.UserDefined,
-      special: (flags & TokenFlag.Special) !== 0,
+      special,
       text: text?.visible ?? null,
       markerText: null,
       marker: null,
@@ -550,6 +581,7 @@ function tokenCellsParts(
         tint: -1,
         id,
         digits: digitsOf(id),
+        idLines: null,
         hatchStart: false,
         hatchEnd: false,
         partial: false,
@@ -567,6 +599,7 @@ function tokenCellsParts(
     const token = result.byteToToken[start] ?? -1;
     const exact = token >= 0 && result.tokens.byteStart[token] === start && result.tokens.byteStart[token + 1] === end;
     const kind = exact ? (result.tokens.kind[token] ?? 0) : -1;
+    const piece = kind === TokenKind.Byte ? bytePiece(result.utf8[start] ?? 0) : null;
     const hexes: string[] = [];
     for (let b = f.byteStart; b < f.byteEnd; b++) hexes.push(hexByte(result.utf8[b] ?? 0));
     out.push({
@@ -577,17 +610,18 @@ function tokenCellsParts(
       span: f.colSpan,
       first: f.first,
       last: f.last,
-      label: partLabel(result, p, count, start, end, partId, t),
+      label: partLabel(result, p, count, start, end, partId, t, piece),
       describedBy: fragment.id,
       variant: 'part',
       tint: token < 0 ? -1 : token % 8,
       id,
       digits: digitsOf(id),
+      idLines: null, // a part's hex always sits under its id
       // Partial hatching is a stop-6 cue (05 §2); live parts say "partial" in their label only.
       hatchStart: false,
       hatchEnd: false,
       partial: cutsChar(result, start, end),
-      bytePiece: kind === TokenKind.Byte ? bytePiece(result.utf8[start] ?? 0) : null,
+      bytePiece: piece,
       userDefined: kind === TokenKind.UserDefined,
       special: false,
       text: hexes.join(' '),

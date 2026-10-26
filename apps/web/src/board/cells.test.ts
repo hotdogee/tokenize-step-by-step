@@ -2,14 +2,16 @@
  * Render descriptors for the 05 §4.1 hard cases, from fixture results (and a synthetic special-token match): sliced char
  * backgrounds and hatched cuts, a partial token crossing a char boundary, full-column marker cells, the fused dummy
  * prefix, byte-fallback chips, USER_DEFINED locks, the SPECIAL badge, direct hits, grapheme brackets, stand-ins,
- * combining marks, the NFKC source row and the `aria-label` templates in all three locales.
+ * combining marks, the NFKC source row, the ids inside every chip (PA-17: two lines for a bare 1-column id of ≥ 5
+ * digits, markers and byte-fallback chips included) and the `aria-label` templates in all three locales.
  */
 import { buildResult } from '@tsbs/core/model/build-result';
 import { ChunkKind, TokenKind } from '@tsbs/core/model/result';
 import { analyzeText } from '@tsbs/core/text/analyze';
+import { TokenizationView } from '@tsbs/core/model/view';
 import { describe, expect, it } from 'vitest';
 import { LOCALES } from '../i18n/types.ts';
-import { rowCells, type RowCells } from './cells.ts';
+import { idLines, rowCells, type RowCells } from './cells.ts';
 import { boardContext, caseResult, type ContextOptions } from './fixture-results.test-helper.ts';
 import type { TokenizationResult } from '@tsbs/core';
 
@@ -78,7 +80,8 @@ describe('zero-width tokens get full marker columns (AD-25)', () => {
       ['bos', 0],
       ['dummy', 1],
     ]);
-    expect(row?.tokens[0]?.label).toBe('BOS, beginning-of-sequence token, 0 bytes, id 1');
+    // The chip shows its id over BOS (PA-17): the name says them in that order (WCAG 2.5.3).
+    expect(row?.tokens[0]?.label).toBe('beginning-of-sequence token, 0 bytes, id 1, BOS');
   });
 
   it('Llama 3 + addBos on empty text: a trailing marker and an empty char tier', () => {
@@ -103,7 +106,9 @@ describe('spm specifics', () => {
     expect(row?.tokens.map((cell) => cell.bytePiece)).toEqual(['<0xF0>', '<0xB0>', '<0xBB>', '<0x9D>']);
     expect(row?.tokens.every((cell) => cell.variant === 'part' && !cell.hatchStart && !cell.hatchEnd)).toBe(true);
     const [final] = cellsOf(caseResult('google-gemma2', 'cjk-ext-g-biang'), { K: 9 });
-    expect(final?.tokens[0]?.label).toContain('byte-fallback piece <0xF0>');
+    // The chip shows its id over <0xF0> (PA-17): the name says the piece right after the id (WCAG 2.5.3).
+    expect(final?.tokens[0]?.label).toMatch(/^token 1 of \d+, id \d+, <0xF0>, 1 byte, byte-fallback piece, /);
+    expect(row?.tokens[0]?.label).toMatch(/^part 1 of 4, id \d+, <0xF0>, 1 byte, byte-fallback piece, /);
   });
 
   it('USER_DEFINED symbols are locked (Grok-1 digits, Gemma 2 <start_of_turn>)', () => {
@@ -242,6 +247,64 @@ describe('fragments of a span over rows (05 §8)', () => {
       [0, 3, 'U+53F0'],
       [0, 3, 'U+5357'],
     ]);
+  });
+});
+
+describe('token ids inside every chip (PA-17)', () => {
+  it('sets a bare 1-column id of ≥ 5 digits on two lines, split thousands-style', () => {
+    expect(idLines(236778, 6, 1, true)).toEqual(['236', '778']);
+    expect(idLines(23677, 5, 1, true)).toEqual(['23', '677']);
+    expect(idLines(1234567, 7, 1, true)).toEqual(['1234', '567']);
+    expect(idLines(4321, 4, 1, true)).toBeNull();
+    expect(idLines(236778, 6, 2, true)).toBeNull();
+    expect(idLines(236778, 6, 1, false)).toBeNull();
+    expect(idLines(null, 0, 1, true)).toBeNull();
+    const [gemma] = cellsOf(caseResult('google-gemma4', 'en-contraction-code'), { K: 30 });
+    expect(gemma?.tokens.slice(0, 3).map((cell) => [cell.span, cell.idLines])).toEqual([
+      [1, ['236', '777']],
+      [1, ['236', '789']],
+      [1, ['236', '757']],
+    ]);
+  });
+
+  it('keeps one line when anything shares the 1-column chip: a continuation mark, a partial token’s hatch', () => {
+    // o200k “ 台” (50922) straddles the first two rows at K = 8: its 1-column first fragment carries the continues mark.
+    const rows = cellsOf(caseResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo'), { K: 8 });
+    const fragment = rows[0]?.tokens.find((cell) => cell.id === 50922);
+    expect(fragment).toMatchObject({ span: 1, first: true, last: false, digits: 5, idLines: null });
+    // Byte-level vocabularies give single bytes ids < 256: a 1-column partial token with a 6-digit id is synthetic.
+    const result = buildResult({
+      tokenizer: 'openai-o200k_base',
+      family: 'bytelevel-bpe',
+      analysis: analyzeText('台'),
+      chunks: { byteStart: [0, 3], kind: [ChunkKind.Regex] },
+      tokens: { id: [123456, 654321], byteStart: [0, 1, 3], kind: [TokenKind.Normal, TokenKind.Normal] },
+      timeline: null,
+    });
+    const [row] = cellsOf(result, { K: 9 });
+    expect(row?.tokens[0]).toMatchObject({ span: 1, partial: true, digits: 6, idLines: null });
+  });
+
+  it('gives zero-width markers and byte-fallback chips their ids (Grok-1 台灣台南)', () => {
+    const [row] = cellsOf(caseResult('xai-grok1', 'zh-tw-tainan'), { K: 34 });
+    expect(row?.tokens[0]).toMatchObject({ variant: 'marker', id: 130089, digits: 6, idLines: null });
+    const pieces = row?.tokens.filter((cell) => cell.bytePiece !== null);
+    expect(pieces?.map((cell) => [cell.bytePiece, cell.id, cell.digits, cell.idLines])).toEqual([
+      ['<0xE7>', 300, 3, null],
+      ['<0x81>', 198, 3, null],
+      ['<0xA3>', 232, 3, null],
+    ]);
+  });
+
+  it('always gives a live part its hex, so the stop-5 star never sits beside an id alone (motion.css)', () => {
+    const result = caseResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
+    const steps = new TokenizationView(result).stepCount;
+    expect(steps).toBeGreaterThan(0);
+    for (let step = 0; step <= steps; step++)
+      for (const row of cellsOf(result, { K: 8, stage: 5, step }))
+        for (const cell of row.tokens)
+          if (cell.variant === 'part')
+            expect(cell.text, `step ${String(step)}, part ${String(cell.index)}`).not.toBeNull();
   });
 });
 

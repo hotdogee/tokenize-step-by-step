@@ -2,16 +2,17 @@
   /**
    * A token-tier fragment (05 §4, §4.1): a final token (stop 6) or a live part (stops 4–5) as a chip in its token tint
    * with the 1 px border. Partial tokens get the SVG hatch mark and a squared, two-tone hatched edge on each side that cuts
-   * a code point; byte-fallback pieces show the Byte icon and `<0xF0>`; USER_DEFINED symbols the lock; matched specials a
+   * a code point; byte-fallback pieces show `<0xF0>` under their id; USER_DEFINED symbols the lock; matched specials a
    * SPECIAL badge and a dashed border. Fragments over several rows carry the SVG continuation marks and reference their
-   * `frag-…` description. Every chip with an id (byte-fallback pieces aside) shows it inside, at any width (PA-17): the
-   * digits subset narrows, then shrinks, to the room left by the paddings and the marks (`.d<n>` = digit count,
-   * board.css). Chips of ≤ 2 columns and live parts are `stacked`: the id has the first line to itself and the marks
-   * (and a part's hex) go on a line under it instead of beside it.
+   * `frag-…` description. Every chip with an id shows it inside, at any width (PA-17, ChipId): the digits subset
+   * narrows, then shrinks, to the room left by the paddings and the marks beside it. Chips of ≤ 2 columns and live parts
+   * are `stacked`: the id has the first line to itself and the marks (and a part's hex) share one clipped line under it
+   * (`.bd-chip-line`, left out when empty: a bare 1-column chip holds its id alone, on two lines from 5 digits).
    */
   import { i18n } from '../i18n/locale.svelte.ts';
   import BoardIcon from './BoardIcon.svelte';
   import type { TokenCellModel } from './cells.ts';
+  import ChipId from './ChipId.svelte';
   import { placeClass, tintClass, type CellState } from './cell-state.ts';
 
   interface Props {
@@ -22,7 +23,23 @@
 
   const hatchMark = $derived(cell.partial && cell.first && cell.variant === 'token' && cell.bytePiece === null);
   const stacked = $derived(cell.bytePiece === null && (cell.span <= 2 || cell.variant === 'part'));
+  /** Something shares the chip with the id (a stacked chip draws it on the line under the id). */
+  const marked = $derived(
+    !cell.first || !cell.last || cell.userDefined || cell.text !== null || hatchMark || cell.special,
+  );
 </script>
+
+<!-- The chip's marks and text in reading order, the id between the lock and the text when they share its line. -->
+{#snippet marks(withId: boolean)}
+  {#if !cell.first}<BoardIcon name="continued" size={10} />{/if}
+  {#if cell.userDefined}<BoardIcon name="lock" size={11} />{/if}
+  {#if withId && cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={cell.idLines} />{/if}
+  {#if cell.text !== null}<span class={cell.variant === 'part' ? 'bd-part-text mono' : 'bd-chip-text'}>{cell.text}</span
+    >{/if}
+  {#if hatchMark}<BoardIcon name="hatch" size={10} />{/if}
+  {#if cell.special}<span class="bd-badge">{i18n.t('board.special')}</span>{/if}
+  {#if !cell.last}<BoardIcon name="continues" size={10} />{/if}
+{/snippet}
 
 <div
   role="gridcell"
@@ -55,18 +72,15 @@
     class:has-lock={cell.userDefined}
     aria-hidden="true"
   >
-    {#if !cell.first}<BoardIcon name="continued" size={10} />{/if}
     {#if cell.bytePiece !== null}
-      <BoardIcon name="byte" size={11} /><span class="bd-piece mono">{cell.bytePiece}</span>
+      <!-- One byte, one column: never a fragment, never hatched; the `<0x…>` notation says it is a byte. -->
+      {#if cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={null} />{/if}
+      <span class="bd-piece mono">{cell.bytePiece}</span>
+    {:else if stacked}
+      {#if cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={cell.idLines} />{/if}
+      {#if marked}<span class="bd-chip-line">{@render marks(false)}</span>{/if}
     {:else}
-      {#if cell.userDefined}<BoardIcon name="lock" size={11} />{/if}
-      {#if cell.id !== null}<span class={`bd-id d${String(cell.digits)}`}>{cell.id}</span>{/if}
-      {#if cell.text !== null}<span class={cell.variant === 'part' ? 'bd-part-text mono' : 'bd-chip-text'}
-          >{cell.text}</span
-        >{/if}
+      {@render marks(true)}
     {/if}
-    {#if hatchMark}<BoardIcon name="hatch" size={10} />{/if}
-    {#if cell.special}<span class="bd-badge">{i18n.t('board.special')}</span>{/if}
-    {#if !cell.last}<BoardIcon name="continues" size={10} />{/if}
   </div>
 </div>

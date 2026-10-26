@@ -1,15 +1,18 @@
 /**
  * Board component tests in chromium (06 §1 "Component"): the 05 §4.1 hard cases rendered from fixture results with DOM
  * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks
- * (≥ 2560 px scaling from --cell) with every token id inside its chip (PA-17: narrowed, then shrunk, never clipped), the
- * APG grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
+ * (≥ 2560 px scaling from --cell; the 12 px gap under the token tier) with every token id inside its chip (PA-17: narrowed,
+ * then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits; markers and byte-fallback chips), the APG
+ * grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
  * view mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import axe from 'axe-core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
+import type { TokenizationResult } from '@tsbs/core';
 import { packRows } from '@tsbs/core/layout/pack-rows';
+import type { AppState } from '../app/app-state.svelte.ts';
 import {
   appWith,
   boardWidthFor,
@@ -76,24 +79,31 @@ describe('05 §4.1 hard cases', () => {
     expect(chip.textContent).toContain('4242');
   });
 
-  it('zero-width token: a full-column marker cell with an SVG mark and aria-label (Grok-1 ▁, 360 px)', async () => {
+  it('zero-width token: a full-column marker cell with its id over ▁ and an aria-label (Grok-1 ▁, 360 px)', async () => {
     await page.viewport(360, 780);
     const board = await show(fixtureResult('xai-grok1', 'zh-tw-tainan'));
     const marker = cell(board, '[data-variant="marker"]');
     expect(marker.getAttribute('aria-label')).toBe('dummy prefix, 0 bytes, id 130089');
     expect(marker.getAttribute('aria-colindex')).toBe('1');
-    expect(marker.querySelector('svg')).not.toBeNull();
+    expect(marker.querySelector('.bd-id')?.textContent).toBe('130089');
+    expect(marker.querySelector('svg')).toBeNull(); // the dotted border is the zero-width cue (PA-17)
     expect(marker.getBoundingClientRect().width).toBeCloseTo(cellPx(), 0);
     expect(marker.getBoundingClientRect().height).toBeGreaterThanOrEqual(28);
     expect(getComputedStyle(marker.querySelector('.bd-chip') ?? marker).borderTopStyle).toBe('dotted');
   });
 
-  it('byte-fallback chips show the Byte icon and <0xF0> (Gemma 4 𰻝, shattered at stop 4)', async () => {
+  it('byte-fallback chips show their id over <0xF0>, no icon (Gemma 4 𰻝, shattered at stop 4)', async () => {
     await page.viewport(1440, 900);
     const board = await show(fixtureResult('google-gemma4', 'cjk-ext-g-biang'), { stage: 4 });
     const pieces = cells(board, '[data-tier="token"] .bd-piece').map((el) => el.textContent);
     expect(pieces).toEqual(['<0xF0>', '<0xB0>', '<0xBB>', '<0x9D>']);
-    expect(cells(board, '[data-tier="token"] svg.bd-icon')).toHaveLength(4);
+    expect(cells(board, '[data-tier="token"] .bd-id').map((el) => el.textContent)).toEqual([
+      '478',
+      '414',
+      '425',
+      '395',
+    ]);
+    expect(cells(board, '[data-tier="token"] svg.bd-icon')).toHaveLength(0);
   });
 
   it('USER_DEFINED symbols carry the lock (Grok-1 digits)', async () => {
@@ -278,6 +288,10 @@ describe('row tracks by breakpoint (05 §3.3)', () => {
 });
 
 describe('token ids inside every chip (PA-17)', () => {
+  afterEach(() => {
+    document.documentElement.dataset['cellSize'] = 'M';
+  });
+
   /** The digits subset is `font-display: block`: wait for it so the rects measure its glyphs, not a fallback's. */
   const digitsLoaded = async (): Promise<void> => {
     await document.fonts.load('12px "TSBS Digits"', '0123456789');
@@ -286,21 +300,97 @@ describe('token ids inside every chip (PA-17)', () => {
 
   /** `font-stretch` as computed (`fontStretch` is typed deprecated: CSS Fonts 4 renames it `font-width`). */
   const fontStretch = (element: Element): string => getComputedStyle(element).getPropertyValue('font-stretch');
+  const px = (value: string): number => Number.parseFloat(value);
 
-  /** Every token-tier id lies inside its chip's box (1 px border tolerance) and is whole. */
+  interface Box {
+    readonly left: number;
+    readonly right: number;
+    readonly top: number;
+    readonly bottom: number;
+  }
+
+  /** The chip's padding box: its border box less the border, which an id must not run into. */
+  const paddingBox = (chip: Element): Box => {
+    const rect = chip.getBoundingClientRect();
+    const style = getComputedStyle(chip);
+    return {
+      left: rect.left + px(style.borderLeftWidth),
+      right: rect.right - px(style.borderRightWidth),
+      top: rect.top + px(style.borderTopWidth),
+      bottom: rect.bottom - px(style.borderBottomWidth),
+    };
+  };
+
+  /** The chip's content box: its padding box less the inline paddings. */
+  const contentBox = (chip: Element): Box => {
+    const pad = paddingBox(chip);
+    const style = getComputedStyle(chip);
+    return { ...pad, left: pad.left + px(style.paddingLeft), right: pad.right - px(style.paddingRight) };
+  };
+
+  /**
+   * An element's glyph run: across, the extent of its text (a Range over its contents, not the element's box); down, its
+   * line box. A text Range is as tall as the font's content area (ascent + descent: 1.362 em in Noto Sans), which pokes
+   * past the line-height-1 lines the chip stacks, so its height would put digits outside a chip they sit inside.
+   */
+  const glyphRun = (element: Element): Box => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const text = range.getBoundingClientRect();
+    const box = element.getBoundingClientRect();
+    return { left: text.left, right: text.right, top: box.top, bottom: box.bottom };
+  };
+
+  /** `inner` lies inside `outer` (0.02 px: layout positions are 1/64 px units). */
+  const expectWithin = (inner: Box, outer: Box, what: string): void => {
+    expect(inner.left, `${what} left`).toBeGreaterThanOrEqual(outer.left - 0.02);
+    expect(inner.right, `${what} right`).toBeLessThanOrEqual(outer.right + 0.02);
+    expect(inner.top, `${what} top`).toBeGreaterThanOrEqual(outer.top - 0.02);
+    expect(inner.bottom, `${what} bottom`).toBeLessThanOrEqual(outer.bottom + 0.02);
+  };
+
+  /** Every token-tier id's glyph run lies inside its chip's padding box: whole, never clipped. */
   const expectIdsInside = (board: MountedBoard, ids: readonly string[]): void => {
     const shown = cells(board, '[data-tier="token"] .bd-id');
     expect(shown.map((id) => id.textContent)).toEqual(ids);
     for (const id of shown) {
-      const chip = id.closest('.bd-chip')?.getBoundingClientRect();
-      const box = id.getBoundingClientRect();
-      expect(box.left, `${id.textContent} left`).toBeGreaterThanOrEqual((chip?.left ?? 0) + 1 - 0.01);
-      expect(box.right, `${id.textContent} right`).toBeLessThanOrEqual((chip?.right ?? 0) - 1 + 0.01);
-      expect(box.top, `${id.textContent} top`).toBeGreaterThanOrEqual((chip?.top ?? 0) + 1 - 0.01);
-      expect(box.bottom, `${id.textContent} bottom`).toBeLessThanOrEqual((chip?.bottom ?? 0) - 1 + 0.01);
-      expect(id.scrollWidth, `${id.textContent} whole`).toBeLessThanOrEqual(Math.ceil(box.width));
+      const chip = id.closest('.bd-chip');
+      if (chip === null) throw new Error(`id ${id.textContent} outside a chip`);
+      expectWithin(glyphRun(id), paddingBox(chip), id.textContent);
     }
   };
+
+  const shownIds = (board: MountedBoard): string[] =>
+    cells(board, '[data-tier="token"] .bd-id').map((id) => id.textContent);
+
+  /** Mounts `app` at cell size `size` (the AppState applies the stored size, M, when it is made: set it after). */
+  async function showAt(app: AppState, size: 'S' | 'M' | 'L', width?: number): Promise<MountedBoard> {
+    document.documentElement.dataset['cellSize'] = size;
+    mounted = await mountBoard(app, width);
+    return mounted;
+  }
+
+  /**
+   * K + 1 ASCII bytes in one-byte tokens (`ids`, then filler ids) but the last, a 2-byte token (`last`) that the row end
+   * cuts into two 1-column fragments, each with a continuation mark under its id.
+   */
+  async function rowEndSplit(k: number, ids: readonly number[], last: number): Promise<TokenizationResult> {
+    const { buildResult } = await import('@tsbs/core/model/build-result');
+    const { analyzeText } = await import('@tsbs/core/text/analyze');
+    const single = Array.from({ length: k - 1 }, (_, i) => ids[i] ?? 10 + i);
+    return buildResult({
+      tokenizer: 'openai-o200k_base',
+      family: 'bytelevel-bpe',
+      analysis: analyzeText('a'.repeat(k + 1)),
+      chunks: { byteStart: [0, k + 1], kind: [0] },
+      tokens: {
+        id: [...single, last],
+        byteStart: [...single.map((_, i) => i), k - 1, k + 1],
+        kind: Array.from({ length: k }, () => 0),
+      },
+      timeline: null,
+    });
+  }
 
   for (const width of [360, 600, 1440]) {
     it(`puts every id of cl100k 台灣台南 inside its chip at ${String(width)} px, in the digits subset`, async () => {
@@ -316,25 +406,16 @@ describe('token ids inside every chip (PA-17)', () => {
 
   it('narrows the width axis first, then shrinks the size (1-column chips with 1-, 4- and 6-digit ids)', async () => {
     await page.viewport(1440, 900);
-    const { buildResult } = await import('@tsbs/core/model/build-result');
-    const { analyzeText } = await import('@tsbs/core/text/analyze');
-    const result = buildResult({
-      tokenizer: 'openai-o200k_base',
-      family: 'bytelevel-bpe',
-      analysis: analyzeText('abc'),
-      chunks: { byteStart: [0, 3], kind: [0] },
-      tokens: { id: [7, 4321, 654321], byteStart: [0, 1, 2, 3], kind: [0, 0, 0] },
-      timeline: null,
-    });
-    const board = await show(result);
+    const k = expectedColumns(1440);
+    const board = await show(await rowEndSplit(k, [7, 4321], 654321));
     await digitsLoaded();
-    expectIdsInside(board, ['7', '4321', '654321']);
-    const cell = cellPx();
-    const room = cell - 8; // 1 px inset + 1 px border + 2 px padding on each side, no marks
+    expect(board.grid.getAttribute('aria-colcount')).toBe(String(k));
+    expectIdsInside(board, shownIds(board));
+    const room = cellPx() - 6; // 1 px inset, 1 px border and a stacked chip's 1 px padding on each side, no marks beside
     const style = (index: number): CSSStyleDeclaration =>
       getComputedStyle(cells(board, `[data-tier="token"][data-index="${String(index)}"] .bd-id`)[0] ?? board.grid);
-    const stretch = (index: number): number => Number.parseFloat(style(index).getPropertyValue('font-stretch'));
-    const size = (index: number): number => Number.parseFloat(style(index).fontSize);
+    const stretch = (index: number): number => px(style(index).getPropertyValue('font-stretch'));
+    const size = (index: number): number => px(style(index).fontSize);
     // w = 262.2 · room / (digits · em) − 50, clamped to the axis; below 62.5 % the size gives way instead.
     expect(stretch(0)).toBe(100);
     expect(size(0)).toBe(12);
@@ -342,27 +423,40 @@ describe('token ids inside every chip (PA-17)', () => {
     expect(stretch(1)).toBeLessThan(100);
     expect(stretch(1)).toBeGreaterThan(62.5);
     expect(size(1)).toBe(12);
-    expect(stretch(2)).toBe(62.5);
-    expect(size(2)).toBeCloseTo(room / (6 * 0.429), 1);
+    expect(stretch(k - 1)).toBe(62.5); // the cut 6-digit token: its continuation mark takes the line under it
+    expect(size(k - 1)).toBeCloseTo(room / (6 * 0.429), 1);
   });
 
-  it('fits a 6-digit id in a 1-column chip (Gemma 4 “I” in I’m here) and keeps 100 % where there is room', async () => {
-    await page.viewport(1440, 900);
+  it('sets a bare 1-column 6-digit id on two full-size lines (Gemma 4 “I’m here” at 1280 px, cell M)', async () => {
+    await page.viewport(1280, 800);
     let board = await show(fixtureResult('google-gemma4', 'en-contraction-code'));
     await digitsLoaded();
-    const chip = cell(board, '[data-tier="token"][data-index="0"]');
-    expect(chip.getAttribute('aria-colspan')).toBe('1');
-    const id = chip.querySelector<HTMLElement>('.bd-id');
-    expect(id?.textContent).toBe('236777');
-    expect(fontStretch(id ?? chip)).toBe('62.5%');
-    const chipSize = Number.parseFloat(getComputedStyle(chip.querySelector('.bd-chip') ?? chip).fontSize);
-    expect(Number.parseFloat(getComputedStyle(id ?? chip).fontSize)).toBeLessThan(chipSize);
-    expectIdsInside(
-      board,
-      cells(board, '[data-tier="token"] .bd-id').map((el) => el.textContent),
-    );
+    expect(cellPx()).toBe(30);
+    for (const [index, lines] of [
+      [0, ['236', '777']],
+      [1, ['236', '789']],
+      [2, ['236', '757']],
+    ] as const) {
+      const chip = cell(board, `[data-tier="token"][data-index="${String(index)}"]`);
+      expect(chip.getAttribute('aria-colspan')).toBe('1');
+      const vis = chip.querySelector('.bd-chip') ?? chip;
+      expect(vis.querySelector('.bd-chip-line')).toBeNull(); // nothing else shares the chip
+      const id = vis.querySelector<HTMLElement>('.bd-id.two');
+      if (id === null) throw new Error(`chip ${String(index)} has no two-line id`);
+      const [upper, lower] = [...id.children];
+      expect([upper?.textContent, lower?.textContent]).toEqual(lines);
+      expect(getComputedStyle(id).fontSize).toBe('12px');
+      expect(fontStretch(id)).toBe('100%');
+      for (const line of [upper, lower])
+        if (line !== undefined) expectWithin(glyphRun(line), paddingBox(vis), lines[0]);
+      expect(lower?.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        (upper?.getBoundingClientRect().bottom ?? 0) - 0.02,
+      );
+    }
+    expectIdsInside(board, shownIds(board));
     mounted?.destroy();
-    // cl100k 66285: 2 columns at the 32 px cell, a hatched end: 52 px of room for 5 digits needs no narrowing.
+    // cl100k 66285: 2 columns at the 32 px cell, a hatched end: 54 px of room for 5 digits needs no narrowing.
+    await page.viewport(1440, 900);
     board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
     await digitsLoaded();
     expect(cellPx()).toBe(32);
@@ -372,18 +466,50 @@ describe('token ids inside every chip (PA-17)', () => {
     expect(getComputedStyle(wide).fontSize).toBe('12px');
   });
 
-  it('stacks a narrow chip’s marks under its id (cl100k 96, 1 column, hatch mark)', async () => {
+  for (const [width, size, cellSize, idSize] of [
+    [1280, 'S', 27, 8.16],
+    [1280, 'M', 30, 9.32],
+    [1440, 'M', 32, 10.1],
+  ] as const) {
+    it(`keeps one line for a 1-column 6-digit id with a mark under it: ${String(idSize)} px at the ${String(cellSize)} px cell`, async () => {
+      await page.viewport(width, 900);
+      document.documentElement.dataset['cellSize'] = size;
+      expect(cellPx()).toBe(cellSize);
+      const k = expectedColumns(width);
+      const board = await showAt(appWith(await rowEndSplit(k, [], 654321)), size);
+      await digitsLoaded();
+      expect(board.grid.getAttribute('aria-colcount')).toBe(String(k));
+      const fragments = cells(board, `[data-tier="token"][data-index="${String(k - 1)}"]`);
+      expect(fragments.map((fragment) => fragment.getAttribute('aria-colspan'))).toEqual(['1', '1']);
+      for (const fragment of fragments) {
+        const vis = fragment.querySelector('.bd-chip') ?? fragment;
+        const id = vis.querySelector('.bd-id') ?? vis;
+        expect(vis.classList.contains('stacked')).toBe(true);
+        expect([getComputedStyle(vis).paddingLeft, getComputedStyle(vis).paddingRight]).toEqual(['1px', '1px']);
+        expect(id.classList.contains('two')).toBe(false);
+        expect(fontStretch(id)).toBe('62.5%');
+        expect(px(getComputedStyle(id).fontSize)).toBeCloseTo(idSize, 1);
+        expectWithin(glyphRun(id), paddingBox(vis), '654321');
+        expect(vis.querySelector('.bd-chip-line svg.bd-icon')).not.toBeNull();
+      }
+    });
+  }
+
+  it('stacks a narrow chip’s marks on one line under its id, padded 1 px and 5 px at a hatched edge (cl100k 96, 66285)', async () => {
     await page.viewport(1440, 900);
     const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
     await digitsLoaded();
     const chip = cell(board, '[data-tier="token"][data-index="2"]');
     expect(chip.getAttribute('aria-colspan')).toBe('1');
-    expect(chip.querySelector('.bd-chip')?.classList.contains('stacked')).toBe(true);
-    const id = chip.querySelector('.bd-id')?.getBoundingClientRect();
-    const mark = chip.querySelector('svg.bd-icon')?.getBoundingClientRect();
+    const vis = chip.querySelector('.bd-chip') ?? chip;
+    expect(vis.classList.contains('stacked')).toBe(true);
+    expect([getComputedStyle(vis).paddingLeft, getComputedStyle(vis).paddingRight]).toEqual(['5px', '1px']);
+    const id = vis.querySelector('.bd-id')?.getBoundingClientRect();
+    const mark = vis.querySelector('.bd-chip-line > svg.bd-icon')?.getBoundingClientRect();
     expect(mark?.top ?? 0).toBeGreaterThanOrEqual(id?.bottom ?? Number.POSITIVE_INFINITY);
-    const vis = chip.querySelector('.bd-chip')?.getBoundingClientRect();
-    expect(mark?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual((vis?.bottom ?? 0) - 1);
+    expect(mark?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(paddingBox(vis).bottom);
+    const wide = cell(board, '[data-tier="token"][data-index="1"] .bd-chip');
+    expect([getComputedStyle(wide).paddingLeft, getComputedStyle(wide).paddingRight]).toEqual(['1px', '5px']);
   });
 
   it('shows the id on every fragment of a token split over rows (o200k token 5 at 360 px)', async () => {
@@ -395,10 +521,7 @@ describe('token ids inside every chip (PA-17)', () => {
     const ids = fragments.map((fragment) => fragment.querySelector('.bd-id')?.textContent);
     expect(ids[0]).toMatch(/^\d+$/);
     expect(ids[1]).toBe(ids[0]);
-    expectIdsInside(
-      board,
-      cells(board, '[data-tier="token"] .bd-id').map((el) => el.textContent),
-    );
+    expectIdsInside(board, shownIds(board));
   });
 
   it('puts a live part’s hex under its id at stops 4–5, wide or narrow (o200k Hello, stop 5)', async () => {
@@ -410,7 +533,7 @@ describe('token ids inside every chip (PA-17)', () => {
     expect(Math.max(...parts.map((part) => Number(part.getAttribute('aria-colspan'))))).toBeGreaterThan(2);
     for (const part of parts) {
       const id = part.querySelector('.bd-id')?.getBoundingClientRect();
-      const hex = part.querySelector('.bd-part-text')?.getBoundingClientRect();
+      const hex = part.querySelector('.bd-chip-line > .bd-part-text')?.getBoundingClientRect();
       expect(hex?.top ?? 0).toBeGreaterThanOrEqual(id?.bottom ?? Number.POSITIVE_INFINITY);
       expect(part.getAttribute('aria-label')).toMatch(/^part \d+ of \d+, id \d+, [0-9A-F]{2}/);
     }
@@ -420,11 +543,75 @@ describe('token ids inside every chip (PA-17)', () => {
     );
   });
 
-  it('keeps byte-fallback chips to <0xNN> (Gemma 4 𰻝): the label and the inspector carry their ids', async () => {
+  for (const [width, size, cellSize] of [
+    [768, 'S', 29],
+    [1280, 'M', 30],
+  ] as const) {
+    it(`keeps a 1-column part fragment’s mark and hex on one line under its id at the ${String(cellSize)} px cell`, async () => {
+      await page.viewport(width, 900);
+      document.documentElement.dataset['cellSize'] = size;
+      expect(cellPx()).toBe(cellSize);
+      // K = 8: the row end cuts “ 台” (50922) after its space, a 1-column fragment carrying the continues mark.
+      const frame = 2 * 16 + (width >= 1024 ? 320 : 0) + 8 * cellSize;
+      const board = await showAt(
+        appWith(fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo'), { stage: 5 }),
+        size,
+        frame,
+      );
+      await digitsLoaded();
+      expect(board.grid.getAttribute('aria-colcount')).toBe('8');
+      const fragment = cells(board, '[data-tier="token"][data-variant="part"]').find(
+        (part) => part.getAttribute('aria-colspan') === '1' && part.querySelector('.bd-chip.cont-end') !== null,
+      );
+      const vis = fragment?.querySelector('.bd-chip') ?? null;
+      const line = vis?.querySelector('.bd-chip-line') ?? null;
+      if (vis === null || line === null) throw new Error('no 1-column part fragment with a continues mark');
+      expect(vis.querySelector('.bd-id')?.textContent).toBe('50922');
+      expect(line.querySelector('.bd-part-text')?.textContent).toBe('20');
+      expect(line.querySelector('svg.bd-icon')).not.toBeNull();
+      // One line under the id, inside the chip: no third line overflowing the bottom.
+      const lineBox = line.getBoundingClientRect();
+      expectWithin(lineBox, contentBox(vis), 'line');
+      expect(lineBox.top).toBeGreaterThanOrEqual(
+        (vis.querySelector('.bd-id')?.getBoundingClientRect().bottom ?? 0) - 0.02,
+      );
+      for (const child of line.children)
+        expect(child.getBoundingClientRect().bottom).toBeLessThanOrEqual(lineBox.bottom + 0.02);
+    });
+  }
+
+  it('shows a marker’s id over ▁ and a byte-fallback chip’s over <0xNN>, no icons (Grok-1 台灣台南, 1440 px)', async () => {
     await page.viewport(1440, 900);
-    const board = await show(fixtureResult('google-gemma4', 'cjk-ext-g-biang'), { stage: 4 });
-    expect(cells(board, '[data-tier="token"] .bd-piece')).toHaveLength(4);
-    expect(cells(board, '[data-tier="token"] .bd-id')).toHaveLength(0);
+    const board = await show(fixtureResult('xai-grok1', 'zh-tw-tainan'));
+    await digitsLoaded();
+    expectIdsInside(board, ['130089', '130876', '300', '198', '232', '130876', '130899']);
+    const marker = cell(board, '[data-variant="marker"] .bd-chip');
+    expect(marker.querySelector('svg')).toBeNull();
+    expect(getComputedStyle(marker).borderTopStyle).toBe('dotted');
+    expect(getComputedStyle(marker).borderTopWidth).toBe('2px');
+    const markerId = marker.querySelector('.bd-id');
+    const markerText = marker.querySelector('.bd-marker-text');
+    expect([markerId?.textContent, markerText?.textContent]).toEqual(['130089', '▁']);
+    const pad = paddingBox(marker);
+    expectWithin(markerText?.getBoundingClientRect() ?? pad, pad, '▁');
+    expect(markerText?.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      (markerId?.getBoundingClientRect().bottom ?? 0) - 0.02,
+    );
+    const bytes = cells(board, '[data-tier="token"] .bd-chip.byte-fallback');
+    expect(
+      bytes.map((chip) => [chip.querySelector('.bd-id')?.textContent, chip.querySelector('.bd-piece')?.textContent]),
+    ).toEqual([
+      ['300', '<0xE7>'],
+      ['198', '<0x81>'],
+      ['232', '<0xA3>'],
+    ]);
+    for (const chip of bytes) {
+      expect(chip.querySelector('svg')).toBeNull();
+      expect(getComputedStyle(chip.querySelector('.bd-id') ?? chip).fontSize).toBe('12px');
+      expect(chip.querySelector('.bd-piece')?.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+        (chip.querySelector('.bd-id')?.getBoundingClientRect().bottom ?? 0) - 0.02,
+      );
+    }
   });
 });
 
@@ -548,6 +735,21 @@ describe('CSP and accessibility', () => {
     it(`is axe clean: ${tokenizer} ${name} at stop ${String(stage)}, ${String(width)} px`, async () => {
       await page.viewport(width, 900);
       const board = await show(fixtureResult(tokenizer, name), { stage, step: 2 });
+      const results = await axe.run(board.target, {
+        runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
+      });
+      expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual(
+        [],
+      );
+    });
+  }
+
+  // PA-17 puts ids over BOS and over byte-fallback pieces: their names must still contain what the chips show, in order.
+  for (const stage of [4, 6] as const) {
+    it(`is axe clean with ids over BOS and byte-fallback pieces: google-gemma4 cjk-ext-g-biang + BOS at stop ${String(stage)}`, async () => {
+      await page.viewport(1440, 900);
+      const board = await show(fixtureResult('google-gemma4', 'cjk-ext-g-biang', { addBos: true }), { stage });
+      expect(cells(board, '[data-tier="token"] .bd-piece')).toHaveLength(4);
       const results = await axe.run(board.target, {
         runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'] },
       });

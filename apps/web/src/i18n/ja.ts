@@ -169,6 +169,7 @@ export const ja = {
   'a11y.cell.inToken': '{count} 個中 {index} 個目のトークンに含まれる（ID {id}）',
   'a11y.cell.inTokenPartial': '{count} 個中 {index} 個目のトークンに含まれる（ID {id}、部分文字）',
   'a11y.cell.partial': '部分文字：{list}',
+  'a11y.cell.byteFallback': 'バイトフォールバックのピース',
   'a11y.cell.empty': '空',
   'a11y.byteRole.single': '「{glyph}」の唯一のバイト',
   'a11y.byteRole.first': '「{glyph}」の先頭バイト',

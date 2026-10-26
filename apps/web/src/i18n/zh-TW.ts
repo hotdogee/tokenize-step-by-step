@@ -165,6 +165,7 @@ export const zhTW = {
   'a11y.cell.inToken': '屬於第 {index} 個詞元，共 {count} 個（ID {id}）',
   'a11y.cell.inTokenPartial': '屬於第 {index} 個詞元，共 {count} 個（ID {id}，部分字元）',
   'a11y.cell.partial': '部分字元：{list}',
+  'a11y.cell.byteFallback': '位元組回退片段',
   'a11y.cell.empty': '空白',
   'a11y.byteRole.single': '「{glyph}」唯一的位元組',
   'a11y.byteRole.first': '「{glyph}」的第一個位元組',
