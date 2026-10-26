@@ -39,7 +39,10 @@ export async function motionReady(page: Page): Promise<void> {
 /** One part as `HEX HEX|id`. */
 export type Part = string;
 
-/** The token tier's parts in order, read from each logical cell's label (first fragment). */
+/**
+ * The token tier's parts in order, read from each logical cell's label (first fragment). A byte-fallback part names its
+ * piece (`<0xE7>`, as its chip shows it under the id, PA-17) where other parts name their hex.
+ */
 export async function domParts(page: Page): Promise<Part[]> {
   const labels = await grid(page)
     .locator('[data-tier="token"][data-first]')
@@ -48,7 +51,9 @@ export async function domParts(page: Page): Promise<Part[]> {
     const fields = label.split(', ');
     const id = /\bid (\d+)/.exec(label)?.[1] ?? '-';
     if (fields[0] === 'dummy prefix') return `▁|${id}`;
-    return `${fields.find((field) => /^[0-9A-F]{2}( [0-9A-F]{2})*$/.test(field)) ?? '?'}|${id}`;
+    const hex = fields.find((field) => /^[0-9A-F]{2}( [0-9A-F]{2})*$/.test(field));
+    const piece = fields.map((field) => /^<0x([0-9A-F]{2})>$/.exec(field)?.[1]).find((byte) => byte !== undefined);
+    return `${hex ?? piece ?? '?'}|${id}`;
   });
 }
 
