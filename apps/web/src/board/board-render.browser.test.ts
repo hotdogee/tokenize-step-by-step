@@ -2,16 +2,19 @@
  * Board component tests in chromium (06 §1 "Component"): the 05 §4.1 hard cases rendered from fixture results with DOM
  * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks
  * (≥ 2560 px scaling from --cell; the 12 px gap under the token tier) with every token id inside its chip (PA-17: narrowed,
- * then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits; markers and byte-fallback chips), the APG
- * grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
+ * then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits; markers and byte-fallback chips; the stop-5
+ * star clear of the id), the APG grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
  * view mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
+import '../motion/motion.css';
 import axe from 'axe-core';
+import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
 import type { TokenizationResult } from '@tsbs/core';
 import { packRows } from '@tsbs/core/layout/pack-rows';
+import { TokenizationView } from '@tsbs/core/model/view';
 import type { AppState } from '../app/app-state.svelte.ts';
 import {
   appWith,
@@ -349,6 +352,9 @@ describe('token ids inside every chip (PA-17)', () => {
     expect(inner.bottom, `${what} bottom`).toBeLessThanOrEqual(outer.bottom + 0.02);
   };
 
+  const intersects = (a: Box, b: Box): boolean =>
+    a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
   /** Every token-tier id's glyph run lies inside its chip's padding box: whole, never clipped. */
   const expectIdsInside = (board: MountedBoard, ids: readonly string[]): void => {
     const shown = cells(board, '[data-tier="token"] .bd-id');
@@ -579,6 +585,45 @@ describe('token ids inside every chip (PA-17)', () => {
         expect(child.getBoundingClientRect().bottom).toBeLessThanOrEqual(lineBox.bottom + 0.02);
     });
   }
+
+  it('keeps the stop-5 star clear of a just-merged 1-column fragment’s id, at the end of its hex line (o200k, 360 px, L)', async () => {
+    await page.viewport(360, 780);
+    const result = fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
+    const app = appWith(result, { stage: 5, step: 1 });
+    const board = await showAt(app, 'L');
+    await digitsLoaded();
+    expect(board.grid.getAttribute('aria-colcount')).toBe('8');
+    // Step through the merges to the first whose part the row end cuts into a 1-column fragment, and mark it as the
+    // director does at stop 5 (data-just-merged on every fragment of the merged part).
+    const view = new TokenizationView(result);
+    let fragment: HTMLElement | undefined;
+    for (let step = 1; step <= view.stepCount && fragment === undefined; step++) {
+      app.step = step;
+      flushSync();
+      await frames(1);
+      const merged = cells(board, `[data-tier="token"][data-index="${String(view.partsAt(step).justMerged)}"]`);
+      fragment = merged.length > 1 ? merged.find((part) => part.getAttribute('aria-colspan') === '1') : undefined;
+      if (fragment !== undefined) for (const part of merged) part.dataset['justMerged'] = '';
+    }
+    await frames(1);
+    const vis = fragment?.querySelector('.bd-chip') ?? null;
+    const id = vis?.querySelector('.bd-id') ?? null;
+    const line = vis?.querySelector('.bd-chip-line') ?? null;
+    if (vis === null || id === null || line === null) throw new Error('no just-merged 1-column fragment');
+    const pad = paddingBox(vis);
+    const after = getComputedStyle(vis, '::after');
+    expect(after.content).not.toBe('none');
+    // The star is absolutely placed in the chip's padding box from its right and bottom.
+    const right = pad.right - px(after.right);
+    const bottom = pad.bottom - px(after.bottom);
+    const star: Box = { left: right - px(after.width), right, top: bottom - px(after.height), bottom };
+    expectWithin(star, pad, 'star');
+    expect(intersects(star, glyphRun(id)), 'star over the id').toBe(false);
+    // The hex line's content box ends before the star, so its content centres in the room left of it.
+    const lineBox = line.getBoundingClientRect();
+    expect(lineBox.right - px(getComputedStyle(line).paddingRight)).toBeLessThanOrEqual(star.left);
+    expectWithin(glyphRun(id), pad, 'id');
+  });
 
   it('shows a marker’s id over ▁ and a byte-fallback chip’s over <0xNN>, no icons (Grok-1 台灣台南, 1440 px)', async () => {
     await page.viewport(1440, 900);
