@@ -27,8 +27,16 @@
   }
   let { open, assets, onclose, onlivecheck }: Props = $props();
   const app = appState();
-  /** The live-check row was chosen: the drawer opens once the dialog has handed focus back (`onclosed`). */
+  /**
+   * The live-check row was chosen: the drawer opens once the dialog has handed focus back (`onclosed`). Cleared whenever
+   * the picker opens: a reopen before the queued `close` arrives makes Dialog drop that close, and the flag must not
+   * survive to the next close for another reason (Esc, a tokenizer chosen).
+   */
   let liveCheck = false;
+
+  $effect(() => {
+    if (open) liveCheck = false;
+  });
 
   const LABS: readonly Lab[] = ['openai', 'anthropic', 'google', 'meta', 'xai'];
   const LAB_KEY = {
