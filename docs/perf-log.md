@@ -414,3 +414,70 @@ registry 8.56 + i18n 8.84). `hydrate()` keeps Svelte's hydration paths in the ru
 moving the help dialog's shortcut table (`shell/shortcut-groups.ts`) and the `?mock=1` client's feature probe out of the
 startup chunks recovered 0.55 kB. `first-paint-[hash].js` 345 B of 512 (new budget), `boot-[hash].js` 320 B (unchanged),
 CSS 12.08 kB (the 57 `.k8…k64` column-count classes), `index.html` 9.01 kB of 14.34.
+
+## 2026-10-26 — production, launch (WP13b)
+
+**Where:** production `https://tokenize-step-by-step.hotdogee.workers.dev`, serving `c1ff708` (CI deploy run
+40285946585, Worker version `ff444522`), measured from this machine (Windows, Lighthouse `benchmarkIndex` 4,350–4,500)
+on 2026-10-26 09:50–09:56 UTC. The release push (PA-15's static first paint and the WP13b fixes) deploys after this entry;
+the post-push verification re-runs Lighthouse there. `tokens.hanlin.uk` is attached by that deploy (docs/release.md §
+Custom domain) and serves the same Worker.
+
+**Lighthouse** (`pnpm lhci --collect.url=<production>/`, the mobile preset of `lighthouserc.json`: Lighthouse 12.6.1,
+simulated Slow 4G 1.6 Mbps / 150 ms, CPU ×4, 3 runs; LHCI asserts the best run):
+
+| Metric / category (3 runs) | Found                    | Budget        | Status                    |
+| -------------------------- | ------------------------ | ------------- | ------------------------- |
+| Performance                | 99 / 99 / 99             | ≥ 95          | ✓                         |
+| Accessibility              | 100 / 100 / 100          | 100           | ✓                         |
+| Best Practices             | 100 / 100 / 100          | 100           | ✓                         |
+| SEO (not asserted)         | 100                      | —             | —                         |
+| first-contentful-paint     | 1,514 / 1,531 / 1,511 ms | ≤ 1,500 ms    | **✗ by 11 ms** (best run) |
+| largest-contentful-paint   | 1,572 / 1,605 / 1,567 ms | ≤ 2,000 ms    | ✓                         |
+| total-blocking-time        | 67 / 98 / 62 ms          | ≤ 150 ms      | ✓                         |
+| cumulative-layout-shift    | 0 / 0 / 0                | ≤ 0.02        | ✓                         |
+| speed-index (not asserted) | 1,993 / 1,973 / 1,837 ms | —             | —                         |
+| document (as served)       | 1,373 B                  | ≤ 14,336 B    | ✓                         |
+| script (as served, zstd)   | 139,945 B                | ≤ 146,432 B   | ✓                         |
+| stylesheet                 | 11,242 B                 | ≤ 20,480 B    | ✓                         |
+| font                       | 1,773 B                  | ≤ 4,096 B     | ✓                         |
+| other (the o200k `.bin`)   | 1,050,145 B              | ≤ 1,126,400 B | ✓                         |
+| total                      | 1,204,469 B              | ≤ 1,331,200 B | ✓                         |
+
+The same files from the CI runner (deploy run 40285946585's report-only pass, `benchmarkIndex` 2,628–2,726): FCP
+1,490 / 2,063 / 2,069 ms, LCP 1,617 / 2,186 / 2,181, TBT 58 / 197 / 174, performance 99 / 94 / 94 — green only on the
+best run. This is the pre-PA-15 page; PA-15 measured −396 to −407 ms of FCP on the same preset (entry above), which is
+the margin the launch relies on. The verifier's post-push run is the authoritative one.
+
+**Perf spec** (`E2E_PERF_BASE_URL=<production> pnpm e2e:perf`: chromium 156, 1440 × 900, desktop, load under CDP "Fast
+4G" 9 Mbps / 170 ms, the rest unthrottled; all soft budgets met):
+
+| Metric                                                                           | Value          | Budget     |
+| -------------------------------------------------------------------------------- | -------------- | ---------- |
+| o200k load, `loaded.ms` (Fast 4G, desktop; layer gzip)                           | 1,165 ms       | ≤ 2,500 ms |
+| o200k load, navigation → live result (Fast 4G)                                   | 3,031 ms       | —          |
+| o200k `.bin` transferred                                                         | 1,049,074 B    | —          |
+| keystroke → board, 1k chars, p95 (encode request → frame, PA-12)                 | 18.6 ms        | ≤ 50 ms    |
+| keystroke → board, 1k chars, p95 / p50 (keystroke → frame, incl. 40 ms debounce) | 65.0 / 49.2 ms | —          |
+| paste 10k CJK → board update                                                     | 128.0 ms       | —          |
+| keystroke → board, 10k CJK, p95 (encode request → frame)                         | 26.3 ms        | ≤ 120 ms   |
+| longest main-thread task while typing into 10k CJK (trace)                       | 9.8 ms         | ≤ 50 ms    |
+| render 2,000 cells, result → DOM, median / max of 5 (938 mounted)                | 14.9 / 16.0 ms | ≤ 50 ms    |
+| scrub one merge step, keydown → frame, p95                                       | 27.6 ms        | —          |
+| longest main-thread task while scrubbing (trace)                                 | 14.8 ms        | ≤ 50 ms    |
+
+**Largest vocabulary file and loader diagnostics** (06 §7 item 6): `/tok/google-gemma4/95b2821652a7.bin` → `200`,
+`Content-Length: 1658262` (= the manifest's `bytesCompressed`), no `Content-Encoding` although the request offered
+`zstd, br, gzip`, `Content-Type: application/octet-stream` (one value), `Cache-Control: public, max-age=31536000,
+immutable`, `X-Content-Type-Options: nosniff`, `Cross-Origin-Resource-Policy: same-origin`, `CF-Cache-Status: HIT`;
+1,658,262 B transferred in 1.23 s (curl, HTTP/1.1, this machine). About › Diagnostics after a first visit in a fresh
+chromium profile: "o200k_base (GPT-4o → GPT-5.x): 784 ms, from the network, 1,023 KB transferred, layer gzip, content
+encoding none" (navigation → live 2.95 s unthrottled); a revisit loads from the Cache API ("14 ms, from the cache, 0 B
+transferred, layer gzip"). Feature probe in chromium: Cache API, `Intl.Segmenter` and Web Crypto available, Brotli
+`DecompressionStream` not available (so the loader verifies the gzip layer, as designed).
+
+**Mid-range Android (owner, open):** one run of docs/release.md § Mid-range Android check, to be filled in.
+
+| Phone / Android / Chrome / network | A: board shown | B: LIVE (o200k loaded) | C: typing | D: scrub | E: 2→3 morph | F: About › Diagnostics last load |
+| ---------------------------------- | -------------- | ---------------------- | --------- | -------- | ------------ | -------------------------------- |
+| _(owner)_                          |                | (≤ 4 s budget)         |           |          |              |                                  |
