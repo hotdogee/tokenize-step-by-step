@@ -30,7 +30,8 @@
     };
   });
 
-  // The picker's live-check row: focus the requested panel's heading once it is in the DOM.
+  // The picker's live-check row: focus the requested panel's heading once it is in the DOM. The picker asks only after
+  // its dialog has closed and handed focus back (Dialog `onclosed`), so that hand-back cannot take focus from the heading.
   $effect(() => {
     const panel = focus;
     const element = root;

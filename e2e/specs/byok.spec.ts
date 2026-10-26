@@ -387,4 +387,22 @@ test.describe('drawer', () => {
     await expect(key).toHaveAttribute('type', 'password');
     await expect(key).toHaveAttribute('autocomplete', 'off');
   });
+
+  // With the body chunk already loaded the drawer mounts in the same frame as the picker closes; the heading must keep
+  // focus through the dialog's queued `close`, which hands focus back to the picker button (Chromium: 0 of 5 before).
+  test('the live-check row focuses the Anthropic heading when the drawer body is already loaded', async ({ page }) => {
+    await openPage(page);
+    await openDrawer(page);
+    const toggle = page.getByTestId('live-check-toggle');
+    await toggle.click();
+    await expect(page.getByTestId('byok-warning')).toHaveCount(0);
+    await page.getByTestId('picker-button').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Claude 3+ → live check' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#byok-anthropic-heading')).toBeFocused();
+    await page.waitForTimeout(300); // nothing takes it back later
+    await expect(page.locator('#byok-anthropic-heading')).toBeFocused();
+  });
 });

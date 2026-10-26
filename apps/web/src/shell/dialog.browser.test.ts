@@ -64,6 +64,19 @@ describe('Dialog', () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  it('runs onclosed after the queued close has returned focus, so an owner can move focus elsewhere', async () => {
+    const { opener, dialog } = openDialog();
+    const closed = nextClose(dialog);
+    dialog.querySelector<HTMLButtonElement>('[data-testid="handoff"]')?.click();
+    flushSync();
+    expect(dialog.open).toBe(false);
+    await closed;
+    flushSync();
+    // The opener got focus back first; the hand-off after it is not undone by the dialog.
+    expect(document.activeElement).not.toBe(opener);
+    expect(document.activeElement?.getAttribute('data-testid')).toBe('elsewhere');
+  });
+
   it('keeps a reopen that lands between Esc and the queued close event', async () => {
     const { opener, dialog } = openDialog();
     // Esc as the engine runs it: `cancel`, whose default action closes the dialog and queues `close` as a task (a

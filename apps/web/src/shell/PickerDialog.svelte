@@ -27,6 +27,8 @@
   }
   let { open, assets, onclose, onlivecheck }: Props = $props();
   const app = appState();
+  /** The live-check row was chosen: the drawer opens once the dialog has handed focus back (`onclosed`). */
+  let liveCheck = false;
 
   const LABS: readonly Lab[] = ['openai', 'anthropic', 'google', 'meta', 'xai'];
   const LAB_KEY = {
@@ -146,7 +148,18 @@
   const dateFormat = $derived(new Intl.DateTimeFormat(i18n.current, { dateStyle: 'medium', timeZone: 'UTC' }));
 </script>
 
-<Dialog {open} labelledby="picker-title" {onclose} wide initialFocus={() => optionEl(app.tokenizer)}>
+<Dialog
+  {open}
+  labelledby="picker-title"
+  {onclose}
+  onclosed={() => {
+    if (!liveCheck) return;
+    liveCheck = false;
+    onlivecheck();
+  }}
+  wide
+  initialFocus={() => optionEl(app.tokenizer)}
+>
   <div class="head">
     <h2 id="picker-title">{i18n.t('picker.title')}</h2>
     <button type="button" class="btn btn-icon btn-quiet" aria-label={i18n.t('picker.close')} onclick={onclose}>
@@ -229,8 +242,8 @@
       type="button"
       class="btn"
       onclick={() => {
+        liveCheck = true;
         onclose();
-        onlivecheck();
       }}
     >
       {i18n.t('picker.claude3')}

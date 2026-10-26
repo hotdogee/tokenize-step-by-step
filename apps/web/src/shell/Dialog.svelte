@@ -6,7 +6,8 @@
    *
    * The owner hears of a close at once — on `cancel` (Esc) and on a backdrop click — not from the `close` event, which
    * engines queue as a task (Chromium at 2560 × 1440: 50–110 ms after Esc). A click or shortcut that reopens the dialog in
-   * that gap is kept: the queued `close` finds the dialog open again and is ignored.
+   * that gap is kept: the queued `close` finds the dialog open again and is ignored. `onclosed` runs after that `close`
+   * has handed focus back, for an owner that moves focus elsewhere once the dialog is gone (the picker's live-check row).
    */
   import type { Snippet } from 'svelte';
 
@@ -14,12 +15,14 @@
     open: boolean;
     labelledby: string;
     onclose: () => void;
+    /** Runs once the dialog has closed and focus is back on its opener (the queued `close` event). */
+    onclosed?: () => void;
     /** Element to focus when the dialog opens (default: the first focusable element). */
     initialFocus?: () => HTMLElement | null | undefined;
     wide?: boolean;
     children: Snippet;
   }
-  let { open, labelledby, onclose, initialFocus, wide = false, children }: Props = $props();
+  let { open, labelledby, onclose, onclosed, initialFocus, wide = false, children }: Props = $props();
 
   let dialog: HTMLDialogElement | undefined = $state();
   let returnTo: HTMLElement | null = null;
@@ -41,6 +44,7 @@
     onclose();
     returnTo?.focus();
     returnTo = null;
+    onclosed?.();
   }
 
   function handleClick(event: MouseEvent): void {
