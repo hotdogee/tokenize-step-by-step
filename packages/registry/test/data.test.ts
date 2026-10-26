@@ -120,8 +120,8 @@ describe('models', () => {
     for (const m of claude3plus) expect([m.byok, m.fidelity]).toEqual(['anthropic-count', 'unavailable']);
   });
 
-  it('dates every row on the research date and marks the inferred mappings of research §9', () => {
-    expect(new Set(models.map((m) => m.checkedOn))).toEqual(new Set(['2026-10-25']));
+  it('dates every row on the pre-launch re-verification date and marks the inferred mappings of research §9', () => {
+    expect(new Set(models.map((m) => m.checkedOn))).toEqual(new Set(['2026-10-26']));
     const inferred = models.filter((m) => m.fidelity === 'inferred').map((m) => m.model);
     expect(inferred).toEqual(expect.arrayContaining(['GPT-6 Astra', 'Gemini 4 Argon', 'Muse Wonder', 'Grok 4.7']));
   });
@@ -158,7 +158,7 @@ describe('licences and notices', () => {
 
 describe('byok', () => {
   it('holds the AD-24 values', () => {
-    expect(byok.checkedOn).toBe('2026-10-25');
+    expect(byok.checkedOn).toBe('2026-10-26');
     expect(byok.anthropic.version).toBe('2026-10-21');
     expect(byok.anthropic.defaultAuth).toBe('bearer');
     expect(byok.anthropic.authSchemes).toEqual(['bearer', 'x-api-key']);
