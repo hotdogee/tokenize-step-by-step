@@ -13,9 +13,50 @@ at a time → tokens with ids**, including tokens that cover only part of a char
 
 ## Status
 
-Work package **WP00** (scaffold and frozen contracts) is in place: the pnpm workspace, strict TypeScript, lint/format/test
-tooling, the FROZEN v1 interfaces, a placeholder app shell and the CI/deploy configuration. The engines, the board and the
-real UI arrive with the later work packages of [`docs/design/07-implementation-plan.md`](docs/design/07-implementation-plan.md).
+The work packages of [`docs/design/07-implementation-plan.md`](docs/design/07-implementation-plan.md) through wave 4's
+integration (WP13a) are in place: both engines, the Worker, the board, the pipeline rail and scrubber, the inspector,
+the live-check drawer, long-input tiers, URL state, error handling and diagnostics. The launch checklist (WP13b) is
+`docs/release.md`.
+
+## Architecture
+
+```text
+ build time (Node, CI)                                     run time (the browser only — no server code anywhere)
+ ─────────────────────                                     ──────────────────────────────────────────────────────
+ tools/oracle (Python)                                     main thread: apps/web (Svelte 5)
+   pinned upstream vocabularies → data/vocab/raw             boot.js (lang, theme) → app shell → AppState
+   reference tokenizers → fixtures/*.json (golden)           first paint: the precomputed default example
+ @tsbs/vocab-tools (tsbs-vocab)                              board · pipeline rail · inspector · live-check drawer
+   raw vocab → TSBV1 .bin (gzip) + manifest                    │ postMessage (typed arrays, transferred)
+   conformance against the fixtures before any write           ▼
+   precomputed example results, licence data               Web Worker: @tsbs/worker
+ vite build → apps/web/dist (+ dist/tok/*.bin)               loader: Cache API → fetch /tok/<id>/<sha>.bin → sha256 → gunzip
+   → Cloudflare Workers static assets (CI deploys)           engines (lazy chunks): byte-level BPE · SentencePiece BPE
+```
+
+- **What runs where.** Everything runs in the visitor's browser. The page (`apps/web`) renders and animates; the
+  tokenizer engines run in a Web Worker so long texts never block the page. The only network requests are the site's
+  own static files (`/assets`, `/examples`, `/tok`) and, only when the visitor opens the live-check drawer and enters
+  their own key, the Anthropic and xAI token-counting APIs.
+- **The three core packages.** `@tsbs/core` is the pure TypeScript heart (no DOM, no Node): the struct-of-arrays
+  `TokenizationResult`, text analysis (code points, UTF-8, grapheme clusters), the shared agenda merge loop, both engines
+  and the merge timeline that makes every BPE step replayable. `@tsbs/worker` hosts the engines behind a small message
+  protocol (load, encode with cancellation, lookup) and caches vocabularies in the Cache API. `@tsbs/registry` is the
+  data: tokenizers, model mappings with dated evidence, licences and notices, example chips, BYOK endpoints — validated
+  by zod at build time, imported as plain JSON at run time.
+- **The Worker.** The page posts `load` for the default tokenizer only after its first paint; the Worker downloads the
+  vocabulary (or reads it from the Cache API), verifies its sha256, builds the tables, and answers encodes with results
+  whose typed arrays are transferred, never copied. A newer keystroke cancels an older encode; a crashed Worker is
+  respawned once.
+- **The data pipeline.** `tools/oracle` pins every upstream vocabulary by URL and sha256 and generates the golden
+  fixtures with the reference libraries (tiktoken, sentencepiece, Hugging Face tokenizers). `tsbs-vocab build` converts
+  each vocabulary into a compact `.bin`, refusing to write one whose tables fail its fixture, and emits the precomputed
+  example results the page shows before any vocabulary arrives. CI runs the conformance, unit, component, end-to-end
+  (three browsers, two devices, three viewports) and Lighthouse checks, then deploys the tested build.
+
+The design documents explain each piece in depth: [`02-architecture.md`](docs/design/02-architecture.md),
+[`04-engines.md`](docs/design/04-engines.md), [`05-ui-ux.md`](docs/design/05-ui-ux.md); developer notes, including how the
+page is wired, are in [`docs/dev.md`](docs/dev.md).
 
 ## Run it
 

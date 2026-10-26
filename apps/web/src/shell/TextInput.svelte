@@ -1,14 +1,22 @@
 <script lang="ts">
   /**
    * The input textarea (05 §1 region 2, §6 IME): auto-grows from 3 to 8 rows (height set through the CSSOM, which the
-   * strict CSP allows), `lang` = the resolved text language, spellcheck/autocorrect off. IME: while composing the text is
-   * provisional and no encode is sent; on `compositionend` the encode is scheduled from `textarea.value` after a frame, and
-   * a later `input` with `isComposing === false` is authoritative — the 40 ms debounce collapses the pair. Paste encodes
-   * immediately.
+   * strict CSP allows), `lang` = the resolved text language, spellcheck/autocapitalize/autocorrect off.
+   *
+   * IME (05 §6): composing = `isComposing || key === 'Process' || keyCode === 229` (old Android keyboards send no
+   * composition events). While composing the text is provisional: `input` events update the text — stops 1–3 and the
+   * counts, shown muted — but no encode is sent. Browsers disagree on the order (Chromium sends the last `input` with
+   * `isComposing: true` before `compositionend`; Firefox and WebKit send `compositionend`, then an `input` with
+   * `isComposing: false`), so `compositionend` schedules the encode from `textarea.value` read in the next animation frame,
+   * and a later `input` with `isComposing === false` is the authoritative trigger; the 40 ms debounce collapses the pair
+   * into one request, and when that `input` has already taken the committed text (a frame later than the debounce on a
+   * slow machine) the frame does nothing, so the commit never sends a second encode of the same text. A paste (`inputType` `insertFromPaste`) tokenizes at once. The caret position feeds the window a
+   * long input's board shows (AD-27). WP13 wiring.
    */
   import { appState } from '../app/context.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
+  import { isComposing } from './shortcuts.ts';
 
   interface Props {
     /** Exposes the element so `/` can focus it. */
@@ -47,8 +55,10 @@
 
   function onInput(event: Event): void {
     const target = event.currentTarget as HTMLTextAreaElement;
-    app.composing = (event as InputEvent).isComposing;
-    app.setText(target.value);
+    const input = event as InputEvent;
+    app.composing = input.isComposing;
+    app.setText(target.value, input.inputType === 'insertFromPaste');
+    app.setCaret(target.selectionStart);
   }
 
   function onCompositionStart(): void {
@@ -58,19 +68,19 @@
   function onCompositionEnd(event: CompositionEvent): void {
     const target = event.currentTarget as HTMLTextAreaElement;
     requestAnimationFrame(() => {
+      if (!app.composing && target.value === app.text) return; // the non-composing `input` already took it
       app.composing = false;
       app.setText(target.value);
     });
   }
 
-  function onPaste(): void {
-    queueMicrotask(() => {
-      if (element !== undefined) {
-        app.composing = false;
-        app.text = element.value;
-        app.encodeNow();
-      }
-    });
+  /** A key that belongs to an IME composition marks the text provisional until the next non-composing `input`. */
+  function onKeydown(event: KeyboardEvent): void {
+    if (isComposing(event)) app.composing = true;
+  }
+
+  function onCaret(event: Event): void {
+    app.setCaret((event.currentTarget as HTMLTextAreaElement).selectionStart);
   }
 </script>
 
@@ -91,7 +101,10 @@
   oninput={onInput}
   oncompositionstart={onCompositionStart}
   oncompositionend={onCompositionEnd}
-  onpaste={onPaste}></textarea>
+  onkeydown={onKeydown}
+  onkeyup={onCaret}
+  onclick={onCaret}
+  onselect={onCaret}></textarea>
 
 <style>
   .label {

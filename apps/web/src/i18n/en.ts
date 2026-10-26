@@ -112,6 +112,7 @@ export const en = {
   'counts.steps': { one: '{n} step', other: '{n} steps' },
   'counts.partial': { one: '{n} partial-character token', other: '{n} partial-character tokens' },
   'counts.tokensPending': 'tokens: waiting for the tokenizer',
+  'counts.tokensOnDemand': 'tokens: press “Tokenize now”',
   'counts.stale': 'stale',
   'badge.precomputed': 'precomputed',
   'badge.live': 'live',
@@ -200,8 +201,11 @@ export const en = {
   'error.fetch': 'A new version is available — reload',
   'error.integrity': 'Download was corrupted — retry',
   'error.oom': 'Not enough memory to load {name} on this device — try {fallback}',
+  'error.oomText': 'Not enough memory to tokenize this text on this device — try a shorter text',
   'error.quota': 'The offline cache is not available; the tokenizer still works.',
   'error.internal': 'Something went wrong: {message}',
+  'error.network': 'Could not download {name} — check the connection and retry',
+  'error.engine': 'This text could not be tokenized ({code}).',
   'action.reload': 'Reload',
   'action.retry': 'Retry',
   'action.back': 'Go back',
@@ -276,6 +280,13 @@ export const en = {
   'longInput.banner': 'Long input — tokenize on demand',
   'longInput.run': 'Tokenize now',
   'longInput.capped': 'Only the first {n} code points are analysed',
+  'status.replayOff': 'merge replay is not recorded above {n} code points',
+  'link.copy': 'Copy link',
+  'link.copied': 'Link copied',
+  'link.copiedWithoutText': 'Link copied without the text (longer than {n} characters)',
+  'link.inAddressBar': 'Could not copy — the link is in the address bar',
+  'link.inAddressBarWithoutText':
+    'Could not copy — the link is in the address bar, without the text (longer than {n} characters)',
 } as const satisfies Readonly<Record<string, Message>>;
 
 /** Every message key (the typed `t()` key union). */

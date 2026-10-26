@@ -84,6 +84,59 @@ for the tokenizer". E2E specs that need deterministic precomputed results open `
 (`e2e/specs/live-worker.spec.ts` covers both modes); the Worker's generated inputs
 (`packages/worker/src/generated/{vocab-manifest,engine-config}.json`) come from `pnpm generate` or any Vite run.
 
+## How the page is wired (WP13)
+
+One `AppState` (`apps/web/src/app/app-state.svelte.ts`, 05 §1.1) drives the client, the board, the rail, the inspector
+and the drawer:
+
+- **Startup.** The precomputed default example (台灣台南 on o200k, inlined) is on screen at first paint, badge
+  "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
+  the first paint entry (`largest-contentful-paint`, else `paint`) and two animation frames (`load-trigger.ts`, 06 §3);
+  `integration-load.spec.ts` asserts the Worker script and the `.bin` start after the last LCP entry. While a tokenizer
+  loads, an example chip answers from the precomputed examples (`precomputed.ts`); the engine's first answer replaces a
+  precomputed result inside the board's View Transition (`setResultTransition`, skipped above 8 MB, where the previous
+  result is released first) and the badge says "live".
+- **Requests.** Every encode carries one sequence number: an older answer is dropped, a superseded encode settles as
+  `cancelled` (never an error), keystrokes coalesce in the 40 ms debounce, an encode asked for during a load is sent once
+  after `loaded`, a paste (`inputType` `insertFromPaste`) skips the debounce, an IME composition sends nothing until it is
+  committed (05 §6).
+- **The board's result** is `AppState.board`: `final` (the current result, or its window), `stale` (the last result, kept
+  with `data-pending` until its successor arrives — a keystroke on a loaded tokenizer renders once, PA-11; a tokenizer
+  switch keeps the last result, AD-19) or `text` (text-only stops 1–3, only while nothing is loaded for the text, an IME
+  composition is open or a long input waits). Rows virtualize above 600 cells or 8 packed rows (`board/window.ts`).
+- **Long input** (AD-27, `long-input.ts`): ≤ 2,000 code points live; ≤ 20,000 virtualized with scoped replay; above that
+  the "Long input — tokenize on demand" banner runs the WHOLE analysed text once (`trace: { maxSteps: 50_000 }` up to
+  100,000 code points, `trace: false` beyond) and the board shows a 2,000-byte window of that result around the caret
+  (`window-slice.ts` slices the full result; it never tokenizes a substring); above 200,000 code points only the first
+  200,000 are analysed. The counts line keeps code points, graphemes and bytes live and marks the last run's tokens
+  "stale" after an edit. Each tier change is said once in the always-mounted status region (the banner is lazy-mounted
+  and is no live region of its own). A run asked for while the tokenizer loads runs on `loaded`, also after a failed
+  load is retried, and is dropped when the text goes back under 20,001 code points (the load then encodes the short
+  text live).
+- **URL state** (`url-state.ts`): `?t=&q=&s=<stage>.<step>&b=&lang=&tl=` is read once (`bootstrap.ts`), invalid values
+  ignored; every change but the text is written with `history.replaceState` 500 ms later; "Copy link" alone puts the text
+  in `q` (≤ 2,000 code points) and confirms it.
+- **Errors** (`errors.ts`, 05 §12 / 04 §5) surface as one `role="alert"` toast with its action: reload (stale deploy),
+  retry (network, integrity after the loader's automatic refetch; in an on-demand tier it runs the whole text again),
+  back (a load out of memory: the previous tokenizer, from the cache; an out-of-memory tokenization offers no action and
+  suggests a shorter text). `quota` is informational: when the Worker's `ready.features.cacheApi` is false (Safari
+  private mode, blocked storage) the toast says once per session that the tokenizer works without the offline cache. A
+  short storage quota with a working cache is silent by design: the loader keeps the vocabulary in memory only
+  (`packages/worker/src/loader.ts`, `hasRoom`) and the FROZEN protocol has no warning message to tell the page.
+- **Vocabulary lookups.** `TokenizationView`'s `idOf` / `pieceOf` go through the Worker's `lookup` (`vocab-lookup.ts`),
+  batched and cached per tokenizer; an answered batch bumps `AppState.lookupVersion`, so `viewOf` builds a fresh view.
+- **Startup budget (PA-7).** `plugins/registry-trim.ts` keeps registry fields `/` never renders (tokenizer `asset` /
+  `fixture`, licence `summary` / `spdx`, the MODIFIED template) and the non-default chips' "why" sentences out of the
+  bundle (`app/example-why.svelte.ts` loads those on the first other chip); the inspector model, the window slicer and
+  the long-input banner are lazy chunks. `plugins/lazy-chunks.ts` names chunks `lazy-*` on the rendered chunk graph.
+- **The merge list** stays in the rail region at every width (WP09's placement) rather than moving into the ≥ 1024 px
+  side rail of 05 §1: its toggle, scope and step live in the rail, one DOM position keeps the tab order the same at every
+  breakpoint, and the sticky side rail is the inspector's column (moving it would need the rail's replay state to cross
+  into the board's layout).
+
+`pnpm e2e integration` runs the WP13 suites (`e2e/specs/integration-*.spec.ts`): the load trigger, precomputed vs live
+for every chip × tokenizer, long input, URL state, error toasts, the Cache API second visit, IME and a keyboard tour.
+
 ## Windows
 
 - Always run wrangler through the workspace: `pnpm exec wrangler …`, never `npx wrangler` (research §6.4).

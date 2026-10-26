@@ -6,8 +6,14 @@
    * WP08's and the drawer WP10's. Also owns the global single-key shortcuts (AD-22) and the two dialogs,
    * which load on first open: neither is needed for first paint, and the picker brings the model rows and licence tags
    * with it (registry-details.ts), so both stay out of the initial Main JS of `/` (06 §3).
+   *
+   * WP13 wiring: the long-input banners and "Copy link" in the input panel, the URL writer (`history.replaceState`,
+   * debounced 500 ms, everything but the text, and a `q` that no longer equals the text removed — url-state.ts) and the crossfade a result swap runs in (precomputed →
+   * live, one tokenizer's answer → another's: the board's View Transition of motion/view-transition.ts).
    */
   import { onMount } from 'svelte';
+  import { motionPrefs } from '../motion/motion-prefs.svelte.ts';
+  import { crossfade } from '../motion/view-transition.ts';
   import Board from '../board/Board.svelte';
   import { openLiveCheck } from '../byok/drawer.svelte.ts';
   import LiveCheckDrawer from '../byok/LiveCheckDrawer.svelte';
@@ -24,10 +30,15 @@
   import type PickerDialogComponent from '../shell/PickerDialog.svelte';
   import { isEditableTarget, matchShortcut } from '../shell/shortcuts.ts';
   import PipelineRail from '../pipeline/PipelineRail.svelte';
+  import { setViewResolvers } from '../board/view-cache.ts';
   import TextInput from '../shell/TextInput.svelte';
   import type { AppState } from './app-state.svelte.ts';
   import { createAppState } from './bootstrap.ts';
   import { provideAppState } from './context.ts';
+  import CopyLink from './CopyLink.svelte';
+  import type LongInputBannerComponent from './LongInputBanner.svelte';
+  import { isOnDemand } from './long-input.ts';
+  import { stageParam, URL_WRITE_DELAY_MS, urlFor, type UrlSnapshot } from './url-state.ts';
 
   interface Props {
     /** Tests pass their own; the page builds one (bootstrap.ts). */
@@ -42,10 +53,62 @@
   let PickerDialog: typeof PickerDialogComponent | null = $state.raw(null);
   let HelpDialog: typeof HelpDialogComponent | null = $state.raw(null);
   let textarea: HTMLTextAreaElement | undefined = $state();
+  /** The long-input banner (AD-27) loads the first time a text reaches an on-demand tier. */
+  let LongInputBanner: typeof LongInputBannerComponent | null = $state.raw(null);
+  $effect(() => {
+    if (!isOnDemand(app.longInput) || LongInputBanner !== null) return;
+    import('./LongInputBanner.svelte').then(
+      (module) => {
+        LongInputBanner = module.default;
+      },
+      (error: unknown) => {
+        staleChunk(error);
+      },
+    );
+  });
 
   /** A dialog chunk that fails to load means a page older than the deploy: the `fetch` alert offers the reload (AD-11). */
   function staleChunk(error: unknown): void {
     app.error = { code: 'fetch', message: String(error), retryable: false, tokenizer: app.tokenizer, previous: null };
+  }
+
+  // URL state (05 §1.1): everything but the text, 500 ms after the last change; a `q` already in the URL (a deep link,
+  // "Copy link") stays while the text equals it and goes 500 ms after an edit, so the address bar never brings back a text
+  // that is no longer in the textarea. The state the page opened with is never rewritten.
+  let urlKey: string | null = null;
+  let urlTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    const snapshot: UrlSnapshot = {
+      tokenizer: app.tokenizer,
+      stage: app.stage,
+      step: app.step,
+      byteView: app.byteView,
+      locale: i18n.current,
+      textLang: app.textLang,
+    };
+    const text = app.text;
+    const key = [
+      snapshot.tokenizer,
+      stageParam(snapshot.stage, snapshot.step),
+      snapshot.byteView,
+      snapshot.locale,
+      snapshot.textLang,
+    ].join('|');
+    const first = urlKey === null;
+    const changed = urlKey !== key;
+    urlKey = key;
+    if (first || (!changed && !staleQuery(text))) return;
+    clearTimeout(urlTimer);
+    urlTimer = setTimeout(() => {
+      const q = new URL(location.href).searchParams.get('q');
+      history.replaceState(history.state, '', urlFor(location.href, snapshot, q === text ? text : undefined));
+    }, URL_WRITE_DELAY_MS);
+  });
+
+  /** True when the URL carries a `q` that is not the current text. */
+  function staleQuery(text: string): boolean {
+    const q = new URL(location.href).searchParams.get('q');
+    return q !== null && q !== text;
   }
 
   function openPicker(): void {
@@ -117,7 +180,14 @@
 
   onMount(() => {
     i18n.setPage('main');
+    app.setResultTransition((update) => crossfade(document.getElementById('board'), update, motionPrefs.reduced));
+    setViewResolvers(app.viewResolvers);
     void app.start();
+    return () => {
+      app.setResultTransition(null);
+      setViewResolvers(null);
+      clearTimeout(urlTimer);
+    };
   });
 </script>
 
@@ -136,6 +206,8 @@
     <ExampleChips />
     <OptionsRow />
     <CountsLine />
+    {#if LongInputBanner !== null}<LongInputBanner />{/if}
+    <CopyLink />
   </section>
   <PipelineRail />
   <Board />

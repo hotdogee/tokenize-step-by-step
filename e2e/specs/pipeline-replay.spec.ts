@@ -9,7 +9,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Family, TokenizerId } from '@tsbs/core';
 import { chooseExample, grid } from './board-helpers.ts';
-import { domParts, fixture, fixtureReplay, partBytes, scrubber, walkSteps, type Part } from './pipeline-helpers.ts';
+import {
+  domParts,
+  fixture,
+  fixtureReplay,
+  maskUnnamed,
+  partBytes,
+  scrubber,
+  walkSteps,
+  type Part,
+} from './pipeline-helpers.ts';
 import { openShell, pickTokenizer } from './shell-helpers.ts';
 
 /** Opens `/`, selects the tokenizer (unless it is the default) and the chip, and waits for the live result. */
@@ -21,12 +30,12 @@ async function show(page: Page, tokenizer: string | null, chip: string): Promise
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
 }
 
-/** Walks every step at stop 5 and returns the token tier at each. */
-async function replayFromDom(page: Page, count: number): Promise<Part[][]> {
+/** Walks every step at stop 5 and returns the token tier at each (ids the replay leaves unnamed masked). */
+async function replayFromDom(page: Page, count: number, expected: readonly Part[][]): Promise<Part[][]> {
   const seen: Part[][] = [];
   await walkSteps(page, count, async (k) => {
     await expect(grid(page)).toHaveAttribute('data-stage', '5');
-    seen[k] = await domParts(page);
+    seen[k] = maskUnnamed(await domParts(page), expected[k]);
   });
   return seen;
 }
@@ -41,7 +50,7 @@ for (const { name, id, picker, chip } of BYTE_LEVEL) {
   test(`token tier at every step equals the fixture replay: ${name}`, async ({ page }) => {
     const expected = fixtureReplay(id, 'bytelevel-bpe', chip);
     await show(page, picker, chip);
-    expect(await replayFromDom(page, expected.length - 1)).toEqual(expected);
+    expect(await replayFromDom(page, expected.length - 1, expected)).toEqual(expected);
   });
 }
 
@@ -81,7 +90,7 @@ for (const { name, id, picker, chip, before } of SPM) {
       expect(await domParts(page)).toEqual(final);
       return;
     }
-    expect(await replayFromDom(page, expected.length - 1)).toEqual(expected);
+    expect(await replayFromDom(page, expected.length - 1, expected)).toEqual(expected);
   });
 }
 
@@ -89,7 +98,7 @@ test('byte-level replays chunk by chunk, left to right (Hello 台灣! 東京タ�
   const chip = 'mixed-hello-taiwan-tokyo';
   const expected = fixtureReplay('openai-o200k_base', 'bytelevel-bpe', chip);
   await show(page, null, chip);
-  const seen = await replayFromDom(page, expected.length - 1);
+  const seen = await replayFromDom(page, expected.length - 1, expected);
   expect(seen).toEqual(expected);
   // At step k the chunk being merged is the one whose merge record holds step k: earlier chunks show their final
   // tokens, later chunks are still single bytes.

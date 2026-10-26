@@ -23,7 +23,7 @@
    *   end" (05 §2; Play does not).
    * - The merge list sits in the rail under the scrubber (on narrow viewports it is the collapsible section 05 §1 asks
    *   for) with a single tab stop (roving tabindex), so it adds one Tab stop between Play and the board where 05 §8 has
-   *   it after the inspector; WP13 owns the final region order.
+   *   it after the inspector; WP13 kept it here at every width (docs/dev.md, "How the page is wired").
    * - The motion director (motion/director.svelte.ts) animates every commit; the switch crossfades wrap the byte-view,
    *   tokenizer and locale switches (motion/view-transition.ts). Both load nothing before the first interaction.
    */
@@ -31,6 +31,7 @@
   import type { TokenizationResult } from '@tsbs/core';
   import type { Stage } from '../app/app-state.svelte.ts';
   import { appState } from '../app/context.ts';
+  import { TRACED_MAX } from '../app/long-input.ts';
   import { viewOf } from '../board/view-cache.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
@@ -89,8 +90,11 @@
     if (scope.kind === 'chunk')
       lines.push(i18n.t('status.replayScope', { index: scope.chunk + 1, count: scope.chunks }));
     if (scope.kind === 'window') lines.push(i18n.t('status.replayWindow', { start: scope.start, end: scope.end }));
+    // A long input's run (AD-27, WP13): the cap of its recorded prefix, or no timeline at all above 100,000 code points.
     if (result.timeline?.truncated === true)
-      lines.push(i18n.t('status.replayLimited', { n: result.timeline.stepCount }));
+      lines.push(i18n.t('status.replayLimited', { n: app.replayLimit ?? result.timeline.stepCount }));
+    else if (result.timeline === null && result.options.trace === false && app.longInput === 'on-demand')
+      lines.push(i18n.t('status.replayOff', { n: TRACED_MAX }));
     return lines.join(i18n.t('a11y.sep'));
   });
 

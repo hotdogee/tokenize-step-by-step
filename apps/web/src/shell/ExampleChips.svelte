@@ -5,9 +5,9 @@
    * the `lang` of its resolved text language; a chip whose precomputed result splits a character on the selected tokenizer
    * shows the SVG hatch mark with visually hidden text.
    */
-  import type { ExampleChip } from '@tsbs/registry';
   import { appState } from '../app/context.ts';
-  import { CHIP_SPLITS, EXAMPLES } from '../app/registry.ts';
+  import { exampleWhy } from '../app/example-why.svelte.ts';
+  import { CHIP_SPLITS, EXAMPLES, type SiteExampleChip as ExampleChip } from '../app/registry.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
   import Icon from './Icon.svelte';
@@ -111,7 +111,7 @@
     {/each}
   </div>
   {#if selected !== null}
-    <p class="why prose">{selected.why[i18n.current]}</p>
+    <p class="why prose">{exampleWhy.text(selected, i18n.current)}</p>
   {/if}
 </div>
 

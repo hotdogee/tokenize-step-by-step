@@ -2,16 +2,20 @@
   /**
    * The counts line (05 §1, §3.5 ARIA table): `<ul role="list">` of code points · grapheme clusters · bytes · tokens ·
    * partial-character tokens; the "·" separators are CSS generated content with empty alt text, so screen readers hear
-   * "4 code points, 4 grapheme clusters, 12 bytes, …". Code points, graphemes and bytes are always live from the text;
-   * tokens come from the current result (precomputed or live badge) and wait for the tokenizer otherwise.
+   * "4 code points, 4 grapheme clusters, 12 bytes, …". Code points, graphemes and bytes are always live from the analysed
+   * text (`analyzeText`, no tokenizer needed — every long-input tier, AD-27); tokens come from the current result
+   * (precomputed or live badge) and wait for the tokenizer otherwise. In an on-demand tier they are the last run's values,
+   * with a "stale" badge once the text has changed since, and before any run on this tokenizer and options the line
+   * points at the banner's "Tokenize now" instead of the tokenizer (WP13).
    */
   import { appState } from '../app/context.ts';
   import { textStats } from '../app/text-stats.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
 
   const app = appState();
-  const stats = $derived(textStats(app.text, 0));
-  const result = $derived(app.currentResult);
+  const stats = $derived(textStats(app.analysed, 0));
+  const counts = $derived(app.tokenCounts);
+  const stale = $derived(counts !== null && app.resultStale);
 </script>
 
 <div class="counts">
@@ -19,14 +23,19 @@
     <li>{i18n.t('counts.codePoints', { n: stats.codePoints })}</li>
     <li>{i18n.t('counts.graphemes', { n: stats.graphemes })}</li>
     <li>{i18n.t('counts.bytes', { n: stats.bytes })}</li>
-    {#if result !== null}
-      <li>{i18n.t('counts.tokens', { n: result.stats.tokens })}</li>
-      <li>{i18n.t('counts.partial', { n: result.stats.partialTokens })}</li>
+    {#if counts !== null}
+      <li class:stale>{i18n.t('counts.tokens', { n: counts.tokens })}</li>
+      <li class:stale>{i18n.t('counts.partial', { n: counts.partialTokens })}</li>
     {:else}
-      <li class="pending">{i18n.t('counts.tokensPending')}</li>
+      <li class="pending" data-testid="tokens-pending">
+        {i18n.t(app.awaitingRun ? 'counts.tokensOnDemand' : 'counts.tokensPending')}
+      </li>
     {/if}
   </ul>
-  {#if result !== null}
+  {#if stale}
+    <span class="badge control-label" data-testid="stale-badge">{i18n.t('counts.stale')}</span>
+  {/if}
+  {#if counts !== null}
     <span class="badge control-label" data-source={app.resultSource}
       >{i18n.t(app.resultSource === 'live' ? 'badge.live' : 'badge.precomputed')}</span
     >
@@ -58,7 +67,8 @@
     color: var(--fg-muted);
   }
 
-  .pending {
+  .pending,
+  .stale {
     color: var(--fg-muted);
   }
 

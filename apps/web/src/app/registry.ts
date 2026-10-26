@@ -5,7 +5,7 @@
  * which `/` shows only inside the picker dialog, live in `registry-details.ts` so they stay out of the initial bundle.
  */
 import type { TokenizerId } from '@tsbs/core';
-import type { ExampleChip, Locale, NoticeEntry, NoticeKey, TokenizerEntry } from '@tsbs/registry';
+import type { ExampleChip, L10n, Locale, NoticeEntry, NoticeKey, TokenizerEntry } from '@tsbs/registry';
 import { examples } from '@tsbs/registry/examples';
 import { licences } from '@tsbs/registry/licences';
 import { defaultTokenizerId, tokenizers } from '@tsbs/registry/tokenizers';
@@ -14,8 +14,14 @@ import examplesIndex from '../generated/examples-index.json';
 /** The nine tokenizers in the brief's lab order (the picker hides `withdrawn` ones itself). */
 export const TOKENIZERS: readonly TokenizerEntry[] = tokenizers;
 
+/**
+ * An example chip as the site bundles it: `why` is present on the default chip only (the others load on demand,
+ * `example-why.svelte.ts`; PA-7, plugins/registry-trim.ts).
+ */
+export type SiteExampleChip = Omit<ExampleChip, 'why'> & { readonly why?: L10n };
+
 /** The 19 example chips (05 §6); the first one is the default example. */
-export const EXAMPLES: readonly ExampleChip[] = examples;
+export const EXAMPLES: readonly SiteExampleChip[] = examples;
 
 /** The selected tokenizer on first visit (exactly one `default: true`). */
 export const DEFAULT_TOKENIZER: TokenizerId = defaultTokenizerId;

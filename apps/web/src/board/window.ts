@@ -7,8 +7,15 @@
 
 /** Rows mounted beyond each edge of the viewport. */
 export const OVERSCAN = 2;
-/** Boards with at most this many packed rows mount every row (≈ the "full board" tier of AD-27 for short inputs). */
-export const VIRTUALIZE_ABOVE = 24;
+/** PA-11: a board with more grid cells than this is virtualized (2,000 cells must render in ≤ 50 ms of script, 06 §3). */
+export const VIRTUALIZE_CELLS = 600;
+/** PA-11: a board with more packed rows than this is virtualized. */
+export const VIRTUALIZE_ROWS = 8;
+
+/** Whether a board of `cells` grid cells in `rows` packed rows mounts only its window (PA-11: whichever bound first). */
+export function shouldVirtualize(cells: number, rows: number): boolean {
+  return cells > VIRTUALIZE_CELLS || rows > VIRTUALIZE_ROWS;
+}
 
 export interface RowRange {
   /** First and last row index of the window (inclusive); `last < first` for an empty board. */
@@ -18,7 +25,8 @@ export interface RowRange {
 
 /**
  * The rows overlapping the viewport plus the overscan. `viewTop` is the viewport top minus the grid top in px (negative
- * while the grid is still below the fold), `viewHeight` the viewport height.
+ * while the grid is still below the fold), `viewHeight` the viewport height; `virtualize` false mounts every row
+ * (default: by row count alone; the board passes `shouldVirtualize`, which also counts cells).
  */
 export function visibleRows(
   viewTop: number,
@@ -26,9 +34,10 @@ export function visibleRows(
   rowHeight: number,
   rowCount: number,
   overscan: number = OVERSCAN,
+  virtualize: boolean = rowCount > VIRTUALIZE_ROWS,
 ): RowRange {
   if (rowCount <= 0) return { first: 0, last: -1 };
-  if (rowCount <= VIRTUALIZE_ABOVE || !(rowHeight > 0)) return { first: 0, last: rowCount - 1 };
+  if (!virtualize || !(rowHeight > 0)) return { first: 0, last: rowCount - 1 };
   const top = Math.floor(viewTop / rowHeight);
   const bottom = Math.ceil((viewTop + Math.max(0, viewHeight)) / rowHeight) - 1;
   const first = Math.min(rowCount - 1, Math.max(0, top - overscan));

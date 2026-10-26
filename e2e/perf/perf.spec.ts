@@ -3,16 +3,18 @@
  *
  * 1. o200k load end to end under CDP `Network.emulateNetworkConditions` "Fast 4G" (9 Mbps down, 170 ms RTT):
  *    `loaded.ms` (the Worker's download + verify + gunzip + build, read from About's `tsbs:lastLoaded`) ≤ 2.5 s;
- * 2. keystroke → board update at 1k and 10k characters (p95 ≤ 50 / ≤ 120 ms), with a Chromium trace of the 10k typing
+ * 2. keystroke → board update at 1k and 10k characters (p95 ≤ 50 / ≤ 120 ms), measured from the encode request the 40 ms
+ *    debounce releases (PA-12; the from-keystroke latency is recorded beside it), with a Chromium trace of the 10k typing
  *    (no main-thread task > 50 ms);
- * 3. render a board of ≈ 2,000 cells (the text is sized from a calibration render): the wall time from the Worker's
- *    `result` to the updated DOM, held to the 06 §3 "≤ 50 ms script" budget (wall time bounds the script time from above);
+ * 3. render a board of ≈ 2,000 cells (the text is sized from the board's own `data-cells` count, the cells every row
+ *    would mount): the wall time from the Worker's `result` to the updated DOM, held to the 06 §3 "≤ 50 ms script"
+ *    budget (wall time bounds the script time from above). Since PA-11 such a board is virtualized (above 600 cells or 8
+ *    rows) and renders once per text change, so only the rows in view are mounted;
  * 4. scrub: `.` through the merge steps at stop 5 with a trace (recorded).
  *
  * Budget misses are soft (warnings + `test-results/perf/perf-results.json`, the trend artifact) unless `PERF_STRICT=1`.
- * The keystroke budget is held to the interval 06 §3 defines, keystroke → frame, which includes the deliberate 40 ms
- * encode debounce of 05 §6 (`ENCODE_DEBOUNCE_MS`); the latency from the `encode` request the debounce releases is
- * recorded beside it as a diagnostic (docs/perf-log.md, finding 2).
+ * PA-12: the keystroke budget is held from the `encode` request (after the 40 ms `ENCODE_DEBOUNCE_MS` of 05 §6) to the
+ * next presented frame; keystroke → frame, which includes the debounce, is recorded beside it but not asserted.
  */
 import { join } from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
@@ -170,12 +172,17 @@ test('keystroke → board update at 1k characters (p95 ≤ 50 ms)', async ({ pag
   );
   expect(total).toHaveLength(KEYSTROKES);
   budget(
-    'keystroke → board update, 1k chars, p95 (keystroke → frame, incl. 40 ms debounce)',
-    percentile(total, 95),
+    'keystroke → board update, 1k chars, p95 (encode request → frame, PA-12)',
+    percentile(work, 95),
     BUDGET.keystroke1kP95Ms,
   );
+  record(
+    'keystroke → board update, 1k chars, p95 (keystroke → frame, incl. 40 ms debounce)',
+    percentile(total, 95),
+    'ms',
+    null,
+  );
   record('keystroke → board update, 1k chars, p50 (keystroke → frame)', percentile(total, 50), 'ms', null);
-  record('encode request → board update, 1k chars, p95 (diagnostic)', percentile(work, 95), 'ms', null);
   record(
     'keystroke → encode request (the debounce), median',
     percentile(latencies(keys, encodes), 50),
@@ -204,18 +211,24 @@ test('keystroke → board update at 10k characters (p95 ≤ 120 ms), no main-thr
   );
   expect(total).toHaveLength(KEYSTROKES);
   budget(
-    'keystroke → board update, 10k CJK, p95 (keystroke → frame, incl. 40 ms debounce)',
-    percentile(total, 95),
+    'keystroke → board update, 10k CJK, p95 (encode request → frame, PA-12)',
+    percentile(work, 95),
     BUDGET.keystroke10kP95Ms,
   );
-  record('encode request → board update, 10k CJK, p95 (diagnostic)', percentile(work, 95), 'ms', null);
+  record(
+    'keystroke → board update, 10k CJK, p95 (keystroke → frame, incl. 40 ms debounce)',
+    percentile(total, 95),
+    'ms',
+    null,
+  );
   budget('longest main-thread task while typing into 10k CJK (trace)', Math.max(0, ...tasks), BUDGET.longTaskMs);
   const longTasks = (await probeOf(page)).longTasks.slice(longTasksBefore);
   record('long tasks (> 50 ms) while typing into 10k CJK (PerformanceObserver)', longTasks.length, 'count', null);
 });
 
 test.describe('render', () => {
-  // Wide enough that K reaches the 1600 px board cap, so ≈ 2,000 cells fit in ≤ 24 rows: the full, unvirtualized board.
+  // The widest desktop layout (K at the 2,400 px board cap, the tallest viewport): the most rows in view of a virtualized
+  // board, so the most cells mounted per render.
   test.use({ viewport: { width: 2560, height: 1440 } });
 
   /** `rows` rows of K one-byte characters (short words, so the token tier has chips); `variant` changes the words. */
@@ -223,7 +236,11 @@ test.describe('render', () => {
     Array.from({ length: rows * k }, (_, w) => `w${String((w * 7 + variant) % 97)}x`)
       .join(' ')
       .slice(0, rows * k);
-  const cellCount = (page: Page): Promise<number> =>
+  /** Cells the board would mount with every row (its `data-cells`, the PA-11 virtualization measure). */
+  const boardCells = async (page: Page): Promise<number> =>
+    Number(await page.locator('[data-testid="board-grid"]').getAttribute('data-cells'));
+  /** Cells actually mounted (the rows in view of a virtualized board). */
+  const mountedCells = (page: Page): Promise<number> =>
     page.locator('[data-testid="board-grid"] [role="gridcell"]').count();
 
   test('render ≈ 2,000 board cells: wall time from the Worker result to the updated DOM ≤ 50 ms (06 §3 script budget)', async ({
@@ -233,14 +250,15 @@ test.describe('render', () => {
     await openLive(page);
     const k = Number(await page.locator('[data-k]').first().getAttribute('data-k'));
     expect(k).toBeGreaterThanOrEqual(8);
-    // Calibration: the cells one row of this text mounts (K char cells, K byte cells and the token chips), so the
-    // measured text is sized to about RENDER_CELLS cells.
+    // Calibration: the cells one row of this text holds (K char cells, K byte cells and the token chips), so the
+    // measured text is sized to about RENDER_CELLS cells of the whole board.
     const calibrationRows = 10;
     await setText(page, rowsText(k, calibrationRows, 0));
-    const rows = Math.max(1, Math.round(RENDER_CELLS / ((await cellCount(page)) / calibrationRows)));
+    const rows = Math.max(1, Math.round(RENDER_CELLS / ((await boardCells(page)) / calibrationRows)));
     const walls: number[] = [];
     const frames: number[] = [];
     let cells = 0;
+    let mounted = 0;
     // One warm-up, five measured renders, then one more under a trace (tracing slows the page, so its numbers are
     // reported separately).
     for (let i = 0; i < 7; i++) {
@@ -261,14 +279,11 @@ test.describe('render', () => {
         walls.push(update - result);
         frames.push(frame - result);
       }
-      cells = await cellCount(page);
+      cells = await boardCells(page);
+      mounted = await mountedCells(page);
     }
-    record(
-      `board cells mounted (K ${String(k)}, ${String(rows)} rows, ${String(rows * k)} characters)`,
-      cells,
-      'count',
-      null,
-    );
+    record(`board cells (K ${String(k)}, ${String(rows)} rows, ${String(rows * k)} characters)`, cells, 'count', null);
+    record('board cells mounted (the rows in view of the virtualized board, PA-11)', mounted, 'count', null);
     expect(cells).toBeGreaterThan(RENDER_CELLS * 0.85);
     expect(cells).toBeLessThan(RENDER_CELLS * 1.15);
     budget(

@@ -2,7 +2,7 @@
  * Board interaction in chromium (05 §5, §6, §8, §9): the APG keyboard state machine on a 3-row fixture (o200k `ja-text`
  * at 360 px, K from the formula) with one roving tab stop, ↑/↓ edge no-ops, Enter/Space pin, `i` into the inspector and
  * Esc back, Esc unpins then returns to the textarea, `c` copies; focus persistence by byte offset across
- * re-tokenization; a tab stop on a lone BOS marker; the inspector region on its three surfaces (the anchored panel below
+ * re-tokenization and across a long input's window moves (absolute anchors); a tab stop on a lone BOS marker; the inspector region on its three surfaces (the anchored panel below
  * the row, flipped above it near the viewport bottom); hover after 120 ms; keyboard input taking the inspector back from
  * a resting pointer; click pins; textarea selection sync; focus scrolls follow the in-app Reduce motion switch.
  */
@@ -10,12 +10,14 @@ import '../theme/base.css';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { packRows } from '@tsbs/core/layout/pack-rows';
+import { AppState } from '../app/app-state.svelte.ts';
 import { motionPrefs } from '../motion/motion-prefs.svelte.ts';
 import {
   appWith,
   expectedColumns,
   fixtureResult,
   frames,
+  idleClient,
   mountBoard,
   syntheticResult,
   type MountedBoard,
@@ -148,6 +150,53 @@ describe('keyboard state machine on a 3-row fixture (05 §8)', () => {
     stop?.focus();
     await press('{ArrowUp}');
     expect(focused()).toBe('token:0'); // the char and byte tiers are empty
+  });
+
+  it('keeps focus and pin on the same absolute byte when a long input’s window moves (AD-17, AD-27)', async () => {
+    await page.viewport(1440, 900);
+    // 25,000 CJK code points (3 bytes each, 5,000 distinct): the on-demand tier; one token per code point, id = it.
+    const text = Array.from({ length: 25_000 }, (_, i) => String.fromCodePoint(0x4e00 + (i % 5000))).join('');
+    const result = syntheticResult(text);
+    const app = new AppState(idleClient(), null);
+    app.setText(text);
+    app.options = result.options;
+    app.result = result; // the whole-text run, current for the text
+    app.setCaret(10_000); // byte 30,000
+    await app.slicerReady();
+    const board = await mountBoard(app);
+    mounted = board;
+    const windowStart = (): number => Number((board.grid.dataset['window'] ?? '').split('-')[0]);
+    const start = windowStart();
+    expect(start).toBeGreaterThan(0);
+    board.grid.querySelector<HTMLElement>('[data-tier="token"][data-index="5"][data-first]')?.focus();
+    await press('{Enter}'); // pin it
+    const byte = start + 15;
+    expect(app.focus).toEqual({ tier: 'token', byte });
+    expect(app.pinned).toEqual({ byte, tier: 'token' });
+    const id = `id ${String(0x4e00 + ((byte / 3) % 5000))}`;
+
+    // The caret moves one window step back: the same token, at another index of the moved window.
+    app.setCaret(9_833); // byte 29,499
+    await frames(3);
+    const moved = windowStart();
+    expect(moved).toBeLessThan(start);
+    const index = String((byte - moved) / 3);
+    expect(app.focus).toEqual({ tier: 'token', byte });
+    expect(app.pinned).toEqual({ byte, tier: 'token' });
+    const stop = board.grid.querySelector<HTMLElement>('[tabindex="0"]');
+    expect(stop?.dataset['index']).toBe(index);
+    expect(stop?.getAttribute('aria-label')).toContain(id);
+    expect(board.grid.querySelector<HTMLElement>('[data-pinned]')?.dataset['index']).toBe(index);
+
+    // Far away the window does not hold the pinned byte: nothing shows as pinned, and the anchors stay for the way back.
+    app.setCaret(20_000);
+    await frames(3);
+    expect(board.grid.querySelector('[data-pinned]')).toBeNull();
+    expect(app.focus).toEqual({ tier: 'token', byte });
+    expect(app.pinned).toEqual({ byte, tier: 'token' });
+    app.setCaret(9_833);
+    await frames(3);
+    expect(board.grid.querySelector<HTMLElement>('[data-pinned]')?.dataset['index']).toBe(index);
   });
 
   it('scrolls focus moves with behavior "auto" when the in-app switch reduces motion (05 §7)', async () => {

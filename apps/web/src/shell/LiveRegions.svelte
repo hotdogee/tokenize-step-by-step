@@ -1,64 +1,82 @@
 <script lang="ts">
   /**
    * The status region (`role="status"`, polite: load completion, stage changes) and, as a separate element, the alert
-   * (`role="alert"`, assertive, once) for errors with their 05 §12 copy and action (05 §3.5 ARIA table).
+   * toast (`role="alert"`, assertive, once) for errors with their 05 §12 copy and action (05 §3.5 ARIA table). The
+   * message and action come from `app/errors.ts` (WP13); the toast floats above the bottom sheet, so it never shifts the
+   * page. Its buttons remove it, so keyboard focus first moves to a control that stays (05 §8): the picker button for
+   * "back" (a tokenizer switch), the textarea for every other action and for dismiss.
    */
   import { appState } from '../app/context.ts';
-  import type { UiError } from '../app/app-state.svelte.ts';
-  import { tokenizerEntry, DEFAULT_TOKENIZER } from '../app/registry.ts';
+  import { errorView, type ErrorView } from '../app/errors.ts';
+  import { DEFAULT_TOKENIZER, tokenizerEntry } from '../app/registry.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
 
   const app = appState();
+  let toast: HTMLDivElement | undefined = $state();
 
-  function message(error: UiError): string {
-    const name = tokenizerEntry(error.tokenizer).displayName[i18n.current];
-    switch (error.code) {
-      case 'fetch':
-        return i18n.t('error.fetch');
-      case 'integrity':
-        return i18n.t('error.integrity');
-      case 'oom':
-        return i18n.t('error.oom', {
-          name,
-          fallback: tokenizerEntry(error.previous ?? DEFAULT_TOKENIZER).displayName[i18n.current],
-        });
-      case 'quota':
-        return i18n.t('error.quota');
-      default:
-        return i18n.t('error.internal', { message: error.message });
-    }
+  const view: ErrorView | null = $derived(
+    app.error === null
+      ? null
+      : errorView(app.error, (id) => tokenizerEntry(id).displayName[i18n.current], DEFAULT_TOKENIZER),
+  );
+
+  /**
+   * Moves keyboard focus from the toast to `target` before the toast goes. A pointer activation (focus not visible) is
+   * left alone, so a tap never focuses the textarea and opens a phone's virtual keyboard.
+   */
+  function keepFocus(target: 'picker-button' | 'text-input'): void {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement) || !(toast?.contains(active) ?? false) || !active.matches(':focus-visible'))
+      return;
+    document.getElementById(target)?.focus();
   }
 
-  function action(error: UiError): string | null {
-    switch (error.code) {
-      case 'fetch':
+  function act(action: NonNullable<ErrorView['action']>): void {
+    keepFocus(action === 'back' ? 'picker-button' : 'text-input');
+    void app.recover();
+  }
+
+  function dismiss(): void {
+    keepFocus('text-input');
+    app.dismissError();
+  }
+
+  function actionLabel(action: NonNullable<ErrorView['action']>): string {
+    switch (action) {
+      case 'reload':
         return i18n.t('action.reload');
-      case 'oom':
-        return i18n.t('action.back');
-      case 'quota':
-        return null;
-      default:
+      case 'retry':
         return i18n.t('action.retry');
+      case 'back':
+        return i18n.t('action.back');
     }
   }
 </script>
 
 <div class="visually-hidden" role="status" aria-live="polite" data-testid="status">{app.status}</div>
-{#if app.error !== null}
-  {@const error = app.error}
-  {@const label = action(error)}
-  <div class="alert">
-    <p role="alert" class="prose">{message(error)}</p>
+{#if app.error !== null && view !== null}
+  <div
+    class="alert"
+    bind:this={toast}
+    data-testid="error-toast"
+    data-code={app.error.code}
+    data-informational={view.informational}
+  >
+    <p role="alert" class="prose">{i18n.t(view.key, view.params)}</p>
     <div class="actions">
-      {#if label !== null}
-        <button type="button" class="btn" onclick={() => void app.recover()}>{label}</button>
+      {#if view.action !== null}
+        {@const action = view.action}
+        <button
+          type="button"
+          class="btn"
+          data-testid="error-action"
+          onclick={() => {
+            act(action);
+          }}>{actionLabel(action)}</button
+        >
       {/if}
-      <button
-        type="button"
-        class="btn btn-quiet"
-        onclick={() => {
-          app.dismissError();
-        }}>{i18n.t('action.dismiss')}</button
+      <button type="button" class="btn btn-quiet" data-testid="error-dismiss" onclick={dismiss}
+        >{i18n.t('action.dismiss')}</button
       >
     </div>
   </div>
@@ -66,21 +84,31 @@
 
 <style>
   .alert {
+    position: fixed;
+    z-index: 30;
+    inset-inline: max(1rem, calc((100vw - 40rem) / 2));
+    bottom: calc(var(--sheet-height, 0px) + 1rem);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem 1rem;
-    margin-block: 0.5rem;
     padding: 0.5rem 0.75rem;
     border: calc(var(--border-width) * 2) solid var(--fg);
     border-radius: var(--radius);
     background: var(--surface-2);
+    box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 0.2);
+  }
+
+  .alert[data-informational='true'] {
+    border-color: var(--border);
   }
 
   .alert p {
     flex: 1 1 16rem;
     margin: 0;
     font-weight: 600;
+    line-break: strict;
+    overflow-wrap: anywhere;
   }
 
   .actions {

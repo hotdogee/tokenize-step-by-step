@@ -6,7 +6,8 @@
    * - layout: K = clamp(8, floor((boardWidth − 2·gutter) / cell), 64) from a ResizeObserver on the board column and a
    *   `--cell`/`--row-h` probe (debounced one frame), `packRows` once per (result, K), `withParts` per step;
    * - the APG layout grid: `role="grid"` with `aria-rowcount`/`aria-colcount`, one tab stop (roving tabindex on the
-   *   focused cell, keyed by a byte-offset anchor that survives re-tokenization, a new K and virtual remounts), the
+   *   focused cell, keyed by a byte-offset anchor that survives re-tokenization, a new K, virtual remounts and a long
+   *   input's window moves), the
    *   05 §8 keys, and `scrollIntoView` on every focus move with the sheet height as scroll padding;
    * - arithmetic virtualization (fixed row heights, `content-visibility: auto`), always mounting the focused and pinned
    *   rows and, at stop 5, the row holding the part the current step formed (the motion director marks it and follow
@@ -17,7 +18,11 @@
    * - the inspector host (side rail / anchored panel / bottom sheet by viewport width) and selection sync with the
    *   textarea (CSS Custom Highlight API where supported).
    *
-   * While no tokenizer result belongs to the text, stops 1–3 are live from `analyzeText` and the token tier waits.
+   * What it renders is AppState's `board` (WP13): the current result; the last one, kept until its successor arrives (a
+   * keystroke on a loaded tokenizer renders once — PA-11 —, a tokenizer switch keeps the last result — AD-19), with
+   * `data-pending` set; or, while no tokenizer is loaded for the text, an IME composition is open (muted) or a long
+   * input waits for its on-demand run, the text-only board: stops 1–3 live from `analyzeText`, the token tier waiting.
+   * Rows virtualize above 600 cells or 8 packed rows (PA-11, window.ts).
    */
   import { onMount, tick, untrack } from 'svelte';
   import type { TokenizationResult } from '@tsbs/core';
@@ -26,6 +31,7 @@
   import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
   import { hexByte } from '@tsbs/core/text/utf8';
   import { appState } from '../app/context.ts';
+  import { tokenizerEntry } from '../app/registry.ts';
   import { readStored, writeStored } from '../app/storage.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { formatPercent } from '../i18n/t.ts';
@@ -34,7 +40,7 @@
   import InspectorHost from '../inspector/InspectorHost.svelte';
   import type * as InspectorCatalogModule from '../inspector/i18n/catalogs.ts';
   import type { InspectorTranslate } from '../inspector/i18n/catalogs.ts';
-  import { copyValueOf, inspectorModel } from '../inspector/model.ts';
+  import type * as InspectorModelModule from '../inspector/model.ts';
   import { progressPercent } from '../shell/progress.ts';
   import { isComposing } from '../shell/shortcuts.ts';
   import { placePanel, type Extent } from './anchor.ts';
@@ -46,11 +52,10 @@
   import { navigate, navKeyOf, resolveAnchor as resolveAnchorIn } from './navigation.ts';
   import Row from './Row.svelte';
   import { byteRangeOfSelection, highlightSelection } from './selection.ts';
-  import { textOnlyResult } from './text-only.ts';
   import { BoardUnits, type Anchor, type CellRef, type Span } from './units.ts';
   import { viewOf } from './view-cache.ts';
   import { BoardViewport } from './viewport.svelte.ts';
-  import { mountedRows, spacers, visibleRows } from './window.ts';
+  import { mountedRows, OVERSCAN, shouldVirtualize, spacers, visibleRows } from './window.ts';
   import './grid-classes.css';
   import './board.css';
 
@@ -59,8 +64,9 @@
   /** localStorage: the keyboard hint under the board is shown until the board keys have been used (05 §8). */
   const HINT_KEY = 'tsbs:boardKeysUsed';
   /**
-   * The first of these anywhere on the page loads the inspector catalog (PA-7: it is not part of the startup JS); a
-   * `pointermove` only once the pointer has really moved (`pointerMoved`).
+   * The first of these anywhere on the page loads the inspector catalog and the inspector model (PA-7: neither is part of
+   * the startup JS; WP13 moved the model out of it too); a `pointermove` only once the pointer has really moved
+   * (`pointerMoved`).
    */
   const ENGAGE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'focusin'] as const;
 
@@ -82,10 +88,10 @@
   let viewHeight = $state(900);
 
   // ---- data ----
-  const pending = $derived(app.currentResult === null);
-  const result: TokenizationResult = $derived(
-    app.currentResult ?? textOnlyResult(app.text, app.tokenizer, app.entry.family),
-  );
+  const board = $derived(app.board);
+  /** No tokens to show (the text-only board). */
+  const pending = $derived(board.kind === 'text');
+  const result: TokenizationResult = $derived(board.result);
   const lang = $derived(resolveTextLang(app.textLang, app.text, i18n.current));
   const view = $derived(viewOf(result, lang));
   const stage = $derived(app.stage);
@@ -98,7 +104,7 @@
   const tiers = $derived(
     tiersFor({ stage, byteView: app.byteView, wide: viewport.wide, chunkTier: viewport.small, tokens: !pending }),
   );
-  const fusedDummy = $derived(fusesDummy(result, app.entry));
+  const fusedDummy = $derived(fusesDummy(result, tokenizerEntry(result.tokenizer)));
   const nfkc = $derived(nfkcSource(result));
   /** WP10's live token tier (extra-tier.svelte.ts): one more decorative track per row while it applies. */
   const extra = $derived(extraTierFor(extraTier.current, result, stage, pending));
@@ -118,6 +124,8 @@
   });
 
   // ---- focus, pin, hover (anchors are byte offsets, AD-17) ----
+  // Absolute anchors (analysed-text bytes, as AppState keeps them): a long input's board is a window of its whole-text
+  // result (`board.offset`), and moving the window moves the cells under the anchors, never the anchors.
   let focusAnchor: Anchor = $state({ tier: 'char', byte: 0, slot: -1 });
   let pinAnchor: Anchor | null = $state(null);
   let hoverRef: CellRef | null = $state(null);
@@ -132,8 +140,8 @@
   let keysUsed = $state(readStored(HINT_KEY) === 'true');
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const focusRef = $derived(resolveAnchor(focusAnchor));
-  const pinRef = $derived(pinAnchor === null ? null : resolveAnchor(pinAnchor));
+  const focusRef = $derived(resolveAnchor(local(focusAnchor)));
+  const pinRef = $derived(pinAnchor === null ? null : resolvePin(local(pinAnchor)));
   const inspected = $derived(pinRef ?? hoverRef ?? (engaged ? focusRef : null));
   const sliceRef = $derived(pinRef ?? hoverRef ?? (gridFocused ? focusRef : null));
   const interaction: InteractionState = $derived({
@@ -148,19 +156,25 @@
    * its empty text and the keyboard hint's reserved lines stay blank.
    */
   let inspectorCatalog: typeof InspectorCatalogModule | null = $state.raw(null);
+  let inspectorMod: typeof InspectorModelModule | null = $state.raw(null);
   const ti: InspectorTranslate | null = $derived.by(() => {
     const catalog = inspectorCatalog;
     const locale = i18n.current;
     return catalog === null ? null : (key, params) => catalog.translateInspector(locale, key, params);
   });
-  const model = $derived(
-    inspected === null || ti === null
+  const model = $derived.by(() => {
+    const mod = inspectorMod;
+    return inspected === null || ti === null || mod === null
       ? null
-      : inspectorModel({ result, units, ref: inspected, t: i18n.t, ti, fusedDummy, lang, step }),
-  );
+      : mod.inspectorModel({ result, units, ref: inspected, t: i18n.t, ti, fusedDummy, lang, step });
+  });
 
   // ---- virtual window ----
-  const range = $derived(visibleRows(viewTop, viewHeight, rowPx, rows.length));
+  /** Grid cells of the whole board (every row mounted): the virtualization bound of PA-11. */
+  const cellCount = $derived(tiers.reduce((sum, tier) => sum + units.count(tier), 0));
+  const range = $derived(
+    visibleRows(viewTop, viewHeight, rowPx, rows.length, OVERSCAN, shouldVirtualize(cellCount, rows.length)),
+  );
   /** At stop 5: the packed row of the part the current step formed (−1: none), where the director marks and follows. */
   const mergedRow = $derived(
     stage === 5 && parts !== null && parts.justMerged >= 0
@@ -192,6 +206,23 @@
   /** The navigable unit holding `a` among the shown tiers (navigation.ts `resolveAnchor`). */
   function resolveAnchor(a: Anchor): CellRef | null {
     return resolveAnchorIn(units, tiers, a);
+  }
+
+  /** Absolute anchor `a` in the board result's bytes (a long input's window starts at `board.offset`). */
+  function local(a: Anchor): Anchor {
+    return board.offset === 0 ? a : { ...a, byte: a.byte - board.offset };
+  }
+
+  /** The absolute anchor of `ref` (what the board keeps and writes to AppState, AD-17). */
+  function anchorOf(ref: CellRef): Anchor {
+    const a = units.anchorOf(ref);
+    return board.offset === 0 ? a : { ...a, byte: a.byte + board.offset };
+  }
+
+  /** The pinned unit; null while the window does not hold the pinned byte (never clamped onto another cell). */
+  function resolvePin(a: Anchor): CellRef | null {
+    const end = result.utf8.length;
+    return a.byte < 0 || a.byte > end || (a.byte === end && end > 0) ? null : resolveAnchor(a);
   }
 
   function sameRef(a: CellRef | null, b: CellRef | null): boolean {
@@ -231,7 +262,7 @@
   /** Moves the roving tab stop to `ref`, mounts its row, focuses it and keeps it clear of the sheet (05 §5, §8). */
   async function moveFocus(ref: CellRef): Promise<void> {
     dropHover();
-    focusAnchor = units.anchorOf(ref);
+    focusAnchor = anchorOf(ref);
     app.focus = { tier: appTier(ref.tier), byte: focusAnchor.byte };
     await tick();
     const element = cellElement(ref);
@@ -262,7 +293,7 @@
   }
 
   function pin(ref: CellRef): void {
-    pinAnchor = units.anchorOf(ref);
+    pinAnchor = anchorOf(ref);
     app.pinned = { byte: pinAnchor.byte, tier: appTier(ref.tier) };
     app.announce(pinnedMessage(ref));
   }
@@ -311,6 +342,16 @@
     writeStored(HINT_KEY, 'true');
   }
 
+  /** The inspector model module (lazy, PA-7), imported once. */
+  let inspectorImport: Promise<typeof InspectorModelModule> | null = null;
+  function loadInspector(): Promise<typeof InspectorModelModule> {
+    inspectorImport ??= import('../inspector/model.ts').then((mod) => {
+      inspectorMod = mod;
+      return mod;
+    });
+    return inspectorImport;
+  }
+
   // ---- keyboard (05 §8) ----
   function onKeydown(event: KeyboardEvent): void {
     if (isComposing(event)) return;
@@ -344,7 +385,7 @@
       void focusPanel();
     } else if (letter === 'c') {
       event.preventDefault();
-      void copyValue(copyValueOf(result, units, ref));
+      void loadInspector().then((mod) => copyValue(mod.copyValueOf(result, units, ref)));
     }
   }
 
@@ -362,7 +403,7 @@
       return;
     }
     if (!sameRef(ref, focusRef)) {
-      focusAnchor = units.anchorOf(ref);
+      focusAnchor = anchorOf(ref);
       app.focus = { tier: appTier(ref.tier), byte: focusAnchor.byte };
     }
   }
@@ -484,8 +525,8 @@
     const loadCatalog = (event: Event): void => {
       if (event.type === 'pointermove' && !pointerMoved(event as PointerEvent)) return;
       for (const type of ENGAGE_EVENTS) document.removeEventListener(type, loadCatalog, true);
-      void import('../inspector/i18n/catalogs.ts').then(
-        (catalog) => {
+      void Promise.all([import('../inspector/i18n/catalogs.ts'), loadInspector()]).then(
+        ([catalog]) => {
           inspectorCatalog = catalog;
         },
         () => {
@@ -635,7 +676,10 @@
         aria-colcount={K}
         data-testid="board-grid"
         data-stage={stage}
-        data-pending={pending ? '' : undefined}
+        data-pending={board.kind === 'final' ? undefined : ''}
+        data-composing={app.composing ? '' : undefined}
+        data-cells={cellCount}
+        data-window={board.window === null ? undefined : `${String(board.window.start)}-${String(board.window.end)}`}
         style:--k={K}
         bind:this={grid}
         onkeydown={onKeydown}
@@ -734,6 +778,11 @@
   /* The extra tier's track (board.css .bd-grid.extra --extra-h). */
   .main.extra .probe {
     height: calc(var(--row-h) + 32px);
+  }
+
+  /* An open IME composition: the text-only board is provisional, shown muted (05 §6). */
+  .bd-grid[data-composing] {
+    opacity: 0.6;
   }
 
   .pending,

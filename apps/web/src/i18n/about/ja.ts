@@ -96,8 +96,16 @@ export const aboutJa = {
   'about.diagnostics.safari': 'Safari は 7 日間アクセスがないとこのキャッシュを削除します。',
   'about.diagnostics.lastLoad': 'このタブで最後に読み込んだトークナイザー',
   'about.diagnostics.lastLoadNone': 'このタブではまだトークナイザーを読み込んでいません。',
-  'about.diagnostics.lastLoadValue': '{name}：{ms}、{source}、レイヤー {layer}、コンテンツエンコーディング {encoding}',
+  'about.diagnostics.lastLoadValue':
+    '{name}：{ms}、{source}、転送 {bytes}、レイヤー {layer}、コンテンツエンコーディング {encoding}',
   'about.diagnostics.fromCache': 'キャッシュから',
   'about.diagnostics.fromNetwork': 'ネットワークから',
   'about.diagnostics.none': 'なし',
+  'about.diagnostics.workerFeatures': 'トークナイザー Worker 内',
+  'about.diagnostics.workerNone': 'このタブではトークナイザー Worker がまだ起動していません。',
+  'about.diagnostics.cacheEntry': '{path}（{size}）',
+  'about.diagnostics.unicode': 'プリトークナイザーは Unicode {pinned}、お使いのブラウザーは約 Unicode {version} です。',
+  'about.diagnostics.unicodeUnknown':
+    'プリトークナイザーは Unicode {pinned}、お使いのブラウザーの Unicode バージョンは検出できませんでした。',
+  'about.diagnostics.build': 'ビルド {sha}、{date}。',
 } as const satisfies AboutCatalog;

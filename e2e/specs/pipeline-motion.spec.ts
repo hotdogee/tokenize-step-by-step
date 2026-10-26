@@ -160,6 +160,10 @@ test('a byte-view switch is a View Transition when the engine has one', async ({
     };
   });
   await openShell(page, 'en');
+  // The precomputed → live swap at startup is a crossfade of its own (WP13, 05 §12): count from here.
+  await page.evaluate(() => {
+    (window as unknown as Record<string, number>)['__tsbsTransitions'] = 0;
+  });
   await page.keyboard.press('KeyH');
   await expect(grid(page).locator('[data-tier="dec"]').first()).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as Record<string, number>)['__tsbsTransitions'])).toBe(1);
@@ -179,9 +183,11 @@ test.describe('Firefox 143 (no View Transitions)', () => {
     await openShell(page, 'en');
     expect(await page.evaluate(() => navigator.userAgent)).toContain('Firefox/143.0');
     expect(await page.evaluate(() => 'startViewTransition' in document)).toBe(false);
+    // The precomputed → live swap at startup fades the board too (WP13, 05 §12): count the switch's own fade only.
+    const before = (await logged(page)).length;
     await page.keyboard.press('KeyH');
     await expect(grid(page).locator('[data-tier="dec"]').first()).toBeVisible();
-    const fades = (await logged(page)).filter((a) => a.target.startsWith('board '));
+    const fades = (await logged(page)).slice(before).filter((a) => a.target.startsWith('board '));
     expect(fades).toHaveLength(1);
     expect(fades[0]).toMatchObject({ props: ['opacity'], duration: 220 });
     expect(errors).toEqual([]);

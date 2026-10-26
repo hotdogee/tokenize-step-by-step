@@ -210,3 +210,87 @@ the Worker result to the DOM and a 244.3 ms longest main-thread task under a tra
 54.5 ms. Both stay soft nightly misses and do not block wave 3. Finding 1 stays with WP08 / WP13 (virtualize from fewer
 rows than `VIRTUALIZE_ABOVE = 24` or by cell count, and render once per text change); finding 2 waits on the design
 owner's call on whether the debounce counts toward the 1k-character budget.
+
+---
+
+## 2026-10-26 — WP13a integration (development machine)
+
+**Where:** the same machine as the baseline; branch `wp/13a-integration` (from main at `2f826d6`); `vite preview` of the
+production bundle; three serial runs of `pnpm e2e:perf`, machine otherwise idle.
+
+**What changed:** PA-11 (rows virtualize above 600 cells or 8 packed rows; a keystroke on a loaded tokenizer renders the
+board once, when its result arrives — the last result stays on screen with `data-pending` meanwhile), PA-12 (the
+keystroke budget is held from the encode request), the load trigger (06 §3: `DOMContentLoaded` → `document.fonts.ready`
+→ the first paint entry → two animation frames) and the PA-7 trim. The render spec now sizes its text from the board's
+own `data-cells` (the cells every row would mount), since a 2,000-cell board is virtualized.
+
+| Metric                                                                                      | Measured                     | 06 §3 budget    |     |
+| ------------------------------------------------------------------------------------------- | ---------------------------- | --------------- | --- |
+| o200k load, `loaded.ms` (CDP Fast 4G)                                                       | 1,173–1,190 ms               | ≤ 2.5 s desktop | ✓   |
+| keystroke → board update at 1k chars, p95, encode request → frame (PA-12)                   | 9.0–19.4 ms                  | ≤ 50 ms         | ✓   |
+| keystroke → board update at 1k chars, p95, keystroke → frame (incl. the debounce; recorded) | 52.0–73.5 ms (p50 49.0–49.4) | (recorded)      |     |
+| keystroke → board update at 10k CJK, p95, encode request → frame (PA-12)                    | 27.3–44.6 ms                 | ≤ 120 ms        | ✓   |
+| keystroke → board update at 10k CJK, p95, keystroke → frame (recorded)                      | 69.6–86.4 ms                 | (recorded)      |     |
+| longest main-thread task while typing into 10k CJK (trace)                                  | 9.7–11.6 ms; 0 long tasks    | ≤ 50 ms         | ✓   |
+| render a 2,000-cell board (K 51, 15 rows), wall time result → DOM, median of 5              | 11.5–13.7 ms (max 13.4–14.9) | ≤ 50 ms script  | ✓   |
+| render a 2,000-cell board, result → next frame, median                                      | 30.8–34.5 ms                 | (recorded)      |     |
+| render a 2,000-cell board, cells mounted (2560 × 1440: the rows in view plus the overscan)  | 938                          | (recorded)      |     |
+| render a 2,000-cell board, longest main-thread task under a trace                           | 15.4–17.6 ms                 | (recorded)      |     |
+| paste 10k CJK → board update                                                                | 109–152 ms                   | (recorded)      |     |
+| scrub one merge step at stop 5, keydown → frame, p95                                        | 19.3–27.7 ms                 | (recorded)      |     |
+| longest main-thread task while scrubbing (trace)                                            | 10.8–15.8 ms                 | ≤ 50 ms         | ✓   |
+
+Findings 1 (render) and 2 (keystroke budget vs debounce) of the baseline are closed: the 2,000-cell render went from
+125–133 ms to 11.5–13.7 ms (virtualized, rendered once), and the PA-12 measure is 9–19 ms at 1k characters.
+
+**Startup bundle (`pnpm build`, size-limit, brotli, kB = 1000 B):** Main JS 81.10 kB on main at `2f826d6` → ≈ 74.9 kB
+after the PA-7 trim alone (registry fields no page renders, the non-default chips' "why" sentences and the inspector
+model moved out of the initial chunks) → **79.38 kB** of 81.92 with all of WP13a (main 41.97 + Header 19.40 + registry
+9.37 + i18n 8.63; i18n 8.63 of 9.22). Worker entry + entry-core 11.40 of 12.29, bytelevel + engine-core 15.20 of 16.38,
+spm + engine-core 8.75 of 10.24, CSS 11.82 of 20.48. New lazy chunks: window-slice 1.87, LongInputBanner 0.61, inspector
+model 3.37, examples (the "why" sentences) 4.96 kB.
+
+**lhci-local** (`pnpm lhci-local --runs 3`; loopback `wrangler dev`, gzip rather than brotli, not budget-authoritative;
+`lighthouserc.json`: performance ≥ 0.95, FCP ≤ 1.5 s, LCP ≤ 2.0 s, TBT ≤ 150 ms, script ≤ 112,640 B):
+
+| Run           | Performance | FCP         | LCP         | TBT        | Script transferred |
+| ------------- | ----------- | ----------- | ----------- | ---------- | ------------------ |
+| before (main) | 0.93–0.95   | 1.81–1.90 s | 1.97–2.14 s | 169–251 ms | 136,534 B          |
+| after (WP13a) | 0.93        | 1.81–1.82 s | 1.97–1.98 s | 267–270 ms | 134,394–134,404 B  |
+
+The Worker script, the engine chunk and the `.bin` now start after the observed LCP (client chunk requested at 437 ms
+against an observed LCP of 386 ms; before: 370 ms against 381 ms), and the simulated LCP is under 2.0 s in every run.
+TBT is the single startup task (evaluate, mount and the first layout). It now starts at the simulated FCP, so all of it
+counts; before, FCP fell later and cut part of it off. A trace of that task on this machine (4× CPU, 412 px) shows the
+first layout alone is about 75 ms unthrottled (fonts resolved for the first time), a platform cost that the deployed
+preview's Lighthouse run (Linux, brotli, real RTT) measures differently. The CI `lighthouse` job on the preview URL stays
+the budget-authoritative read (06 §3); the budgets were not raised.
+
+**WP13a review fixes (same machine, same harness).** Main JS 79.79 kB of 81.92 (i18n 8.69 of 9.22; one new catalog
+string, the focus and URL fixes). `pnpm lhci-local --runs 3`: performance 0.92–0.93, FCP 1.81–1.83 s, LCP 1.97–2.00 s,
+TBT 260–286 ms, script 135,037–135,047 B — the same misses as above (performance, FCP, TBT, script size on loopback
+gzip). Lighthouse attributes TBT to one startup task of 336 ms (simulated, starting at FCP; `Header-*.js`, the shared
+Svelte/app chunk), and its main-thread breakdown puts style and layout (441 ms) ahead of script evaluation (265 ms).
+
+The budget-authoritative read does not exist yet: the branch has no pull request, so no preview deployment or
+`lighthouse` job ran, and the last production deploy of `main` was skipped because `ci` failed on `main` (`deploy` run
+40236271760; `ci` run 40243655190). **WP13b precondition:** open the WP13a pull request and read its preview `lighthouse`
+job before the launch work starts. If TBT or FCP miss there, mount the non-first-paint UI (the live-check drawer, the
+inspector host, the rail's playback controls) after the first paint in a separate task — reserving their space so CLS
+stays 0 — or apply the AD-16 static-partial fallback. No first-paint change was made on the loopback numbers alone.
+
+**WP13a second review round (same machine, same harness).** The reviewer's independent `pnpm lhci-local` (1 run):
+performance 0.93, FCP 1,814 ms, LCP within budget, TBT 273 ms, script 135,037 B. After this round's fixes (on-demand run
+state, quota notice, tier announcement, copy-link and error-recovery copy: three new catalog strings): Main JS 80.21 kB
+of 81.92 (i18n 8.84 of 9.22); `pnpm lhci-local --runs 3`: performance 0.93, FCP 1.81–1.83 s, LCP 1.97–1.99 s, TBT
+251–259 ms, script 135,538–135,548 B — the same four loopback misses (performance, FCP, TBT, script size); LCP passes.
+The budgets were not raised. The WP13 row's "LHCI budgets met on production" stays **open**, and the WP13b precondition
+above stands unchanged: the preview `lighthouse` job of the WP13a pull request is read before any launch work, and a
+TBT or FCP miss there is answered with the levers above (drawer, inspector host and rail playback mounted after first
+paint, or the AD-16 static partial).
+
+**AD-27 memory (CDP heap probe, `e2e/specs/integration-memory.spec.ts`).** Backing store of the page's ArrayBuffers above
+the baseline (270 KB) after a forced GC (kB/MB = 1000 B): 15.8 MB with a 150,000-code-point zh-TW run on screen;
+0.39 MB while the next (capped, 200,000-code-point) run is in flight, so the previous result is gone before the new one
+arrives (before the fix: 15.8 MB); 0.25 MB after the text goes back to 4 characters (before the fix: about 19.7 MB, the
+review's measure).
