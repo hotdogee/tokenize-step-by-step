@@ -53,16 +53,53 @@ export async function domParts(page: Page): Promise<Part[]> {
 }
 
 /**
- * `dom` with the id of every part that `expected` leaves unnamed (`-`) masked: since WP13 the board names such parts
- * through the Worker's vocabulary lookup (single bytes before their first merge), which a fixture replay cannot do.
- * Every id the replay does name must still match, and so must every part's bytes. The lookup's own ids are asserted
- * where they are known: 台灣台南 on o200k at stop 4 (integration-load.spec.ts).
+ * The ids of single-byte vocabulary entries, from the Python oracle (tiktoken 0.14.0 on the pinned raw vocabularies,
+ * `encode_single_token(bytes([b]))`; identical for o200k_base and cl100k_base, whose first 256 ranks are the bytes in
+ * GPT-2 order), for every byte a byte-level replay below leaves unnamed.
  */
-export function maskUnnamed(dom: readonly Part[], expected: readonly Part[] | undefined): Part[] {
-  return dom.map((part, i) => {
-    const want = expected?.[i];
-    if (want?.endsWith('|-') !== true) return part;
-    return `${part.split('|')[0] ?? ''}|-`;
+const SINGLE_BYTE_IDS: Readonly<Record<string, number>> = {
+  '20': 220,
+  '80': 222,
+  '81': 223,
+  '82': 224,
+  '83': 225,
+  '8D': 235,
+  '8F': 237,
+  '91': 239,
+  '97': 245,
+  '9D': 251,
+  '9F': 253,
+  A3: 96,
+  AC: 105,
+  AF: 107,
+  B0: 108,
+  B1: 109,
+  BA: 118,
+  BC: 120,
+  BF: 123,
+  E2: 158,
+  E3: 159,
+  E4: 160,
+  E5: 161,
+  E6: 162,
+  E7: 163,
+  F0: 172,
+};
+const SINGLE_BYTE_TOKENIZERS: ReadonlySet<TokenizerId> = new Set(['openai-o200k_base', 'openai-cl100k_base']);
+
+/**
+ * `expected` (a fixture replay) with every part it leaves unnamed (`-`) named: since WP13 the board names such parts —
+ * single bytes before their first merge — through the Worker's vocabulary lookup, which a fixture replay cannot do, so
+ * the oracle's ids above stand in for it and the board's lookup ids are asserted, not masked. Throws for an unnamed part
+ * the table does not cover.
+ */
+export function withLookupIds(expected: readonly Part[], tokenizer: TokenizerId): Part[] {
+  return expected.map((part) => {
+    if (!part.endsWith('|-')) return part;
+    const hex = part.slice(0, -2);
+    const id = SINGLE_BYTE_TOKENIZERS.has(tokenizer) ? SINGLE_BYTE_IDS[hex] : undefined;
+    if (id === undefined) throw new Error(`no oracle id for the unnamed part ${hex} on ${tokenizer}`);
+    return `${hex}|${String(id)}`;
   });
 }
 

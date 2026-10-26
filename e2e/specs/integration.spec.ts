@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
 import { mockProvider, openDrawer, XAI_URL } from './byok-helpers.ts';
 import { focusBoard, grid } from './board-helpers.ts';
-import { checkedStop, domParts, fixtureReplay, maskUnnamed, rail, scrubber } from './pipeline-helpers.ts';
+import { checkedStop, domParts, fixtureReplay, rail, scrubber, withLookupIds } from './pipeline-helpers.ts';
 import { openShell, pickTokenizer } from './shell-helpers.ts';
 
 const TEXT = '台灣台南';
@@ -45,20 +45,22 @@ test('shell, board, rail, inspector and drawer work together on the live Worker'
   await expect(status).toHaveText('UTF-8 bytes: 12 bytes');
 
   // Scrub at stop 5: the token tier is the fixture's replay at the first and the last step.
-  const replay = fixtureReplay('openai-o200k_base', 'bytelevel-bpe', 'zh-tw-tainan');
+  const replay = fixtureReplay('openai-o200k_base', 'bytelevel-bpe', 'zh-tw-tainan').map((parts) =>
+    withLookupIds(parts, 'openai-o200k_base'),
+  );
   const last = replay.length - 1;
   await page.keyboard.press('Digit5');
   await expect(grid(page)).toHaveAttribute('data-stage', '5');
   await scrubber(page).focus();
   await page.keyboard.press('Home');
   await expect(scrubber(page)).toHaveAttribute('aria-valuetext', new RegExp(`^step 0 / ${String(last)} · `));
-  await expect.poll(async () => maskUnnamed(await domParts(page), replay[0])).toEqual(replay[0]);
+  await expect.poll(async () => domParts(page)).toEqual(replay[0]);
   await page.keyboard.press('End');
   await expect(scrubber(page)).toHaveAttribute(
     'aria-valuetext',
     new RegExp(`^step ${String(last)} / ${String(last)} · `),
   );
-  await expect.poll(async () => maskUnnamed(await domParts(page), replay[last])).toEqual(replay[last]);
+  await expect.poll(async () => domParts(page)).toEqual(replay[last]);
 
   // Inspector: follows board focus.
   await focusBoard(page);

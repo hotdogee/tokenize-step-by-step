@@ -13,10 +13,10 @@ import {
   domParts,
   fixture,
   fixtureReplay,
-  maskUnnamed,
   partBytes,
   scrubber,
   walkSteps,
+  withLookupIds,
   type Part,
 } from './pipeline-helpers.ts';
 import { openShell, pickTokenizer } from './shell-helpers.ts';
@@ -30,14 +30,19 @@ async function show(page: Page, tokenizer: string | null, chip: string): Promise
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
 }
 
-/** Walks every step at stop 5 and returns the token tier at each (ids the replay leaves unnamed masked). */
-async function replayFromDom(page: Page, count: number, expected: readonly Part[][]): Promise<Part[][]> {
+/** Walks every step at stop 5 and returns the token tier at each. */
+async function replayFromDom(page: Page, count: number): Promise<Part[][]> {
   const seen: Part[][] = [];
   await walkSteps(page, count, async (k) => {
     await expect(grid(page)).toHaveAttribute('data-stage', '5');
-    seen[k] = maskUnnamed(await domParts(page), expected[k]);
+    seen[k] = await domParts(page);
   });
   return seen;
+}
+
+/** A byte-level fixture replay with the single bytes the board names through the vocabulary lookup named. */
+function byteLevelReplay(id: TokenizerId, chip: string): Part[][] {
+  return fixtureReplay(id, 'bytelevel-bpe', chip).map((parts) => withLookupIds(parts, id));
 }
 
 const BYTE_LEVEL: ReadonlyArray<{ name: string; id: TokenizerId; picker: string | null; chip: string }> = [
@@ -48,9 +53,9 @@ const BYTE_LEVEL: ReadonlyArray<{ name: string; id: TokenizerId; picker: string 
 
 for (const { name, id, picker, chip } of BYTE_LEVEL) {
   test(`token tier at every step equals the fixture replay: ${name}`, async ({ page }) => {
-    const expected = fixtureReplay(id, 'bytelevel-bpe', chip);
+    const expected = byteLevelReplay(id, chip);
     await show(page, picker, chip);
-    expect(await replayFromDom(page, expected.length - 1, expected)).toEqual(expected);
+    expect(await replayFromDom(page, expected.length - 1)).toEqual(expected);
   });
 }
 
@@ -90,15 +95,15 @@ for (const { name, id, picker, chip, before } of SPM) {
       expect(await domParts(page)).toEqual(final);
       return;
     }
-    expect(await replayFromDom(page, expected.length - 1, expected)).toEqual(expected);
+    expect(await replayFromDom(page, expected.length - 1)).toEqual(expected);
   });
 }
 
 test('byte-level replays chunk by chunk, left to right (Hello 台灣! 東京タワー on o200k)', async ({ page }) => {
   const chip = 'mixed-hello-taiwan-tokyo';
-  const expected = fixtureReplay('openai-o200k_base', 'bytelevel-bpe', chip);
+  const expected = byteLevelReplay('openai-o200k_base', chip);
   await show(page, null, chip);
-  const seen = await replayFromDom(page, expected.length - 1, expected);
+  const seen = await replayFromDom(page, expected.length - 1);
   expect(seen).toEqual(expected);
   // At step k the chunk being merged is the one whose merge record holds step k: earlier chunks show their final
   // tokens, later chunks are still single bytes.
