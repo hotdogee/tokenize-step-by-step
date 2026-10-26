@@ -210,10 +210,8 @@ test('the stop 2→3 morph at 600 cells: nothing animates in the commit frame, w
   expect(after.length).toBeGreaterThan(0);
   if (STRICT) expect(longest).toBeLessThanOrEqual(FRAME_CEILING_MS);
   else
-    test
-      .info()
-      .annotations.push({
-        type: 'perf',
-        description: `recorded only (PA-16): commit frame ${commitFrameMs.toFixed(1)} ms, longest task ${longest.toFixed(1)} ms, strict ceiling ${String(FRAME_CEILING_MS)} ms under TSBS_PERF=1`,
-      });
+    test.info().annotations.push({
+      type: 'perf',
+      description: `recorded only (PA-16): commit frame ${commitFrameMs.toFixed(1)} ms, longest task ${longest.toFixed(1)} ms, strict ceiling ${String(FRAME_CEILING_MS)} ms under TSBS_PERF=1`,
+    });
 });

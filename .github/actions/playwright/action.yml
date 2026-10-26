@@ -38,24 +38,42 @@ runs:
     - shell: bash
       run: |
         printf 'Acquire::http::Timeout "20";\nAcquire::Retries "3";\nAcquire::ForceIPv4 "true";\n' | sudo tee /etc/apt/apt.conf.d/99-tsbs-timeouts >/dev/null
+    # Browser binaries come from Playwright's CDN (fast) on a cache miss; their apt dependencies are installed from a
+    # cached archive directory keyed on the Playwright version and browser list, so the slow or stalling Azure apt
+    # mirror is hit once per Playwright bump instead of on every shard. The package list is Playwright's own
+    # (`install-deps --dry-run`); if that parse ever yields nothing, the plain install-deps runs with a cap.
     - if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
         BROWSERS: ${{ inputs.browsers }}
       run: |
         for attempt in 1 2; do
-          timeout 600 pnpm --filter @tsbs/e2e exec playwright install --with-deps $BROWSERS && exit 0
-          echo "::warning::playwright install --with-deps attempt ${attempt} failed or stalled; retrying"
+          timeout 600 pnpm --filter @tsbs/e2e exec playwright install $BROWSERS && exit 0
+          echo "::warning::playwright install attempt ${attempt} failed or stalled; retrying"
         done
         exit 1
-    - if: steps.cache.outputs.cache-hit == 'true'
-      shell: bash
+    - id: apt-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/apt-archives
+        key: apt-deps-${{ runner.os }}-${{ steps.key.outputs.version }}-${{ steps.key.outputs.browsers }}-noble-1
+    - shell: bash
       env:
         BROWSERS: ${{ inputs.browsers }}
       run: |
+        ARCHIVES="$HOME/.cache/apt-archives"
+        mkdir -p "$ARCHIVES/partial"
+        PKGS=$(pnpm --filter @tsbs/e2e exec playwright install-deps --dry-run $BROWSERS 2>/dev/null | grep -o 'apt-get install[^"]*' | sed 's/apt-get install//; s/-y//; s/--no-install-recommends//' | tr -s ' \n' ' ')
+        if [ -z "$PKGS" ]; then
+          echo "::warning::could not read the dependency list from install-deps --dry-run; running install-deps directly"
+          timeout 600 pnpm --filter @tsbs/e2e exec playwright install-deps $BROWSERS
+          exit $?
+        fi
+        echo "packages: $PKGS"
+        sudo apt-get update -o Acquire::http::Timeout=20 -o Acquire::Retries=3 -o Acquire::ForceIPv4=true >/dev/null
         for attempt in 1 2; do
-          timeout 600 pnpm --filter @tsbs/e2e exec playwright install-deps $BROWSERS && exit 0
-          echo "::warning::playwright install-deps attempt ${attempt} failed or stalled; retrying"
+          timeout 480 sudo apt-get install -y --no-install-recommends -o Dir::Cache::archives="$ARCHIVES" -o Acquire::http::Timeout=20 -o Acquire::Retries=3 -o Acquire::ForceIPv4=true $PKGS && exit 0
+          echo "::warning::browser dependency install attempt ${attempt} failed or stalled; retrying"
         done
         exit 1
     - if: inputs.cjk-fonts == 'true'
