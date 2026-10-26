@@ -3,6 +3,10 @@
    * Modal `<dialog>` wrapper (PD-5: `<dialog>`, not the Popover API). `showModal()` makes the rest of the page inert and
    * traps focus natively; Esc closes it (the `cancel` → `close` events), a click on the backdrop closes it, and focus
    * returns to the element that was focused before it opened (05 §8).
+   *
+   * The owner hears of a close at once — on `cancel` (Esc) and on a backdrop click — not from the `close` event, which
+   * engines queue as a task (Chromium at 2560 × 1440: 50–110 ms after Esc). A click or shortcut that reopens the dialog in
+   * that gap is kept: the queued `close` finds the dialog open again and is ignored.
    */
   import type { Snippet } from 'svelte';
 
@@ -33,6 +37,7 @@
   });
 
   function handleClose(): void {
+    if (dialog?.open === true) return; // a close queued before a reopen
     onclose();
     returnTo?.focus();
     returnTo = null;
@@ -40,7 +45,9 @@
 
   function handleClick(event: MouseEvent): void {
     // A click on the ::backdrop targets the dialog element itself.
-    if (event.target === dialog) dialog.close();
+    if (event.target !== dialog) return;
+    dialog.close();
+    onclose();
   }
 </script>
 
@@ -49,6 +56,9 @@
   class="dialog"
   class:wide
   aria-labelledby={labelledby}
+  oncancel={() => {
+    onclose();
+  }}
   onclose={handleClose}
   onclick={handleClick}
 >
