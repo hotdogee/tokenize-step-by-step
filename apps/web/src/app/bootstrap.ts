@@ -17,7 +17,6 @@ import { fromFixtureCase } from '@tsbs/core/fixture/from-fixture-case';
 import examplesDefault from '../generated/examples-default.json';
 import { AppState } from './app-state.svelte.ts';
 import { DeferredClient } from './deferred-client.ts';
-import { probeFeatures } from './features.ts';
 import { PrecomputedExamples } from './precomputed.ts';
 import { EXAMPLES_INDEX, TOKENIZERS, tokenizerEntry } from './registry.ts';
 import { parseUrlState, type UrlState } from './url-state.ts';
@@ -39,7 +38,10 @@ export function wantsMockClient(search: string = 'location' in globalThis ? glob
  */
 export function createExamplesClient(fetchImpl?: (url: string) => Promise<Response>): TokenizerClientLike {
   return new DeferredClient(async () => {
-    const { ExamplesClient } = await import('./examples-client.ts');
+    const [{ ExamplesClient }, { probeFeatures }] = await Promise.all([
+      import('./examples-client.ts'),
+      import('./features.ts'),
+    ]);
     return new ExamplesClient({
       refs: TOKENIZERS,
       files: EXAMPLES_INDEX.files,

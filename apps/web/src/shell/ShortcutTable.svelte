@@ -4,7 +4,7 @@
    * dialog's / section's h2).
    */
   import { i18n } from '../i18n/locale.svelte.ts';
-  import { SHORTCUT_GROUPS } from './shortcuts.ts';
+  import { SHORTCUT_GROUPS } from './shortcut-groups.ts';
 </script>
 
 <div class="groups">

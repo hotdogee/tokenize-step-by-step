@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isComposing, matchShortcut, SHORTCUT_GROUPS, type KeyLike, type ShortcutContext } from './shortcuts.ts';
+import { SHORTCUT_GROUPS } from './shortcut-groups.ts';
+import { isComposing, matchShortcut, type KeyLike, type ShortcutContext } from './shortcuts.ts';
 
 const ON: ShortcutContext = { enabled: true, inEditable: false, inDialog: false };
 const key = (init: Partial<KeyLike> & Pick<KeyLike, 'key' | 'code'>): KeyLike => ({
