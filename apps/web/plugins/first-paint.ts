@@ -18,6 +18,8 @@
  * screen. The entry module moves after it as an `async` script, so it runs in a task of its own (a deferred module that
  * has already arrived runs in the parser's last task, before the browser paints), and it and its modulepreloads get
  * `fetchpriority="low"`: the first paint no longer needs them. main.ts hydrates the clone (or mounts when there is none).
+ * The token ids' digits font (PA-17, `font-display: block`) is preloaded right after the stylesheet, so its request starts
+ * with the CSS instead of after the first layout and the chips are not painted empty while it loads.
  *
  * The board's row packing, its inspector surface and its labels depend on the viewport (05 §3.3), so its variants are
  * rendered per width range at the default cell size M (`#app[data-keep]` requires it): K = ⌊(width − 32 px) / cell⌋,
@@ -79,6 +81,10 @@ export const APP_ELEMENT = '<div id="app"></div>';
 const BOARD_START = '<section class="board-region';
 /** The entry module script Vite writes into `<head>`. */
 const ENTRY_SCRIPT = /<script type="module" crossorigin src="([^"]+)"><\/script>\s*/g;
+/** The first stylesheet link Vite writes into `<head>` (the digits font's preload follows it). */
+const STYLESHEET = /<link rel="stylesheet"[^>]*>/;
+/** The emitted digits subset of the token ids (packages/ui-tokens fonts.css, PA-17). */
+export const DIGITS_FONT = /(^|\/)tsbs-digits-[^/]+\.woff2$/;
 
 /** `"`, `&`, `<`, `>` escaped for an attribute value in double quotes. */
 export function attr(value: string): string {
@@ -139,13 +145,25 @@ export function pageTemplate(
 
 /**
  * `index.html` with the page templates before `#app`, the page state they show on it (`keep`), the clone script after
- * it (`clone`: its URL), and the entry module moved after that as a low-priority `async` script (its modulepreloads low
- * priority too; a browser without `fetchpriority` ignores it).
+ * it (`clone`: its URL), the entry module moved after that as a low-priority `async` script (its modulepreloads low
+ * priority too; a browser without `fetchpriority` ignores it), and a preload of the digits font (`font`: its URL) right
+ * after the first stylesheet in `<head>`.
  */
-export function injectFirstPaint(html: string, templates: readonly string[], keep: string, clone: string): string {
+export function injectFirstPaint(
+  html: string,
+  templates: readonly string[],
+  keep: string,
+  clone: string,
+  font: string,
+): string {
   if (html.split(APP_ELEMENT).length !== 2) throw new Error(`first-paint: index.html must hold ${APP_ELEMENT} once`);
   const entries = [...html.matchAll(ENTRY_SCRIPT)].map((match) => match[1] ?? '');
   if (entries.length !== 1) throw new Error('first-paint: index.html must hold one entry module script');
+  const stylesheet = STYLESHEET.exec(html);
+  const headEnd = html.indexOf('</head>');
+  if (stylesheet === null || headEnd < 0 || stylesheet.index > headEnd)
+    throw new Error('first-paint: index.html must hold a stylesheet link in <head>');
+  const preload = `<link rel="preload" as="font" type="font/woff2" crossorigin href="${attr(font)}">`;
   const tail = [
     ...templates,
     `<div id="app" data-keep="${attr(keep)}"></div>`,
@@ -153,6 +171,7 @@ export function injectFirstPaint(html: string, templates: readonly string[], kee
     `<script type="module" async fetchpriority="low" crossorigin src="${attr(entries.join(''))}"></script>`,
   ];
   return html
+    .replace(STYLESHEET, (link) => `${link}\n    ${preload}`)
     .replace(ENTRY_SCRIPT, '')
     .replace(APP_ELEMENT, () => tail.join('\n    '))
     .replaceAll('<link rel="modulepreload" ', '<link rel="modulepreload" fetchpriority="low" ');
@@ -258,7 +277,12 @@ export function firstPaint(options: FirstPaintOptions = {}): Plugin {
           throw new Error(
             `first-paint: no CSS rule for ${unstyled.join(', ')} — the server and client builds hash scoped classes differently`,
           );
-        return injectFirstPaint(html, templates, keep, clone);
+        const font = Object.values(ctx.bundle ?? {}).find(
+          (file) => file.type === 'asset' && DIGITS_FONT.test(file.fileName),
+        );
+        if (font === undefined)
+          throw new Error('first-paint: the build emitted no tsbs-digits-*.woff2 to preload (the token ids, PA-17)');
+        return injectFirstPaint(html, templates, keep, clone, `${config.base}${font.fileName}`);
       },
     },
   };
