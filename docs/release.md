@@ -266,7 +266,7 @@ phone, keystroke → board update p95 ≤ 50 ms at 1k characters). Record the nu
 
 ## Release 1.0.0 — 2026-10-26
 
-Signed on 2026-10-26 by the WP13b launch engineer against **`a313ef2`** on `main` (the PA-15 static first paint, the
+Signed on 2026-10-26 by the WP13b launch engineer against **`6f70faa`** on `main` (re-signed by the planner after the verifier's Gemma §3.2 pass-through fix) (the PA-15 static first paint, the
 wave 4 fixes, the Linux visual baselines, the re-verified registry and the custom domain); the tag **`v1.0.0`** is the
 commit that adds this section, on top of it. **Production URL:** `https://tokenize-step-by-step.hotdogee.workers.dev`
 (live, serving `c1ff708`, deploy run 40285946585), and `https://tokens.hanlin.uk` once the release push's CI deploy has
