@@ -79,12 +79,7 @@ export interface LoadCall extends Deferred<LoadedInfo> {
 }
 
 export class FakeClient implements TokenizerClientLike {
-  readonly features: Promise<Features> = Promise.resolve({
-    cacheApi: true,
-    segmenter: true,
-    brotli: false,
-    subtleCrypto: true,
-  });
+  readonly features: Promise<Features>;
   readonly assets: Promise<AssetSummary> = Promise.reject(new Error('no assets in tests'));
   readonly loads: LoadCall[] = [];
   readonly encodes: EncodeCall[] = [];
@@ -92,7 +87,15 @@ export class FakeClient implements TokenizerClientLike {
   #resident: TokenizerId | null = null;
   readonly #listeners = new Set<(id: TokenizerId | null) => void>();
 
-  constructor() {
+  /** `features` overrides the Worker's `ready.features` (default: everything but brotli). */
+  constructor(features: Partial<Features> = {}) {
+    this.features = Promise.resolve({
+      cacheApi: true,
+      segmenter: true,
+      brotli: false,
+      subtleCrypto: true,
+      ...features,
+    });
     this.assets.catch(() => undefined);
   }
 

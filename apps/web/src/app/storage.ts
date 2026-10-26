@@ -14,6 +14,8 @@ export const STORAGE_KEYS = {
   lastLoaded: 'tsbs:lastLoaded',
   /** sessionStorage: the Worker's `ready.features`, shown on About › Diagnostics next to the main thread's own probe. */
   workerFeatures: 'tsbs:workerFeatures',
+  /** sessionStorage: the informational "no offline cache" toast was shown this session (05 §12 `quota`). */
+  cacheNotice: 'tsbs:cacheNotice',
 } as const;
 
 type Area = 'local' | 'session';

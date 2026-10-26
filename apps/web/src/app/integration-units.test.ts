@@ -150,6 +150,15 @@ describe('errors (05 §12, 04 §5)', () => {
     expect(errorView(error('oom', { previous: null }), name, 'openai-cl100k_base').params['fallback']).toBe(
       name('openai-cl100k_base'),
     );
+    // An out-of-memory tokenization on a loaded tokenizer: nothing to go back to, a shorter text helps.
+    for (const phase of ['encode', 'run'] as const)
+      expect(errorView(error('oom', { phase, previous: null }), name, 'openai-o200k_base')).toEqual({
+        key: 'error.oomText',
+        params: {},
+        action: null,
+        informational: false,
+      });
+    expect(errorView(error('oom', { phase: 'load' }), name, 'openai-o200k_base').action).toBe('back');
     expect(errorView(error('quota'), name, 'openai-o200k_base')).toMatchObject({ action: null, informational: true });
     for (const code of ['pretokenize', 'alignment'] as const)
       expect(errorView(error(code), name, 'openai-o200k_base')).toMatchObject({ key: 'error.engine', action: null });
@@ -167,7 +176,9 @@ describe('errors (05 §12, 04 §5)', () => {
       retryable: false,
       tokenizer: 'google-gemma4',
       previous: 'openai-o200k_base',
+      phase: 'load',
     });
+    expect(toUiError({ code: 'oom' }, 'xai-grok1', null, 'run')).toMatchObject({ code: 'oom', phase: 'run' });
     expect(toUiError(new Error('boom'), 'xai-grok1', 'xai-grok1')).toMatchObject({ code: 'internal', previous: null });
     expect(toUiError({ code: 'integrity' }, 'xai-grok1', null).retryable).toBe(true);
     expect(isCancelledError(Object.assign(new Error('x'), { name: 'cancelled' }))).toBe(true);

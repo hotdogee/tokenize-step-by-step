@@ -7,13 +7,14 @@
  * - the board is a 2,000-byte window of the whole-text result: built from 50 copies of the o200k zh-TW paragraph (each copy
  *   chunks exactly as the fixture case, a "1" between copies), the token ids at both window edges equal the fixture's;
  * - above 100,000 code points the run records no timeline; at 200,001 code points the cap banner shows and the textarea
- *   keeps every code point.
+ *   keeps every code point;
+ * - a run asked for while the tokenizer loads is dropped when the text gets short again: the load encodes the short text.
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 import type { TiktokenFixtureCase } from '@tsbs/core';
 import { grid } from './board-helpers.ts';
 import { fixture } from './pipeline-helpers.ts';
-import { openShell } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, openShell } from './shell-helpers.ts';
 
 /** On-demand runs over 60,000–200,000 code points take a few seconds on a loaded CI runner. */
 const RUN_TIMEOUT_MS = 60_000;
@@ -54,6 +55,7 @@ test('20,001 code points: the on-demand banner, a whole-text run, the 50,000-ste
   await setText(page, 'a'.repeat(20_001), '20,001');
   await expect(banner(page)).toBeVisible();
   await expect(banner(page)).toContainText('Long input — tokenize on demand');
+  await expect(page.getByTestId('status')).toHaveText('Long input — tokenize on demand'); // said once, 05 §6
   await expect(page.getByTestId('cap-banner')).toHaveCount(0);
   // The tokenizer is resident: the tokens wait for the banner's button, and the counts line says so.
   await expect(page.getByTestId('tokens-pending')).toHaveText('tokens: press “Tokenize now”');
@@ -169,4 +171,33 @@ test('above 100,000 code points the run records no timeline; 200,001 shows the c
   expect(await page.locator('#text-input').evaluate((el) => (el as HTMLTextAreaElement).value.length)).toBe(200_001);
   await runOnDemand(page);
   await expect(counts(page)).toContainText('200,000 bytes');
+});
+
+test('a run asked for while the tokenizer loads is dropped once the text is short: the load encodes the short text', async ({
+  page,
+}) => {
+  const held: Route[] = [];
+  let holding = true;
+  await page.route('**/tok/**', async (route) => {
+    if (holding) held.push(route);
+    else await route.continue();
+  });
+  await page.goto('/?lang=en');
+  await setText(page, '台'.repeat(25_000), '25,000');
+  await page.getByTestId('long-input-run').click();
+  await expect(page.getByTestId('long-input-run')).toHaveAttribute('aria-busy', 'true');
+  await expect.poll(() => held.length, { message: 'the vocabulary download is held' }).toBeGreaterThan(0);
+  await setText(page, 'abc', '3');
+  await expect(banner(page)).toHaveCount(0);
+
+  holding = false;
+  for (const route of held.splice(0)) await route.continue();
+  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.getByTestId('tokens-pending')).toHaveCount(0);
+  await expect(grid(page)).not.toHaveAttribute('data-pending', '');
+
+  // A long text again waits for the button, which is free (not stuck "tokenizing").
+  await setText(page, '台'.repeat(25_000), '25,000');
+  await expect(page.getByTestId('long-input-run')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByTestId('tokens-pending')).toHaveText('tokens: press “Tokenize now”');
 });

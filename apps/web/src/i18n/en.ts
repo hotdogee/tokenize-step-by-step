@@ -201,6 +201,7 @@ export const en = {
   'error.fetch': 'A new version is available — reload',
   'error.integrity': 'Download was corrupted — retry',
   'error.oom': 'Not enough memory to load {name} on this device — try {fallback}',
+  'error.oomText': 'Not enough memory to tokenize this text on this device — try a shorter text',
   'error.quota': 'The offline cache is not available; the tokenizer still works.',
   'error.internal': 'Something went wrong: {message}',
   'error.network': 'Could not download {name} — check the connection and retry',

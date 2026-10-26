@@ -197,6 +197,7 @@ export const zhTW = {
   'error.fetch': '有新版本可用，請重新載入',
   'error.integrity': '下載的檔案已損毀，請重試',
   'error.oom': '這台裝置的記憶體不足以載入 {name}，請改用 {fallback}',
+  'error.oomText': '這台裝置的記憶體不足以為這段文字分詞，請改用較短的文字',
   'error.quota': '無法使用離線快取，但分詞器仍可正常運作。',
   'error.internal': '發生錯誤：{message}',
   'error.network': '無法下載 {name}，請檢查網路連線後重試',

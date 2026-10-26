@@ -8,8 +8,9 @@
  * | fetch, retryable        | "Could not download <name> — retry" (network, 5xx)        | retry  |
  * | integrity, decompress   | "Download was corrupted — retry" (after the loader's one automatic refetch) | retry |
  * | format                  | "A new version is available — reload" (asset rebuild needed) | reload |
- * | oom                     | "Not enough memory to load <name> … — try <fallback>"    | back: reload the previous tokenizer from cache |
- * | quota                   | informational: the tokenizer works without the cache       | none   |
+ * | oom, of a load          | "Not enough memory to load <name> … — try <fallback>"    | back: reload the previous tokenizer from cache |
+ * | oom, of a tokenization  | "Not enough memory to tokenize this text … — try a shorter text" | none |
+ * | quota                   | informational: the tokenizer works without the cache (shown when the Worker has no Cache API) | none |
  * | pretokenize, alignment  | "This text could not be tokenized" (an engine error; retrying gives the same) | none |
  * | not-loaded, internal    | "Something went wrong: <message>"                         | retry (reloads the tokenizer) |
  *
@@ -19,6 +20,9 @@ import type { ErrorCode, TokenizerId } from '@tsbs/core';
 import type { MessageKey } from '../i18n/en.ts';
 import type { Params } from '../i18n/types.ts';
 
+/** What failed: a tokenizer load, a live encode, or an on-demand run (AD-27). */
+export type ErrorPhase = 'load' | 'encode' | 'run';
+
 /** A user-facing error: an `ErrorCode` plus what the alert needs to offer an action. */
 export interface UiError {
   readonly code: ErrorCode;
@@ -27,6 +31,8 @@ export interface UiError {
   readonly tokenizer: TokenizerId;
   /** For `oom`: the tokenizer the back action reloads (AD-19). */
   readonly previous: TokenizerId | null;
+  /** What failed (absent: a load, or a page-level failure such as a missing chunk). */
+  readonly phase?: ErrorPhase;
 }
 
 export type ErrorAction = 'reload' | 'retry' | 'back';
@@ -62,7 +68,12 @@ export function isCancelledError(error: unknown): boolean {
 }
 
 /** The `UiError` of anything a client call rejected with (`TokenizerError`, `ClientImportError`, or anything else). */
-export function toUiError(error: unknown, tokenizer: TokenizerId, previous: TokenizerId | null): UiError {
+export function toUiError(
+  error: unknown,
+  tokenizer: TokenizerId,
+  previous: TokenizerId | null,
+  phase: ErrorPhase = 'load',
+): UiError {
   const record = (typeof error === 'object' && error !== null ? error : {}) as Partial<
     Record<'code' | 'message' | 'retryable', unknown>
   >;
@@ -73,6 +84,7 @@ export function toUiError(error: unknown, tokenizer: TokenizerId, previous: Toke
     retryable: record.retryable === true || code === 'integrity' || code === 'decompress',
     tokenizer,
     previous: previous === tokenizer ? null : previous,
+    phase,
   };
 }
 
@@ -90,6 +102,9 @@ export function errorView(error: UiError, name: (id: TokenizerId) => string, fal
     case 'decompress':
       return { key: 'error.integrity', params: {}, action: 'retry', ...informational };
     case 'oom':
+      // A tokenization ran out of memory on a loaded tokenizer: there is nothing to go back to, a shorter text helps.
+      if ((error.phase ?? 'load') !== 'load')
+        return { key: 'error.oomText', params: {}, action: null, ...informational };
       return {
         key: 'error.oom',
         params: { name: name(error.tokenizer), fallback: name(error.previous ?? fallback) },

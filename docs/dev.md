@@ -109,13 +109,20 @@ and the drawer:
   100,000 code points, `trace: false` beyond) and the board shows a 2,000-byte window of that result around the caret
   (`window-slice.ts` slices the full result; it never tokenizes a substring); above 200,000 code points only the first
   200,000 are analysed. The counts line keeps code points, graphemes and bytes live and marks the last run's tokens
-  "stale" after an edit.
+  "stale" after an edit. Each tier change is said once in the always-mounted status region (the banner is lazy-mounted
+  and is no live region of its own). A run asked for while the tokenizer loads runs on `loaded`, also after a failed
+  load is retried, and is dropped when the text goes back under 20,001 code points (the load then encodes the short
+  text live).
 - **URL state** (`url-state.ts`): `?t=&q=&s=<stage>.<step>&b=&lang=&tl=` is read once (`bootstrap.ts`), invalid values
   ignored; every change but the text is written with `history.replaceState` 500 ms later; "Copy link" alone puts the text
   in `q` (≤ 2,000 code points) and confirms it.
 - **Errors** (`errors.ts`, 05 §12 / 04 §5) surface as one `role="alert"` toast with its action: reload (stale deploy),
-  retry (network, integrity after the loader's automatic refetch), back (out of memory: the previous tokenizer, from the
-  cache).
+  retry (network, integrity after the loader's automatic refetch; in an on-demand tier it runs the whole text again),
+  back (a load out of memory: the previous tokenizer, from the cache; an out-of-memory tokenization offers no action and
+  suggests a shorter text). `quota` is informational: when the Worker's `ready.features.cacheApi` is false (Safari
+  private mode, blocked storage) the toast says once per session that the tokenizer works without the offline cache. A
+  short storage quota with a working cache is silent by design: the loader keeps the vocabulary in memory only
+  (`packages/worker/src/loader.ts`, `hasRoom`) and the FROZEN protocol has no warning message to tell the page.
 - **Vocabulary lookups.** `TokenizationView`'s `idOf` / `pieceOf` go through the Worker's `lookup` (`vocab-lookup.ts`),
   batched and cached per tokenizer; an answered batch bumps `AppState.lookupVersion`, so `viewOf` builds a fresh view.
 - **Startup budget (PA-7).** `plugins/registry-trim.ts` keeps registry fields `/` never renders (tokenizer `asset` /

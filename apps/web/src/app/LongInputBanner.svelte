@@ -2,10 +2,11 @@
   /**
    * The long-input banners (AD-27, 05 §6): above 20,000 code points live tokenization pauses behind "Long input —
    * tokenize on demand" and a button that tokenizes the WHOLE (analysed) text once; above 200,000 code points a second
-   * line says only the first 200,000 are analysed (the text stays in the textarea, never truncated). The banner text is
-   * a polite status, so pasting a long text announces it once. While a run is in flight the button stays focusable
-   * (`aria-disabled`, not `disabled`, with a guard): disabling the focused button would drop keyboard focus to the body
-   * (05 §8).
+   * line says only the first 200,000 are analysed (the text stays in the textarea, never truncated). The banner is plain
+   * text: this component is lazy-mounted with its text already present, which screen readers often skip in a live region,
+   * so AppState announces each tier change once in the always-mounted status region. While a run is in flight the button
+   * stays focusable (`aria-disabled`, not `disabled`, with a guard): disabling the focused button would drop keyboard
+   * focus to the body (05 §8).
    */
   import { i18n } from '../i18n/locale.svelte.ts';
   import { appState } from './context.ts';
@@ -22,7 +23,7 @@
 
 {#if shown}
   <div class="banner" data-testid="long-input-banner" data-capped={capped}>
-    <div class="text prose" role="status">
+    <div class="text prose">
       <p>{i18n.t('longInput.banner')}</p>
       {#if capped}<p data-testid="cap-banner">{i18n.t('longInput.capped', { n: ANALYSED_MAX })}</p>{/if}
     </div>

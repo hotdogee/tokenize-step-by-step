@@ -109,7 +109,7 @@ describe('counts line', () => {
 });
 
 describe('long-input banners', () => {
-  it('shows the on-demand banner above 20,000 code points and the cap line above 200,000, as a polite status', async () => {
+  it('shows the on-demand banner above 20,000 code points and the cap line above 200,000, said in the status region', async () => {
     const { app, client, root } = setup();
     await loaded(app, client);
     app.setText('a'.repeat(20_000));
@@ -118,11 +118,15 @@ describe('long-input banners', () => {
     app.setText('a'.repeat(20_001));
     flushSync();
     const banner = root.querySelector('[data-testid="long-input-banner"]');
-    expect(banner?.querySelector('[role="status"]')?.textContent).toContain('Long input — tokenize on demand');
+    expect(banner?.textContent).toContain('Long input — tokenize on demand');
+    // The lazy-mounted banner is no live region of its own: the always-mounted status region says the tier once.
+    expect(banner?.querySelector('[role="status"]')).toBeNull();
+    expect(text(root, '[data-testid="status"]')).toBe('Long input — tokenize on demand');
     expect(root.querySelector('[data-testid="cap-banner"]')).toBeNull();
     app.setText('a'.repeat(200_001));
     flushSync();
     expect(text(root, '[data-testid="cap-banner"]')).toBe('Only the first 200,000 code points are analysed');
+    expect(text(root, '[data-testid="status"]')).toBe('Only the first 200,000 code points are analysed');
     expect(text(root, '[data-testid="counts"]')).toContain('200,000 code points');
     expect(app.text).toHaveLength(200_001);
   });

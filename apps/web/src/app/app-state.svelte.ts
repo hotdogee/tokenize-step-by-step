@@ -48,9 +48,10 @@ import type { Locale } from '../i18n/types.ts';
 import { preferences } from '../shell/preferences.svelte.ts';
 import { theme, type ThemeChoice } from '../theme/theme.svelte.ts';
 import { DEFAULT_EXAMPLE } from './constants.ts';
-import { isCancelledError, toUiError, type UiError } from './errors.ts';
+import { isCancelledError, toUiError, type ErrorPhase, type UiError } from './errors.ts';
 import { afterFirstPaint } from './load-trigger.ts';
 import {
+  ANALYSED_MAX,
   analysedText,
   countCodePoints,
   estimatedResultBytes,
@@ -251,7 +252,10 @@ export class AppState {
   #transition: ResultTransition | null = null;
   /** A deep link's merge step, applied when the first live result for the text arrives. */
   #urlStep: number | null = null;
-  /** An on-demand run asked for before the tokenizer was loaded. */
+  /**
+   * An on-demand run asked for before the tokenizer was loaded: it runs on `loaded`, also after a failed load is retried;
+   * it is dropped when the text leaves the on-demand tiers (the short text is encoded live instead).
+   */
   #pendingRun = false;
   #started = false;
   /** The last on-demand run's counts (the counts line's source in on-demand tiers, AD-27; not the result). */
@@ -265,7 +269,7 @@ export class AppState {
   #slice: { of: TokenizationResult; start: number; end: number; slice: TokenizationResult } | null = null;
   /** The last text-only window of a long text (`offset`: the UTF-8 bytes before `start`). */
   #textWindow: { text: string; start: number; end: number; offset: number; slice: TokenizationResult } | null = null;
-  /** The capped text's analysed prefix, kept for the text it was cut from. */
+  /** The capped text's analysed prefix, kept for the text it was cut from (emptied once the text is not capped, AD-27). */
   #analysed = { text: '', value: '' };
 
   constructor(
@@ -500,13 +504,16 @@ export class AppState {
       this.loading = null;
       this.#rememberLoaded(loaded);
       this.announce(i18n.t('status.ready', { name: tokenizerEntry(id).displayName[i18n.current] }));
-      if (this.#pendingRun) void this.runOnDemand();
-      else this.encodeNow();
+      if (this.#pendingRun && isOnDemand(this.longInput)) void this.runOnDemand();
+      else {
+        this.#pendingRun = false;
+        this.running = false;
+        this.encodeNow();
+      }
     } catch (error) {
       if (seq !== this.#loadSeq || isCancelledError(error)) return;
       this.loading = null;
-      this.#pendingRun = false;
-      this.running = false;
+      this.running = false; // a pending run stays asked for: Retry loads again and runs it
       this.error = toUiError(error, id, previous);
     }
   }
@@ -527,9 +534,22 @@ export class AppState {
     void this.#client.features.then(
       (features) => {
         writeStored(STORAGE_KEYS.workerFeatures, JSON.stringify(features), 'session');
+        if (!features.cacheApi) this.#cacheNotice(loaded.info.id);
       },
       () => undefined,
     );
+  }
+
+  /**
+   * 05 §12 "quota is informational": without the Cache API (Safari private mode, blocked storage) the Worker keeps the
+   * vocabulary in memory only, and the FROZEN protocol has no warning message, so its `ready.features.cacheApi` is the
+   * signal. The informational `quota` toast says so once per session, unless another alert is up (then the next load
+   * tries again). A short storage quota with a working cache stays silent (docs/dev.md).
+   */
+  #cacheNotice(id: TokenizerId): void {
+    if (this.error !== null || readStored(STORAGE_KEYS.cacheNotice, 'session') !== null) return;
+    writeStored(STORAGE_KEYS.cacheNotice, '1', 'session');
+    this.error = { code: 'quota', message: '', retryable: false, tokenizer: id, previous: null };
   }
 
   /**
@@ -537,26 +557,45 @@ export class AppState {
    * or the tier is on demand (AD-27). `immediate` (a paste) skips the debounce.
    */
   setText(text: string, immediate = false): void {
-    const wasOnDemand = isOnDemand(this.longInput);
+    const was = this.longInput;
     this.text = text;
     this.#codePoints = countCodePoints(text);
     this.longInput = longInputMode(this.#codePoints);
+    // AD-27: nothing is held across results; a capped text's prefix goes with the tier.
+    if (this.longInput !== 'capped') this.#analysed = { text: '', value: '' };
     if (isOnDemand(this.longInput)) {
       this.#loadSlicer();
       this.resultStale = this.#onDemand !== null && this.#onDemand.text !== this.analysed;
+      this.#announceTier(was);
       return;
     }
     // Back below the on-demand tiers: the whole-text run is never shown again (a window only exists there), so it is
-    // released now instead of being kept on the board as the "stale" result of a short text.
-    if (wasOnDemand) {
+    // released now instead of being kept on the board as the "stale" result of a short text. A run asked for while the
+    // tokenizer loads, or still in flight (its answer is dropped by the new seq), no longer applies: the short text is
+    // encoded live.
+    if (isOnDemand(was)) {
       this.#release();
       this.#onDemand = null;
       this.#textWindow = null;
+      this.#pendingRun = false;
+      this.running = false;
+      this.#seq++;
     }
     this.resultStale = false;
     if (this.composing) return;
     if (immediate) this.encodeNow();
     else this.scheduleEncode();
+  }
+
+  /**
+   * Says an on-demand tier change in the always-mounted status region (05 §6): the banner is lazy-mounted with its text,
+   * and screen readers often skip a live region inserted with its content already present.
+   */
+  #announceTier(was: LongInputMode): void {
+    const parts: string[] = [];
+    if (!isOnDemand(was)) parts.push(i18n.t('longInput.banner'));
+    if (this.longInput === 'capped' && was !== 'capped') parts.push(i18n.t('longInput.capped', { n: ANALYSED_MAX }));
+    if (parts.length > 0) this.announce(parts.join(' '));
   }
 
   /** The textarea caret moved (UTF-16 offset). */
@@ -590,7 +629,7 @@ export class AppState {
         if (seq === this.#seq) this.#accept(result, 'live', seq);
       },
       (error: unknown) => {
-        this.#encodeFailed(error, seq);
+        this.#encodeFailed(error, seq, 'encode');
       },
     );
   }
@@ -602,6 +641,8 @@ export class AppState {
       this.#pendingRun = true;
       this.running = true;
       if (!this.#started) await this.start();
+      // Nothing loading (a failed load was dismissed): load again, the run follows on `loaded`.
+      else if (this.loading?.tokenizer !== this.tokenizer) await this.#load(this.tokenizer, null);
       return;
     }
     this.#pendingRun = false;
@@ -616,16 +657,16 @@ export class AppState {
       const result = await this.#client.encode(text, { ...this.options, trace });
       if (seq === this.#seq) this.#accept(result, 'live', seq, true);
     } catch (error) {
-      this.#encodeFailed(error, seq);
+      this.#encodeFailed(error, seq, 'run');
     } finally {
       if (seq === this.#seq) this.running = false;
     }
   }
 
-  #encodeFailed(error: unknown, seq: number): void {
+  #encodeFailed(error: unknown, seq: number, phase: ErrorPhase): void {
     if (seq !== this.#seq || isCancelledError(error)) return;
     if (isNoPrecomputedResult(error)) return; // ?mock=1 has no result for free text: tokens wait
-    this.error = toUiError(error, this.tokenizer, null);
+    this.error = toUiError(error, this.tokenizer, null, phase);
   }
 
   /** While the engine loads: the precomputed result of the text, if it is an example chip (AD-16). */
@@ -803,7 +844,8 @@ export class AppState {
 
   /**
    * The error's action (errors.ts): reload the page (`fetch`, `format`), back to the previous tokenizer from the cache
-   * (`oom`), else reload the tokenizer and tokenize again.
+   * (an `oom` of a load; one of a tokenization offers no action), else tokenize again — the on-demand run in an on-demand
+   * tier — after reloading the tokenizer when it is not resident.
    */
   async recover(): Promise<void> {
     const error = this.error;
@@ -814,13 +856,15 @@ export class AppState {
       return;
     }
     if (error.code === 'oom') {
-      await this.selectTokenizer(error.previous ?? DEFAULT_TOKENIZER);
+      if ((error.phase ?? 'load') === 'load') await this.selectTokenizer(error.previous ?? DEFAULT_TOKENIZER);
       return;
     }
     if (this.resident === error.tokenizer) {
-      this.encodeNow();
+      if (isOnDemand(this.longInput)) await this.runOnDemand();
+      else this.encodeNow();
       return;
     }
+    if (error.phase === 'run' && isOnDemand(this.longInput)) this.#pendingRun = true; // runs again on `loaded`
     await this.#load(error.tokenizer, error.previous);
   }
 

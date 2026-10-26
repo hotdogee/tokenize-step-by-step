@@ -8,10 +8,12 @@ import { CancelledError } from '@tsbs/core/model/cancelled';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppState, ENCODE_DEBOUNCE_MS } from './app-state.svelte.ts';
 import { defaultResult } from './bootstrap.ts';
+import { errorView } from './errors.ts';
 import { FakeClient, flush, syntheticResult } from './fake-client.test-helper.ts';
 import { ANALYSED_MAX, ON_DEMAND_MAX_STEPS, RELEASE_ABOVE_BYTES, resultBytes } from './long-input.ts';
 import type { PrecomputedSource } from './precomputed.ts';
-import { EXAMPLES } from './registry.ts';
+import { DEFAULT_TOKENIZER, EXAMPLES, tokenizerEntry } from './registry.ts';
+import { STORAGE_KEYS } from './storage.ts';
 
 /**
  * Node's `gc()` (exposed at runtime with `--expose-gc`; `vm` hands out the function), so a `WeakRef` shows whether a
@@ -390,6 +392,168 @@ describe('long input tiers (AD-27)', () => {
     await flush();
     await flush();
     expect(client.encodes.at(-1)?.text).toHaveLength(30_000);
+  });
+
+  it('drops a run asked for during a load once the text is short again: the load encodes the short text', async () => {
+    const client = new FakeClient();
+    const app = new AppState(client, defaultResult());
+    app.setText('e'.repeat(30_000));
+    const run = app.runOnDemand();
+    await flush();
+    expect(client.loads).toHaveLength(1);
+    expect(app.running).toBe(true);
+    app.setText('abc', true);
+    expect(app.running).toBe(false);
+    client.loads[0]?.finish();
+    await run;
+    await flush();
+    expect(client.encodes.map((call) => call.text)).toEqual(['abc']);
+    expect(app.running).toBe(false);
+    client.encodes[0]?.answer();
+    await flush();
+    expect(app.currentResult?.input.text).toBe('abc');
+    expect(app.tokenCounts?.tokens).toBe(3);
+    // A long text again waits for "Tokenize now" (not a stuck "tokenizing"), and the button runs it.
+    app.setText('f'.repeat(30_000), true);
+    expect(app.running).toBe(false);
+    expect(app.awaitingRun).toBe(true);
+    void app.runOnDemand();
+    expect(client.encodes.at(-1)?.text).toHaveLength(30_000);
+  });
+
+  it('drops the answer of a run in flight once the text is short again', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    const long = 'g'.repeat(30_000);
+    app.setText(long, true);
+    const run = app.runOnDemand();
+    const call = client.encodes.at(-1);
+    app.setText('短'); // debounced: the run answers before the short text's encode is sent
+    expect(app.running).toBe(false);
+    call?.answer();
+    await run;
+    expect(app.result?.input.text).not.toBe(long);
+    expect(app.tokenCounts).toBeNull(); // the short text's tokens wait for its own encode
+    expect(app.running).toBe(false);
+  });
+
+  it('announces each long-input tier once in the status region (the banner is lazy-mounted)', async () => {
+    const app = await loadedApp();
+    app.setText('a'.repeat(20_001));
+    expect(app.status).toBe('Long input — tokenize on demand');
+    app.status = '';
+    app.setText('a'.repeat(20_002));
+    expect(app.status).toBe(''); // same tier: nothing new to say
+    app.setText('a'.repeat(ANALYSED_MAX + 1));
+    expect(app.status).toBe('Only the first 200,000 code points are analysed');
+    app.setText('short');
+    app.setText('a'.repeat(ANALYSED_MAX + 2));
+    expect(app.status).toBe('Long input — tokenize on demand Only the first 200,000 code points are analysed');
+  });
+});
+
+describe('error recovery (05 §12)', () => {
+  const failure = (code: string): Error => Object.assign(new Error(code), { code });
+  const name = (id: Parameters<typeof tokenizerEntry>[0]): string => tokenizerEntry(id).displayName.en;
+
+  it('retries a failed on-demand run with the run itself, reloading the tokenizer first when it is gone', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    const long = 'h'.repeat(30_000);
+    app.setText(long, true);
+    const run = app.runOnDemand();
+    client.encodes.at(-1)?.reject(failure('internal'));
+    await run;
+    expect(app.error).toMatchObject({ code: 'internal', phase: 'run' });
+    expect(app.running).toBe(false);
+    const retry = app.recover();
+    expect(client.encodes.at(-1)?.text).toBe(long);
+    client.encodes.at(-1)?.answer();
+    await retry;
+    expect(app.tokenCounts?.tokens).toBe(30_000);
+
+    // The engine went away (a Worker respawn): Retry reloads it, then runs again.
+    const again = app.runOnDemand();
+    client.setResident(null);
+    client.encodes.at(-1)?.reject(failure('not-loaded'));
+    await again;
+    expect(app.error).toMatchObject({ code: 'not-loaded', phase: 'run' });
+    const sent = client.encodes.length;
+    const reload = app.recover();
+    await flush();
+    expect(client.loads).toHaveLength(2);
+    expect(client.encodes).toHaveLength(sent);
+    client.loads[1]?.finish();
+    await reload;
+    expect(client.encodes).toHaveLength(sent + 1);
+    expect(client.encodes.at(-1)?.text).toBe(long);
+    expect(app.running).toBe(true);
+  });
+
+  it('offers no "back" for an out-of-memory tokenization, and its recovery switches nothing', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    app.setText('i'.repeat(30_000), true);
+    const run = app.runOnDemand();
+    client.encodes.at(-1)?.reject(failure('oom'));
+    await run;
+    const error = app.error;
+    expect(error).toMatchObject({ code: 'oom', phase: 'run', previous: null });
+    if (error === null) throw new Error('no error');
+    expect(errorView(error, name, DEFAULT_TOKENIZER)).toMatchObject({ key: 'error.oomText', action: null });
+    await app.recover();
+    expect(client.unloads).toBe(0);
+    expect(client.loads).toHaveLength(1);
+    expect(app.tokenizer).toBe(DEFAULT_TOKENIZER);
+  });
+
+  it('runs a run asked for before a failed load once Retry loads the tokenizer', async () => {
+    const client = new FakeClient();
+    const app = new AppState(client, defaultResult());
+    app.setText('j'.repeat(30_000));
+    const run = app.runOnDemand();
+    await flush();
+    client.loads[0]?.reject(Object.assign(new Error('offline'), { code: 'fetch', retryable: true }));
+    await run;
+    expect(app.error).toMatchObject({ code: 'fetch', retryable: true });
+    expect(app.running).toBe(false);
+    const retry = app.recover();
+    await flush();
+    client.loads[1]?.finish();
+    await retry;
+    expect(client.encodes.at(-1)?.text).toHaveLength(30_000);
+  });
+
+  it('loads again when "Tokenize now" is pressed after a failed load was dismissed', async () => {
+    const client = new FakeClient();
+    const app = new AppState(client, defaultResult());
+    const start = app.start();
+    await flush();
+    client.loads[0]?.reject(failure('internal'));
+    await start;
+    app.dismissError();
+    app.setText('k'.repeat(30_000));
+    const run = app.runOnDemand();
+    expect(app.running).toBe(true);
+    expect(client.loads).toHaveLength(2);
+    client.loads[1]?.finish();
+    await run;
+    expect(client.encodes.at(-1)?.text).toHaveLength(30_000);
+  });
+
+  it('says once per session that the offline cache is unavailable when the Worker has no Cache API (quota)', async () => {
+    sessionStorage.removeItem(STORAGE_KEYS.cacheNotice);
+    const app = await loadedApp(new FakeClient({ cacheApi: false }));
+    await flush();
+    const error = app.error;
+    expect(error).toMatchObject({ code: 'quota', tokenizer: 'openai-o200k_base' });
+    if (error === null) throw new Error('no error');
+    expect(errorView(error, name, DEFAULT_TOKENIZER)).toMatchObject({ action: null, informational: true });
+    const next = await loadedApp(new FakeClient({ cacheApi: false }));
+    await flush();
+    expect(next.error).toBeNull();
+    sessionStorage.removeItem(STORAGE_KEYS.cacheNotice);
+    expect((await loadedApp()).error).toBeNull(); // a working cache says nothing
   });
 });
 
