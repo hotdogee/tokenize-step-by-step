@@ -7,7 +7,7 @@
  */
 import '../theme/base.css';
 import { hydrate, mount, unmount } from 'svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { commands } from 'vitest/browser';
 import { i18n } from '../i18n/locale.svelte.ts';
 import { LOCALES } from '../i18n/types.ts';
@@ -16,6 +16,7 @@ import { AppState } from './app-state.svelte.ts';
 import { defaultResult } from './bootstrap.ts';
 import { FakeClient } from './fake-client.test-helper.ts';
 import { setFirstPaintView, type FirstPaintView } from './first-paint.ts';
+import { STORAGE_KEYS } from './storage.ts';
 
 interface BoardVariant {
   readonly media: string;
@@ -88,6 +89,17 @@ afterEach(() => {
   for (const element of containers.splice(0)) element.remove();
   setFirstPaintView(null);
   i18n.current = 'en';
+});
+
+// The static paint is the first render of a visitor without stored preferences (prerender.ts `keep`), and the browser
+// project shares one origin across test files: another file's keyboard use or option change (tsbs:boardKeysUsed,
+// tsbs:byteView, …) would otherwise leak into the client render compared here. CI runs the files in a different order.
+beforeEach(() => {
+  try {
+    for (const key of Object.values(STORAGE_KEYS)) localStorage.removeItem(key);
+  } catch {
+    // Storage unavailable: nothing to clear.
+  }
 });
 
 describe('the static first paint (PA-15)', async () => {
