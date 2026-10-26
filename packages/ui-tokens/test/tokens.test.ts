@@ -72,13 +72,15 @@ describe('layout tokens (05 §3.3, AD-18)', () => {
 
   it('uses the 05 §3.3 breakpoints and row heights', () => {
     for (const [width, rowHeight] of [
-      ['480px', '136px'],
-      ['768px', '150px'],
-      ['1024px', '172px'],
+      ['480px', '120px'],
+      ['768px', '136px'],
+      ['1024px', '157px'],
     ] as const) {
       const block = new RegExp(`@media \\(min-width: ${width}\\) \\{\\s*:root \\{([^}]*)\\}`).exec(css)?.[1] ?? '';
       expect(block, width).toContain(`--row-h: ${rowHeight};`);
     }
     expect(declarationsOf(css, ':root').get('--row-h')).toBe('106px');
+    const huge = /@media \(min-width: 2560px\) \{\s*:root \{([^}]*)\}/.exec(css)?.[1] ?? '';
+    expect(huge).toContain('--row-h: calc(var(--cell) * 3.5 + 44px);');
   });
 });

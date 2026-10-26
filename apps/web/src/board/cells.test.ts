@@ -33,21 +33,16 @@ describe('partial-character token (cl100k 灣 = E7 81 + A3)', () => {
     expect(row?.bytes[5]?.label).toContain('token boundary inside this character');
   });
 
-  it('hatches the cut edges of both chips and labels them partial', () => {
+  it('hatches the cut edges of both chips, labels them partial and counts their id digits (PA-17)', () => {
     const [, first, second] = row?.tokens ?? [];
-    expect(first).toMatchObject({
-      id: 66285,
-      hatchStart: false,
-      hatchEnd: true,
-      partial: true,
-      span: 2,
-      idInside: false,
-    });
-    expect(second).toMatchObject({ id: 96, hatchStart: true, hatchEnd: false, partial: true, span: 1 });
+    expect(first).toMatchObject({ id: 66285, digits: 5, hatchStart: false, hatchEnd: true, partial: true, span: 2 });
+    expect(second).toMatchObject({ id: 96, digits: 2, hatchStart: true, hatchEnd: false, partial: true, span: 1 });
     expect(first?.label).toBe(
       'token 2 of 5, id 66285, 2 bytes, partial: first 2 of 3 bytes of 灣, splits a character on this tokenizer',
     );
-    expect(row?.ids.map((id) => id.text)).toEqual(['66285', '96']);
+    // Every id sits inside its chip: the row has no id line (PA-17).
+    expect(row).not.toHaveProperty('ids');
+    expect(row?.tokens.map((cell) => cell.digits)).toEqual([5, 5, 2, 5, 5]);
   });
 
   it('labels the byte cells (05 §8 example)', () => {
@@ -62,7 +57,7 @@ describe('partial token crossing a char boundary (Grok-2 4242 = ー + 2 bytes of
 
   it('is one chip over five columns with only its right edge hatched', () => {
     const chip = rows[0]?.tokens.find((cell) => cell.id === 4242);
-    expect(chip).toMatchObject({ span: 5, hatchStart: false, hatchEnd: true, partial: true, idInside: true });
+    expect(chip).toMatchObject({ span: 5, hatchStart: false, hatchEnd: true, partial: true, digits: 4 });
     expect(chip?.label).toContain('partial: ー, first 2 of 3 bytes of メ');
     expect(rows.map((row) => row.chars.length)).toEqual([11, 3]);
   });

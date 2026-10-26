@@ -1,8 +1,9 @@
 /**
  * Board component tests in chromium (06 §1 "Component"): the 05 §4.1 hard cases rendered from fixture results with DOM
- * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks (id
- * line from 480 px, ≥ 2560 px scaling from --cell), the APG grid's ARIA indices, arithmetic virtualization of a 60k-byte
- * synthetic result (≤ 15 rows in the DOM, every row in view mounted while scrolling), CSP-safe styling and axe.
+ * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks
+ * (≥ 2560 px scaling from --cell) with every token id inside its chip (PA-17: narrowed, then shrunk, never clipped), the
+ * APG grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
+ * view mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import axe from 'axe-core';
@@ -163,7 +164,7 @@ describe('05 §4.1 hard cases', () => {
     const code = cell(board, '[data-tier="token"][data-index="3"]');
     expect(code.querySelector('.bd-chip-text')?.textContent).toBe('␠code');
     expect(code.getAttribute('aria-label')).toContain('␠ space code');
-    // The 2-column ⏎⏎ chip has no room for text (ids go to the id line): its glyphs are the char tier's above it.
+    // The 2-column ⏎⏎ chip has room for its id only: its glyphs are the char tier's above it.
   });
 
   it('a direct-hit chunk says “no merges” at stop 5 (o200k Hello)', async () => {
@@ -237,24 +238,17 @@ describe('row tracks by breakpoint (05 §3.3)', () => {
   const rectIn = (board: MountedBoard, selector: string): DOMRect | undefined =>
     board.grid.querySelector('.bd-row')?.querySelector(selector)?.getBoundingClientRect();
 
-  it('puts the ids of 1–2-column chips on a 16 px id line from 480 px, inside the fixed row height', async () => {
-    await page.viewport(600, 900);
-    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
-    expect(cells(board, '.bd-idl').map((label) => label.textContent)).toEqual(['66285', '96']);
-    const row = board.grid.querySelector('.bd-row')?.getBoundingClientRect();
-    const rowHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--row-h'));
-    expect(row?.height).toBe(rowHeight);
-    const ids = rectIn(board, '.bd-ids');
-    expect(ids?.height).toBe(16);
-    expect(ids?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
-    expect(rectIn(board, '.bd-cell-token')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(ids?.top ?? 0);
-  });
-
-  it('keeps the ids in the sheet below 480 px', async () => {
-    await page.viewport(360, 780);
-    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
-    expect(cells(board, '.bd-idl')).toHaveLength(0);
-  });
+  for (const width of [600, 1440]) {
+    it(`fits the token tier in the fixed row height with no id line at ${String(width)} px (PA-17)`, async () => {
+      await page.viewport(width, 900);
+      const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+      expect(board.target.querySelector('.bd-ids, .bd-idl')).toBeNull();
+      const row = board.grid.querySelector('.bd-row')?.getBoundingClientRect();
+      const rowHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--row-h'));
+      expect(row?.height).toBe(rowHeight);
+      expect(rectIn(board, '.bd-cell-token')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
+    });
+  }
 
   it('scales the tracks, the cells and the type from --cell at ≥ 2560 px', async () => {
     await page.viewport(3840, 900);
@@ -262,12 +256,163 @@ describe('row tracks by breakpoint (05 §3.3)', () => {
     const cell = cellPx();
     expect(cell).toBeGreaterThan(40);
     const row = board.grid.querySelector('.bd-row')?.getBoundingClientRect();
-    expect(row?.height).toBeCloseTo(cell * 4 + 44, 0);
+    expect(row?.height).toBeCloseTo(cell * 3.5 + 44, 0);
     expect(rectIn(board, '.bd-cell-char')?.height).toBeCloseTo(cell + 21, 0);
     expect(rectIn(board, '.bd-cell-token')?.height).toBeCloseTo(cell * 0.75 + 5, 0);
-    expect(rectIn(board, '.bd-ids')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
+    expect(rectIn(board, '.bd-cell-token')?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(row?.bottom ?? 0);
     const glyph = board.grid.querySelector('.bd-glyph.cjk');
     expect(Number.parseFloat(getComputedStyle(glyph ?? board.grid).fontSize)).toBeGreaterThan(22);
+  });
+});
+
+describe('token ids inside every chip (PA-17)', () => {
+  /** The digits subset is `font-display: block`: wait for it so the rects measure its glyphs, not a fallback's. */
+  const digitsLoaded = async (): Promise<void> => {
+    await document.fonts.load('12px "TSBS Digits"', '0123456789');
+    await frames(2);
+  };
+
+  /** `font-stretch` as computed (`fontStretch` is typed deprecated: CSS Fonts 4 renames it `font-width`). */
+  const fontStretch = (element: Element): string => getComputedStyle(element).getPropertyValue('font-stretch');
+
+  /** Every token-tier id lies inside its chip's box (1 px border tolerance) and is whole. */
+  const expectIdsInside = (board: MountedBoard, ids: readonly string[]): void => {
+    const shown = cells(board, '[data-tier="token"] .bd-id');
+    expect(shown.map((id) => id.textContent)).toEqual(ids);
+    for (const id of shown) {
+      const chip = id.closest('.bd-chip')?.getBoundingClientRect();
+      const box = id.getBoundingClientRect();
+      expect(box.left, `${id.textContent} left`).toBeGreaterThanOrEqual((chip?.left ?? 0) + 1 - 0.01);
+      expect(box.right, `${id.textContent} right`).toBeLessThanOrEqual((chip?.right ?? 0) - 1 + 0.01);
+      expect(box.top, `${id.textContent} top`).toBeGreaterThanOrEqual((chip?.top ?? 0) + 1 - 0.01);
+      expect(box.bottom, `${id.textContent} bottom`).toBeLessThanOrEqual((chip?.bottom ?? 0) - 1 + 0.01);
+      expect(id.scrollWidth, `${id.textContent} whole`).toBeLessThanOrEqual(Math.ceil(box.width));
+    }
+  };
+
+  for (const width of [360, 600, 1440]) {
+    it(`puts every id of cl100k 台灣台南 inside its chip at ${String(width)} px, in the digits subset`, async () => {
+      await page.viewport(width, width === 360 ? 780 : 900);
+      const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+      await digitsLoaded();
+      expectIdsInside(board, ['55038', '66285', '96', '55038', '59563']);
+      const id = cell(board, '[data-tier="token"][data-index="2"] .bd-id');
+      expect(getComputedStyle(id).fontFamily).toContain('TSBS Digits');
+      expect(document.fonts.check('12px "TSBS Digits"', '96')).toBe(true);
+    });
+  }
+
+  it('narrows the width axis first, then shrinks the size (1-column chips with 1-, 4- and 6-digit ids)', async () => {
+    await page.viewport(1440, 900);
+    const { buildResult } = await import('@tsbs/core/model/build-result');
+    const { analyzeText } = await import('@tsbs/core/text/analyze');
+    const result = buildResult({
+      tokenizer: 'openai-o200k_base',
+      family: 'bytelevel-bpe',
+      analysis: analyzeText('abc'),
+      chunks: { byteStart: [0, 3], kind: [0] },
+      tokens: { id: [7, 4321, 654321], byteStart: [0, 1, 2, 3], kind: [0, 0, 0] },
+      timeline: null,
+    });
+    const board = await show(result);
+    await digitsLoaded();
+    expectIdsInside(board, ['7', '4321', '654321']);
+    const cell = cellPx();
+    const room = cell - 8; // 1 px inset + 1 px border + 2 px padding on each side, no marks
+    const style = (index: number): CSSStyleDeclaration =>
+      getComputedStyle(cells(board, `[data-tier="token"][data-index="${String(index)}"] .bd-id`)[0] ?? board.grid);
+    const stretch = (index: number): number => Number.parseFloat(style(index).getPropertyValue('font-stretch'));
+    const size = (index: number): number => Number.parseFloat(style(index).fontSize);
+    // w = 262.2 · room / (digits · em) − 50, clamped to the axis; below 62.5 % the size gives way instead.
+    expect(stretch(0)).toBe(100);
+    expect(size(0)).toBe(12);
+    expect(stretch(1)).toBeCloseTo(Math.min(100, (262.2 * room) / (4 * 12) - 50), 0);
+    expect(stretch(1)).toBeLessThan(100);
+    expect(stretch(1)).toBeGreaterThan(62.5);
+    expect(size(1)).toBe(12);
+    expect(stretch(2)).toBe(62.5);
+    expect(size(2)).toBeCloseTo(room / (6 * 0.429), 1);
+  });
+
+  it('fits a 6-digit id in a 1-column chip (Gemma 4 “I” in I’m here) and keeps 100 % where there is room', async () => {
+    await page.viewport(1440, 900);
+    let board = await show(fixtureResult('google-gemma4', 'en-contraction-code'));
+    await digitsLoaded();
+    const chip = cell(board, '[data-tier="token"][data-index="0"]');
+    expect(chip.getAttribute('aria-colspan')).toBe('1');
+    const id = chip.querySelector<HTMLElement>('.bd-id');
+    expect(id?.textContent).toBe('236777');
+    expect(fontStretch(id ?? chip)).toBe('62.5%');
+    const chipSize = Number.parseFloat(getComputedStyle(chip.querySelector('.bd-chip') ?? chip).fontSize);
+    expect(Number.parseFloat(getComputedStyle(id ?? chip).fontSize)).toBeLessThan(chipSize);
+    expectIdsInside(
+      board,
+      cells(board, '[data-tier="token"] .bd-id').map((el) => el.textContent),
+    );
+    mounted?.destroy();
+    // cl100k 66285: 2 columns at the 32 px cell, a hatched end: 52 px of room for 5 digits needs no narrowing.
+    board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    await digitsLoaded();
+    expect(cellPx()).toBe(32);
+    const wide = cell(board, '[data-tier="token"][data-index="1"] .bd-id');
+    expect(wide.textContent).toBe('66285');
+    expect(fontStretch(wide)).toBe('100%');
+    expect(getComputedStyle(wide).fontSize).toBe('12px');
+  });
+
+  it('stacks a narrow chip’s marks under its id (cl100k 96, 1 column, hatch mark)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    await digitsLoaded();
+    const chip = cell(board, '[data-tier="token"][data-index="2"]');
+    expect(chip.getAttribute('aria-colspan')).toBe('1');
+    expect(chip.querySelector('.bd-chip')?.classList.contains('stacked')).toBe(true);
+    const id = chip.querySelector('.bd-id')?.getBoundingClientRect();
+    const mark = chip.querySelector('svg.bd-icon')?.getBoundingClientRect();
+    expect(mark?.top ?? 0).toBeGreaterThanOrEqual(id?.bottom ?? Number.POSITIVE_INFINITY);
+    const vis = chip.querySelector('.bd-chip')?.getBoundingClientRect();
+    expect(mark?.bottom ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual((vis?.bottom ?? 0) - 1);
+  });
+
+  it('shows the id on every fragment of a token split over rows (o200k token 5 at 360 px)', async () => {
+    await page.viewport(360, 780);
+    const board = await show(fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo'));
+    await digitsLoaded();
+    const fragments = cells(board, '[data-tier="token"][data-index="4"]');
+    expect(fragments).toHaveLength(2);
+    const ids = fragments.map((fragment) => fragment.querySelector('.bd-id')?.textContent);
+    expect(ids[0]).toMatch(/^\d+$/);
+    expect(ids[1]).toBe(ids[0]);
+    expectIdsInside(
+      board,
+      cells(board, '[data-tier="token"] .bd-id').map((el) => el.textContent),
+    );
+  });
+
+  it('puts a live part’s hex under its id at stops 4–5, wide or narrow (o200k Hello, stop 5)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('openai-o200k_base', 'en-hello-world'), { stage: 5, step: 2 });
+    await digitsLoaded();
+    const parts = cells(board, '[data-tier="token"][data-variant="part"]');
+    expect(parts.map((part) => Number(part.getAttribute('aria-colspan')))).toContain(1);
+    expect(Math.max(...parts.map((part) => Number(part.getAttribute('aria-colspan'))))).toBeGreaterThan(2);
+    for (const part of parts) {
+      const id = part.querySelector('.bd-id')?.getBoundingClientRect();
+      const hex = part.querySelector('.bd-part-text')?.getBoundingClientRect();
+      expect(hex?.top ?? 0).toBeGreaterThanOrEqual(id?.bottom ?? Number.POSITIVE_INFINITY);
+      expect(part.getAttribute('aria-label')).toMatch(/^part \d+ of \d+, id \d+, [0-9A-F]{2}/);
+    }
+    expectIdsInside(
+      board,
+      parts.map((part) => part.querySelector('.bd-id')?.textContent ?? ''),
+    );
+  });
+
+  it('keeps byte-fallback chips to <0xNN> (Gemma 4 𰻝): the label and the inspector carry their ids', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('google-gemma4', 'cjk-ext-g-biang'), { stage: 4 });
+    expect(cells(board, '[data-tier="token"] .bd-piece')).toHaveLength(4);
+    expect(cells(board, '[data-tier="token"] .bd-id')).toHaveLength(0);
   });
 });
 

@@ -116,7 +116,6 @@
     stage,
     pending,
     uLabels: stage >= 2 && viewport.small,
-    idLine: viewport.small,
     brackets: app.graphemes,
     fusedDummy,
     lang,

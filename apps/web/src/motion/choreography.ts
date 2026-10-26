@@ -294,7 +294,7 @@ export function prepare(grid: HTMLElement, change: Change, reduced: boolean): Pr
     bytes: snapshot(scope(take.bytes), BYTE_ROWS, byteRowKey),
     chunks: snapshot(scope(take.chunks), '.bd-cell-chunk > .bd-vis', cellKey),
     chips: snapshot(scope(take.chips), CHIP, (el, row) => `${cellKey(el, row) ?? row}:${variantOf(el)}`),
-    ids: snapshot(scope(take.chips), '.bd-id, .bd-idl', (el, row) => `${row}:${el.textContent}:${String(column(el))}`),
+    ids: snapshot(scope(take.chips), '.bd-id', (el, row) => `${row}:${el.textContent}:${String(column(el))}`),
   };
   const leaving = chunked(change.from) && !chunked(change.to) ? chunkRows(rows) : [];
   return {

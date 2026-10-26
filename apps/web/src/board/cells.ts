@@ -9,6 +9,8 @@
  *   code point.
  * - Chunk and token/part cells: one per fragment; fragments of a span share its index (one logical cell for the keyboard)
  *   and each references a visually hidden `frag-…` description; zero-width tokens are full-column marker cells (AD-25).
+ *   Every token/part chip with an id carries it inside, on every fragment and at any width (PA-17: no id line beneath);
+ *   byte-fallback chips and markers show their piece instead.
  */
 import type { PartsAt, ResolvedTextLang, RowModel, TokenizationResult } from '@tsbs/core';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
@@ -43,8 +45,6 @@ export interface BoardContext {
   readonly pending: boolean;
   /** U+ labels under glyphs (stop ≥ 2 and viewport ≥ 480 px). */
   readonly uLabels: boolean;
-  /** Ids of 1–2-column chips on the id line beneath (viewport ≥ 480 px, 05 §3.3; below that they live in the sheet). */
-  readonly idLine: boolean;
   /** Grapheme brackets shown (the `g` toggle, and the segmenter is not the fallback). */
   readonly brackets: boolean;
   /** The first spm piece fuses the dummy prefix (`▁Hello`, 03 §B.3). */
@@ -113,9 +113,10 @@ export interface ChunkCellModel extends FragmentModel {
 export interface TokenCellModel extends FragmentModel {
   readonly variant: 'token' | 'part' | 'marker';
   readonly tint: number;
-  /** Shown inside the chip (≥ 3 columns), else on the id line or in the sheet. */
+  /** Shown inside the chip at every width (PA-17), except on byte-fallback chips and markers (the label and inspector). */
   readonly id: number | null;
-  readonly idInside: boolean;
+  /** Digit count of `id` (0 for none): the chip's CSS narrows, then shrinks, the id to fit (`.d<n>`, board.css). */
+  readonly digits: number;
   readonly hatchStart: boolean;
   readonly hatchEnd: boolean;
   readonly partial: boolean;
@@ -139,14 +140,6 @@ export interface BracketModel {
   readonly last: boolean;
 }
 
-export interface IdLabelModel {
-  readonly index: number;
-  readonly col: number;
-  readonly span: number;
-  readonly text: string;
-  readonly odd: boolean;
-}
-
 export interface SourceRunModel {
   readonly key: number;
   readonly col: number;
@@ -166,7 +159,6 @@ export interface RowCells {
   readonly chunks: ChunkCellModel[];
   readonly tokens: TokenCellModel[];
   readonly brackets: BracketModel[];
-  readonly ids: IdLabelModel[];
   readonly sources: SourceRunModel[];
   readonly descriptions: DescriptionModel[];
 }
@@ -238,6 +230,11 @@ function tokenStarts(ctx: BoardContext): Uint8Array {
   if (!ctx.pending && stage >= 4) for (let i = 0; i < tokens.count; i++) marks[tokens.byteStart[i] ?? 0] = 1;
   tokenStartMarks.set(ctx, marks);
   return marks;
+}
+
+/** The digit count of a chip's id (0: none). */
+function digitsOf(id: number | null): number {
+  return id === null ? 0 : String(id).length;
 }
 
 function descriptionId(kind: 'chunk' | 'token' | 'part', index: number, part: number): string {
@@ -335,19 +332,10 @@ export function rowCells(row: RowModel, ctx: BoardContext): RowCells {
 
   // Token tier: final tokens (stop 6) or live parts (stops 4–5)
   const tokenCells: TokenCellModel[] = [];
-  const ids: IdLabelModel[] = [];
   if (tierShown('token')) {
     const parts = units.parts;
     if (parts === null) tokenCellsFinal(row, ctx, tokenCells, descriptions);
     else tokenCellsParts(row, ctx, parts, tokenCells, descriptions);
-    if (ctx.idLine) {
-      let odd = false;
-      for (const cell of tokenCells) {
-        if (cell.id === null || cell.idInside || !cell.first) continue;
-        ids.push({ index: cell.index, col: cell.col, span: cell.span, text: String(cell.id), odd });
-        odd = !odd;
-      }
-    }
   }
 
   // Grapheme brackets over clusters of more than one code point
@@ -389,7 +377,6 @@ export function rowCells(row: RowModel, ctx: BoardContext): RowCells {
     chunks: chunkCells,
     tokens: tokenCells,
     brackets,
-    ids,
     sources,
     descriptions,
   };
@@ -460,6 +447,7 @@ function tokenCellsFinal(
   const fused = ctx.fusedDummy ? firstSpanToken(result) : -1;
   for (const { col, token } of row.markers) {
     const kind = tokens.kind[token] ?? 0;
+    const id = tokens.id[token] ?? 0;
     const dummy = kind === TokenKind.DummyPrefix;
     out.push({
       index: token,
@@ -473,8 +461,8 @@ function tokenCellsFinal(
       describedBy: null,
       variant: 'marker',
       tint: -1,
-      id: tokens.id[token] ?? 0,
-      idInside: false,
+      id,
+      digits: digitsOf(id),
       hatchStart: false,
       hatchEnd: false,
       partial: false,
@@ -510,7 +498,7 @@ function tokenCellsFinal(
       variant: 'token',
       tint: i % 8,
       id,
-      idInside: f.colSpan >= 3,
+      digits: digitsOf(id),
       hatchStart: kind !== TokenKind.Byte && f.first && (flags & TokenFlag.StartsMidChar) !== 0,
       hatchEnd: kind !== TokenKind.Byte && f.last && (flags & TokenFlag.EndsMidChar) !== 0,
       partial: (flags & TokenFlag.Partial) !== 0,
@@ -545,7 +533,8 @@ function tokenCellsParts(
     const p = f.spanId;
     const start = parts.partStart[p] ?? 0;
     const end = parts.partStart[p + 1] ?? 0;
-    const id = parts.partId[p] ?? -1;
+    const partId = parts.partId[p] ?? -1;
+    const id = partId >= 0 ? partId : null;
     if (start === end) {
       out.push({
         index: p,
@@ -555,12 +544,12 @@ function tokenCellsParts(
         span: 1,
         first: true,
         last: true,
-        label: partLabel(result, p, count, start, end, id, t),
+        label: partLabel(result, p, count, start, end, partId, t),
         describedBy: null,
         variant: 'marker',
         tint: -1,
-        id: id >= 0 ? id : null,
-        idInside: false,
+        id,
+        digits: digitsOf(id),
         hatchStart: false,
         hatchEnd: false,
         partial: false,
@@ -588,12 +577,12 @@ function tokenCellsParts(
       span: f.colSpan,
       first: f.first,
       last: f.last,
-      label: partLabel(result, p, count, start, end, id, t),
+      label: partLabel(result, p, count, start, end, partId, t),
       describedBy: fragment.id,
       variant: 'part',
       tint: token < 0 ? -1 : token % 8,
-      id: id >= 0 ? id : null,
-      idInside: false,
+      id,
+      digits: digitsOf(id),
       // Partial hatching is a stop-6 cue (05 §2); live parts say "partial" in their label only.
       hatchStart: false,
       hatchEnd: false,

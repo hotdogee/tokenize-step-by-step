@@ -58,7 +58,7 @@ export const BOARD_VARIANTS: readonly BoardVariant[] = [
   { media: '(min-width: 1024px)', view: { k: 12, wide: true, medium: true, small: true } },
   // Anchored panel; K ≥ 20: one row.
   { media: '(min-width: 768px) and (max-width: 1023.98px)', view: { k: 12, wide: false, medium: true, small: true } },
-  // Bottom sheet, U+ labels and the id line on the board; K ≥ 12: one row.
+  // Bottom sheet, U+ labels and chunk brackets on the board; K ≥ 12: one row.
   { media: '(min-width: 480px) and (max-width: 767.98px)', view: { k: 12, wide: false, medium: false, small: true } },
   // Phones: bottom sheet, no labels; K 9–11: rows of 3 + 1 characters.
   { media: '(min-width: 356px) and (max-width: 463.98px)', view: { k: 9, wide: false, medium: false, small: false } },

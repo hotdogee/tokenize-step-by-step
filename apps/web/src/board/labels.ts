@@ -289,7 +289,10 @@ export function firstSpanToken(result: TokenizationResult): number {
   return -1;
 }
 
-/** `aria-label` of live part `index` (stops 4–5). */
+/**
+ * `aria-label` of live part `index` (stops 4–5). The id comes before the hex, the order the chip shows them in, so the
+ * visible label is part of the name (WCAG 2.5.3; PA-17 put the id inside the chip).
+ */
 export function partLabel(
   result: TokenizationResult,
   index: number,
@@ -306,9 +309,9 @@ export function partLabel(
   return joinParts(
     [
       t('a11y.cell.part', { index: index + 1, count }),
+      id >= 0 && t('a11y.cell.id', { id }),
       hex.join(' '),
       t('counts.bytes', { n: end - start }),
-      id >= 0 && t('a11y.cell.id', { id }),
       cutsChar(result, start, end) && t('a11y.cell.partial', { list: coverageList(result, start, end, t, spoken) }),
     ],
     t,

@@ -29,8 +29,8 @@
   position: relative;
   display: grid;
   grid-template-rows:
-    [source] var(--src-h) [bracket] 6px [char] 42px [bytes1] 26px [bytes2] 0 [chunk] 0 [token] 30px
-    [ids] 0;
+    [source] var(--src-h) [bracket] 6px [char] 42px [bytes1] 26px [bytes2] 0 [chunk] 0
+    [token] 30px;
   height: calc(var(--row-h) + var(--src-h));
   content-visibility: auto;
   contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h));
@@ -43,34 +43,34 @@
   content-visibility: visible;
 }
 
-/* 480–767: the 136 px --row-h holds U+ labels, chunk brackets and the 16 px id line (05 §3.3), so the tiers sit flush. */
+/* 480–767: the 120 px --row-h holds U+ labels and chunk brackets (05 §3.3), so the tiers sit flush. Token ids sit inside
+   their chips at every width (PA-17): no row has an id track. */
 @media (min-width: 480px) {
   .bd-row {
     grid-template-rows:
-      [source] var(--src-h) [bracket] 6px [char] 48px [bytes1] 24px [bytes2] 0 [chunk] 14px [token] 28px
-      [ids] 16px;
+      [source] var(--src-h) [bracket] 6px [char] 48px [bytes1] 24px [bytes2] 0 [chunk] 14px
+      [token] 28px;
   }
 }
 
 @media (min-width: 768px) {
   .bd-row {
     grid-template-rows:
-      [source] var(--src-h) [bracket] 6px [char] 56px [bytes1] 26px [bytes2] 0 [chunk] 16px [token] 30px
-      [ids] 14px;
+      [source] var(--src-h) [bracket] 6px [char] 56px [bytes1] 26px [bytes2] 0 [chunk] 16px
+      [token] 30px;
   }
 }
 
 @media (min-width: 1024px) {
   .bd-row {
     grid-template-rows:
-      [source] var(--src-h) [bracket] 6px [char] 55px [bytes1] 25px [bytes2] 25px [chunk] 15px [token] 29px
-      [ids] 15px;
+      [source] var(--src-h) [bracket] 6px [char] 55px [bytes1] 25px [bytes2] 25px [chunk] 15px
+      [token] 29px;
   }
 }
 
 .bd-tier,
 .bd-brackets,
-.bd-ids,
 .bd-sources {
   display: grid;
   grid-template-columns: repeat(var(--k), var(--cell));
@@ -101,9 +101,6 @@
 }
 .bd-tier-token {
   grid-row: token;
-}
-.bd-ids {
-  grid-row: ids;
 }
 
 /*
@@ -393,12 +390,26 @@
 
 /* ---- Token tier: chips, parts, markers ---- */
 
+/*
+ * The id's room (PA-17): the chip's width (`--span` comes with the gridcell's generated `.s<n>` class) less the 1 px inset
+ * and the border on each side, the paddings (6 px on a hatched edge) and every mark beside the id (icon + 2 px gap).
+ */
 .bd-chip {
+  --pad-s: 2px;
+  --pad-e: 2px;
+  --m-hatch: 0px;
+  --m-lock: 0px;
+  --m-cs: 0px;
+  --m-ce: 0px;
+  --id-room: calc(
+    var(--span) * var(--cell) - 2px - 2 * var(--border-width) - var(--pad-s) - var(--pad-e) - var(--m-hatch) -
+      var(--m-lock) - var(--m-cs) - var(--m-ce)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding-inline: 2px;
+  padding-inline: var(--pad-s) var(--pad-e);
   overflow: hidden;
   border: var(--border-width) solid var(--border);
   background: var(--tint, var(--surface));
@@ -408,15 +419,15 @@
 }
 
 .bd-chip.hatch-start {
+  --pad-s: 6px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  padding-left: 6px;
 }
 
 .bd-chip.hatch-end {
+  --pad-e: 6px;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  padding-right: 6px;
 }
 
 .bd-chip.hatch-start::before,
@@ -464,7 +475,91 @@
   gap: 1px;
 }
 
-.bd-chip-text {
+.bd-chip.has-hatch:not(.stacked) {
+  --m-hatch: 12px;
+}
+
+.bd-chip.has-lock:not(.stacked) {
+  --m-lock: 13px;
+}
+
+.bd-chip.cont-start:not(.stacked) {
+  --m-cs: 12px;
+}
+
+.bd-chip.cont-end:not(.stacked) {
+  --m-ce: 12px;
+}
+
+/*
+ * Stacked chips (≤ 2 columns, and every live part, whose hex would otherwise run into its id): the id has the first
+ * line to itself; the marks and a part's hex wrap onto a line under it (12 + 1 + 11 px inside the 26 px chip). `safe`
+ * keeps the id in view should a third line ever overflow; engines without it (Chrome < 115) drop the declaration and
+ * stretch the lines, which keeps it in view too.
+ */
+.bd-chip.stacked {
+  flex-wrap: wrap;
+  align-content: safe center;
+  row-gap: 1px;
+}
+
+.bd-chip.stacked > .bd-id {
+  order: -1;
+  flex-basis: 100%;
+  text-align: center;
+}
+
+/*
+ * The id (PA-17) in the digits subset (fonts.css), always whole: its width axis narrows from 100 % to 62.5 % as the room
+ * per digit falls from 0.572 to 0.429 em (the build asserts both advances and that the glyphs never run wider than this
+ * line in between), then the size shrinks below the chip's 1em. Engines without CSS trigonometry keep 62.5 %, which
+ * still fits. An `@supports` guard, not a second declaration: a declaration with var() never fails to parse, so a
+ * fallback before it would be discarded and the property would compute to its initial 100 % instead.
+ */
+.bd-id {
+  flex: none;
+  font-family: var(--font-digits);
+  font-size: min(1em, calc(var(--id-room) / (var(--digits) * 0.429)));
+  font-stretch: 62.5%;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@supports (font-stretch: calc(tan(atan2(1px, 1px)) * 1%)) {
+  .bd-id {
+    /* room / em as a number (atan2 takes two lengths); 1em is the id's own, possibly shrunk, size. */
+    --id-adv: calc(tan(atan2(var(--id-room), 1em)) / var(--digits));
+    font-stretch: clamp(62.5%, calc((262.2 * var(--id-adv) - 50) * 1%), 100%);
+  }
+}
+
+/* Digit counts (TokenCellModel.digits); vocabularies top out at 6, 7 is a safety bound. */
+.bd-id.d1 {
+  --digits: 1;
+}
+.bd-id.d2 {
+  --digits: 2;
+}
+.bd-id.d3 {
+  --digits: 3;
+}
+.bd-id.d4 {
+  --digits: 4;
+}
+.bd-id.d5 {
+  --digits: 5;
+}
+.bd-id.d6 {
+  --digits: 6;
+}
+.bd-id.d7 {
+  --digits: 7;
+}
+
+/* Chip text and a part's hex yield to the id: they clip when both do not fit. */
+.bd-chip-text,
+.bd-part-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: clip;
 }
@@ -494,7 +589,7 @@
   flex: none;
 }
 
-/* ---- Decorative lines: grapheme brackets, NFKC sources, id line ---- */
+/* ---- Decorative lines: grapheme brackets, NFKC sources ---- */
 
 .bd-gbracket {
   height: 5px;
@@ -534,33 +629,18 @@
   text-underline-offset: 2px;
 }
 
-.bd-idl {
-  font-size: 0.625rem;
-  line-height: 1;
-  color: var(--fg-muted);
-  text-align: center;
-  white-space: nowrap;
-  overflow: visible;
-  align-self: start;
-}
-
-.bd-idl.odd {
-  align-self: end;
-}
-
 ::highlight(tsbs-selection) {
   background-color: var(--accent);
   color: var(--bg);
 }
 
-/* ---- ≥ 2560 px (05 §3.3): --row-h = 4·cell + 44 px; tracks, cells and type scale from --cell (type via clamp()) ---- */
+/* ---- ≥ 2560 px (05 §3.3): --row-h = 3.5·cell + 44 px; tracks, cells and type scale from --cell (type via clamp()) ---- */
 
 @media (min-width: 2560px) {
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] calc(var(--cell) + 22px) [bytes1] calc(var(--cell) / 2 + 8px)
-      [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px)
-      [ids] calc(var(--cell) / 2);
+      [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px);
   }
 
   .bd-cell-char {
@@ -602,8 +682,7 @@
     font-size: clamp(0.75rem, var(--cell) * 0.375, 1.0625rem);
   }
 
-  .bd-chunk,
-  .bd-idl {
+  .bd-chunk {
     font-size: clamp(0.625rem, var(--cell) * 0.3125, 0.875rem);
   }
 
