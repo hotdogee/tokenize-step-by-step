@@ -43,13 +43,27 @@ runs:
         BROWSERS: ${{ inputs.browsers }}
       run: pnpm --filter @tsbs/e2e exec playwright install-deps $BROWSERS
     - if: inputs.cjk-fonts == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.cache/fonts-noto-cjk
+        key: fonts-noto-cjk-${{ runner.os }}-noble-1
+    - if: inputs.cjk-fonts == 'true'
       shell: bash
       run: |
-        # The 61 MB fonts-noto-cjk download has stalled for 20 minutes on the Azure mirror twice; give apt a stall
-        # timeout and retry instead of letting the job hit its own timeout.
-        for attempt in 1 2 3; do
-          timeout 420 sudo apt-get install -y --no-install-recommends -o Acquire::http::Timeout=30 -o Acquire::Retries=3 fonts-noto-cjk fontconfig && break
-          echo "::warning::fonts-noto-cjk install attempt ${attempt} failed or stalled; retrying"
-          sleep 10
-        done
+        # The 61 MB fonts-noto-cjk download has stalled on the Azure mirror for whole jobs (three shards so far).
+        # The .deb is cached per runner image below; on a miss it is fetched with a stall timeout, IPv4 only, two
+        # attempts of at most five minutes, so the step always ends well inside the job's 20-minute limit.
+        DEB_DIR="$HOME/.cache/fonts-noto-cjk"
+        mkdir -p "$DEB_DIR"
+        if ! ls "$DEB_DIR"/fonts-noto-cjk_*.deb >/dev/null 2>&1; then
+          for attempt in 1 2; do
+            (cd "$DEB_DIR" && timeout 300 apt-get download -o Acquire::http::Timeout=20 -o Acquire::Retries=2 -o Acquire::ForceIPv4=true fonts-noto-cjk) && break
+            echo "::warning::fonts-noto-cjk download attempt ${attempt} failed or stalled; retrying"
+            rm -f "$DEB_DIR"/*.deb; sleep 5
+          done
+        fi
+        ls "$DEB_DIR"/fonts-noto-cjk_*.deb >/dev/null 2>&1 || { echo "::error::fonts-noto-cjk could not be downloaded"; exit 1; }
+        sudo apt-get install -y --no-install-recommends fontconfig
+        sudo dpkg -i "$DEB_DIR"/fonts-noto-cjk_*.deb
+        sudo fc-cache -f >/dev/null
         fc-list :lang=zh-tw family | grep -q 'Noto Sans CJK' || { echo "::error::fonts-noto-cjk did not install"; exit 1; }
