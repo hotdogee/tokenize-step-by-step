@@ -115,9 +115,10 @@ describe('workflows', () => {
     const action = actions.find((entry) => entry.name === 'actions/playwright')?.text ?? '';
     expect(action).toContain(`jq -r '.devDependencies["@playwright/test"]' e2e/package.json`);
     expect(action).toMatch(/key: playwright-\$\{\{ runner\.os \}\}-\$\{\{ steps\.key\.outputs\.version \}\}-/);
-    // Browsers come from Playwright's CDN; their apt packages (install-deps --dry-run) install from a cached archive.
+    // Browsers come from Playwright's CDN; their apt packages install through install-deps from a cached archive dir.
     expect(action).toContain('playwright install $BROWSERS');
-    expect(action).toContain('playwright install-deps --dry-run $BROWSERS');
+    expect(action).toContain('playwright install-deps $BROWSERS');
+    expect(action).toContain('archive.ubuntu.com');
     expect(action).toMatch(/key: apt-deps-\$\{\{ runner\.os \}\}-\$\{\{ steps\.key\.outputs\.version \}\}-/);
     expect(action).toContain('fonts-noto-cjk');
   });

@@ -32,16 +32,23 @@ runs:
       with:
         path: ~/.cache/ms-playwright
         key: playwright-${{ runner.os }}-${{ steps.key.outputs.version }}-${{ steps.key.outputs.browsers }}
-    # apt on the runners has stalled for whole jobs on the Azure mirror (webkit's install-deps pulls ~60 packages);
-    # a stalled transfer now times out after 20 s and is retried, and each install step has a hard 10-minute cap
-    # with one retry, so the job always ends inside its 20-minute limit.
+    # apt on the GitHub runners goes through the Azure mirror, which has delivered at 40-60 KB/s or stalled for whole
+    # jobs. The runner's mirror list is rewritten to prefer archive.ubuntu.com, a stalled transfer times out after 20 s
+    # and is retried, and apt's own archive directory is cached per Playwright version and browser list so the packages
+    # Playwright's install-deps needs are downloaded once per bump. Each install step is capped at ten minutes with one
+    # retry, so the job always ends inside its 20-minute limit.
     - shell: bash
       run: |
         printf 'Acquire::http::Timeout "20";\nAcquire::Retries "3";\nAcquire::ForceIPv4 "true";\n' | sudo tee /etc/apt/apt.conf.d/99-tsbs-timeouts >/dev/null
-    # Browser binaries come from Playwright's CDN (fast) on a cache miss; their apt dependencies are installed from a
-    # cached archive directory keyed on the Playwright version and browser list, so the slow or stalling Azure apt
-    # mirror is hit once per Playwright bump instead of on every shard. The package list is Playwright's own
-    # (`install-deps --dry-run`); if that parse ever yields nothing, the plain install-deps runs with a cap.
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          printf 'http://archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://azure.archive.ubuntu.com/ubuntu/\tpriority:2\n' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+        fi
+        sudo mkdir -p /var/cache/apt/archives/partial
+        sudo chmod -R a+rwX /var/cache/apt/archives
+    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: /var/cache/apt/archives/*.deb
+        key: apt-deps-${{ runner.os }}-${{ steps.key.outputs.version }}-${{ steps.key.outputs.browsers }}-noble-2
     - if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
@@ -52,32 +59,13 @@ runs:
           echo "::warning::playwright install attempt ${attempt} failed or stalled; retrying"
         done
         exit 1
-    - id: apt-cache
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ~/.cache/apt-archives
-        key: apt-deps-${{ runner.os }}-${{ steps.key.outputs.version }}-${{ steps.key.outputs.browsers }}-noble-1
     - shell: bash
       env:
         BROWSERS: ${{ inputs.browsers }}
       run: |
-        ARCHIVES="$HOME/.cache/apt-archives"
-        mkdir -p "$ARCHIVES/partial"
-        # The dry run prints the apt command Playwright would run (stdout or stderr depending on the version); an
-        # unparseable output must not abort the step under `set -e`, so every stage tolerates an empty result.
-        DRY=$(pnpm --filter @tsbs/e2e exec playwright install-deps --dry-run $BROWSERS 2>&1 || true)
-        echo "$DRY" | head -5
-        PKGS=$( (echo "$DRY" | grep -o 'apt-get install[^"]*' || true) | sed 's/apt-get install//; s/ -y//; s/--no-install-recommends//' | tr -s '[:space:]' ' ' || true)
-        if [ -z "$PKGS" ]; then
-          echo "::warning::could not read the dependency list from install-deps --dry-run; running install-deps directly"
-          timeout 600 pnpm --filter @tsbs/e2e exec playwright install-deps $BROWSERS
-          exit $?
-        fi
-        echo "packages: $PKGS"
-        sudo apt-get update -o Acquire::http::Timeout=20 -o Acquire::Retries=3 -o Acquire::ForceIPv4=true >/dev/null
         for attempt in 1 2; do
-          timeout 480 sudo apt-get install -y --no-install-recommends -o Dir::Cache::archives="$ARCHIVES" -o Acquire::http::Timeout=20 -o Acquire::Retries=3 -o Acquire::ForceIPv4=true $PKGS && exit 0
-          echo "::warning::browser dependency install attempt ${attempt} failed or stalled; retrying"
+          timeout 600 pnpm --filter @tsbs/e2e exec playwright install-deps $BROWSERS && exit 0
+          echo "::warning::playwright install-deps attempt ${attempt} failed or stalled; retrying"
         done
         exit 1
     - if: inputs.cjk-fonts == 'true'
