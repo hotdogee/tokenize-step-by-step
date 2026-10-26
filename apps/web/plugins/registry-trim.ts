@@ -15,13 +15,19 @@
  * `registry-trim.test.ts` scans `src/` so no page starts reading a trimmed field. Applied before Vite's JSON plugin
  * (`enforce: 'pre'`) in `vite build` and `vite dev`; unit tests import the full files.
  */
-import { normalizePath, type Plugin } from 'vite';
+import type { Plugin } from 'vite';
 
 export type TrimmedFile = 'tokenizers' | 'licences' | 'examples';
 
-/** Which trimmed registry file a module id is (a `?raw` import is the untouched text, never trimmed). */
+/**
+ * Which trimmed registry file a module id is (a `?raw` import is the untouched text, never trimmed). Backslashes count
+ * as separators on every platform (Vite's `normalizePath` converts them on Windows only, so a Windows-style id failed
+ * this check on the Linux CI).
+ */
 export function registryFileOf(id: string): TrimmedFile | null {
-  const match = /\/packages\/registry\/data\/(tokenizers|licences|examples)\.json(\?.*)?$/.exec(normalizePath(id));
+  const match = /\/packages\/registry\/data\/(tokenizers|licences|examples)\.json(\?.*)?$/.exec(
+    id.replaceAll('\\', '/'),
+  );
   if (match === null || (match[2] ?? '').includes('raw')) return null;
   const file = match[1];
   return file === 'tokenizers' || file === 'licences' || file === 'examples' ? file : null;
