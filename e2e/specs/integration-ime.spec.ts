@@ -1,6 +1,6 @@
 /**
  * WP13 integration — IME (05 §6): while a composition is open the text is provisional (the board shows the text-only
- * tiers, muted, and no encode is posted); the commit sends exactly one encode, for the final text, whichever order the
+ * tiers, muted, the counts keep the last result's tokens marked "stale", and no encode is posted); the commit sends exactly one encode, for the final text, whichever order the
  * engine fires `compositionend` and the last `input` in (Chromium: input with `isComposing: true` first; Firefox/WebKit:
  * `compositionend` first, then an input with `isComposing: false`); shortcuts are ignored while composing; a paste
  * tokenizes at once, without the 40 ms debounce. Chromium also runs a real composition through CDP
@@ -155,6 +155,9 @@ test('a real IME composition through CDP Input.imeSetComposition (chromium)', as
   await expect(grid(page)).toHaveAttribute('data-composing', '');
   await cdp.send('Input.imeSetComposition', { text: 'にほん', selectionStart: 3, selectionEnd: 3 });
   await expect(page.getByTestId('counts')).toContainText('3 code points');
+  // Not "waiting for the tokenizer": the last result's tokens stay, marked stale, until the commit is tokenized.
+  await expect(page.getByTestId('tokens-pending')).toHaveCount(0);
+  await expect(page.getByTestId('stale-badge')).toBeVisible();
   await expectEncodesSince(page, from, []);
   await cdp.send('Input.insertText', { text: '日本' });
   await expect(page.locator('#text-input')).toHaveValue('日本');
@@ -162,4 +165,5 @@ test('a real IME composition through CDP Input.imeSetComposition (chromium)', as
   await expectEncodesSince(page, from, ['日本']);
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
   await expect(page.getByTestId('counts')).toContainText('2 code points');
+  await expect(page.getByTestId('stale-badge')).toHaveCount(0);
 });

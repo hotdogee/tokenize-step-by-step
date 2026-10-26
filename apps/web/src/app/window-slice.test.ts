@@ -4,7 +4,15 @@ import { ALIVE, NEVER } from '@tsbs/core/model/result';
 import { replay } from '@tsbs/core/timeline/replay';
 import { describe, expect, it } from 'vitest';
 import { caseResult } from '../board/fixture-results.test-helper.ts';
-import { byteAtUtf16, isWindowEdge, sliceResult, snapWindow, windowAround, WINDOW_STEP } from './window-slice.ts';
+import {
+  byteAtCaret,
+  byteAtUtf16,
+  isWindowEdge,
+  sliceResult,
+  snapWindow,
+  windowAround,
+  WINDOW_STEP,
+} from './window-slice.ts';
 
 const TOKENIZERS: readonly TokenizerId[] = [
   'openai-o200k_base',
@@ -70,6 +78,27 @@ describe('byteAtUtf16', () => {
     const emoji = caseResult('openai-o200k_base', 'emoji-family-zwj');
     expect(byteAtUtf16(emoji, 1)).toBe(0); // inside the first surrogate pair
     expect(byteAtUtf16(emoji, 2)).toBe(4);
+  });
+});
+
+describe('byteAtCaret', () => {
+  it('maps the caret in the typed text through the NFKC source map (… → ... shifts every later offset)', () => {
+    // fuzz-074 starts "Fm3く%ゑ… 🐾l" as typed; NFKC turns the ellipsis into three full stops (every code point is its
+    // own segment here).
+    const r = caseResult('anthropic-claude-legacy', 'fuzz-074', { normalize: 'NFKC', nfkcSegmentStart: () => true });
+    expect(r.text.startsWith('Fm3く%ゑ... 🐾l')).toBe(true);
+    expect(byteAtCaret(r, 6)).toBe(10); // before …: its first full stop
+    expect(byteAtCaret(r, 7)).toBe(13); // after …: the space after the three full stops
+    expect(byteAtCaret(r, 10)).toBe(18); // after 🐾: l
+    expect(byteAtUtf16(r, 10)).toBe(14); // the typed offset read in the normalized text falls back onto 🐾
+    expect(byteAtCaret(r, 999)).toBe(r.utf8.length);
+    // ﾀﾞ → ダ (2 → 1): a caret between the two typed code points lands on the composed one.
+    const dakuten = caseResult('anthropic-claude-legacy', 'halfwidth-katakana-dakuten', { normalize: 'NFKC' });
+    expect(byteAtCaret(dakuten, 1)).toBe(0);
+    expect(byteAtCaret(dakuten, 2)).toBe(3);
+    // Not normalized: the typed offsets are the result's.
+    const plain = caseResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
+    for (const caret of [0, 6, 7, 999]) expect(byteAtCaret(plain, caret)).toBe(byteAtUtf16(plain, caret));
   });
 });
 

@@ -6,7 +6,8 @@
    * text (`analyzeText`, no tokenizer needed — every long-input tier, AD-27); tokens come from the current result
    * (precomputed or live badge) and wait for the tokenizer otherwise. In an on-demand tier they are the last run's values,
    * with a "stale" badge once the text has changed since, and before any run on this tokenizer and options the line
-   * points at the banner's "Tokenize now" instead of the tokenizer (WP13).
+   * points at the banner's "Tokenize now" instead of the tokenizer (WP13). During an IME composition they are the last
+   * result's, also with the "stale" badge, until the committed text is tokenized (05 §6).
    */
   import { appState } from '../app/context.ts';
   import { textStats } from '../app/text-stats.ts';

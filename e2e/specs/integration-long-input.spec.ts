@@ -3,18 +3,19 @@
  *
  * - at 20,001 code points live tokenization pauses behind the "Long input — tokenize on demand" banner; the counts keep
  *   code points live and point at "Tokenize now" for the tokens; the on-demand run tokenizes the WHOLE text (a run past 50,000 merge steps says "merge replay limited
- *   to the first 50,000 steps"); an edit after the run marks the tokens "stale";
+ *   to the first 50,000 steps"); an edit after the run marks the tokens "stale", and they stay stale through a tokenizer
+ *   switch and back (the run's text still differs);
  * - the board is a 2,000-byte window of the whole-text result: built from 50 copies of the o200k zh-TW paragraph (each copy
  *   chunks exactly as the fixture case, a "1" between copies), the token ids at both window edges equal the fixture's;
- * - above 100,000 code points the run records no timeline; at 200,001 code points the cap banner shows and the textarea
- *   keeps every code point;
+ * - above 100,000 code points the run records no timeline (the rail says so, in the capped tier too); at 200,001 code
+ *   points the cap banner shows and the textarea keeps every code point;
  * - a run asked for while the tokenizer loads is dropped when the text gets short again: the load encodes the short text.
  */
 import { expect, test, type Page, type Route } from '@playwright/test';
 import type { TiktokenFixtureCase } from '@tsbs/core';
 import { grid } from './board-helpers.ts';
 import { fixture } from './pipeline-helpers.ts';
-import { LIVE_READY_TIMEOUT_MS, openShell } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
 
 /** On-demand runs over 60,000–200,000 code points take a few seconds on a loaded CI runner. */
 const RUN_TIMEOUT_MS = 60_000;
@@ -76,6 +77,18 @@ test('20,001 code points: the on-demand banner, a whole-text run, the 50,000-ste
   await expect(page.getByTestId('stale-badge')).toBeVisible();
   expect((await counts(page).textContent()) ?? '').toContain(/(\d[\d,]*) tokens/.exec(tokens)?.[0] ?? '?');
   await expect(grid(page)).toHaveAttribute('data-pending', '');
+
+  // Away to cl100k (no run there: the tokens wait for the button) and back: the o200k run's tokens are still not the
+  // text's, so they come back marked stale.
+  const runTokens = /[0-9][0-9,]* tokens/.exec(tokens)?.[0] ?? '?';
+  await pickTokenizer(page, 'cl100k_base');
+  await expect(page.getByTestId('tokens-pending')).toHaveText('tokens: press “Tokenize now”', {
+    timeout: LIVE_READY_TIMEOUT_MS,
+  });
+  await pickTokenizer(page, 'o200k_base');
+  await expect(page.getByTestId('stale-badge')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(counts(page)).toContainText(runTokens);
+  await expect(counts(page)).toContainText('60,001 code points');
 });
 
 test('the board is a window of the whole-text result: ids at both window edges equal the fixture', async ({ page }) => {
@@ -171,6 +184,11 @@ test('above 100,000 code points the run records no timeline; 200,001 shows the c
   expect(await page.locator('#text-input').evaluate((el) => (el as HTMLTextAreaElement).value.length)).toBe(200_001);
   await runOnDemand(page);
   await expect(counts(page)).toContainText('200,000 bytes');
+  // The capped tier is an on-demand tier: its untraced run says why the replay is off.
+  await expect(page.getByTestId('scope-status')).toContainText(
+    'merge replay is not recorded above 100,000 code points',
+  );
+  await expect(page.getByTestId('scrubber')).toBeDisabled();
 });
 
 test('a run asked for while the tokenizer loads is dropped once the text is short: the load encodes the short text', async ({

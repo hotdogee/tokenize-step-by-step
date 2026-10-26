@@ -99,7 +99,7 @@ and the drawer:
 - **Requests.** Every encode carries one sequence number: an older answer is dropped, a superseded encode settles as
   `cancelled` (never an error), keystrokes coalesce in the 40 ms debounce, an encode asked for during a load is sent once
   after `loaded`, a paste (`inputType` `insertFromPaste`) skips the debounce, an IME composition sends nothing until it is
-  committed (05 §6).
+  committed (05 §6; meanwhile the counts line keeps the last result's tokens, marked "stale").
 - **The board's result** is `AppState.board`: `final` (the current result, or its window), `stale` (the last result, kept
   with `data-pending` until its successor arrives — a keystroke on a loaded tokenizer renders once, PA-11; a tokenizer
   switch keeps the last result, AD-19) or `text` (text-only stops 1–3, only while nothing is loaded for the text, an IME
@@ -107,9 +107,10 @@ and the drawer:
 - **Long input** (AD-27, `long-input.ts`): ≤ 2,000 code points live; ≤ 20,000 virtualized with scoped replay; above that
   the "Long input — tokenize on demand" banner runs the WHOLE analysed text once (`trace: { maxSteps: 50_000 }` up to
   100,000 code points, `trace: false` beyond) and the board shows a 2,000-byte window of that result around the caret
-  (`window-slice.ts` slices the full result; it never tokenizes a substring); above 200,000 code points only the first
-  200,000 are analysed. The counts line keeps code points, graphemes and bytes live and marks the last run's tokens
-  "stale" after an edit. Each tier change is said once in the always-mounted status region (the banner is lazy-mounted
+  (`window-slice.ts` slices the full result; it never tokenizes a substring; an NFKC result maps the caret through its
+  source map, `byteAtCaret`); above 200,000 code points only the first 200,000 are analysed. The counts line keeps code
+  points, graphemes and bytes live and marks the last run's tokens "stale" while the text differs from the run's
+  (`AppState.resultStale` is derived, so a tokenizer switch or an option toggled and back neither clears nor sets it). Each tier change is said once in the always-mounted status region (the banner is lazy-mounted
   and is no live region of its own). A run asked for while the tokenizer loads runs on `loaded`, also after a failed
   load is retried, and is dropped when the text goes back under 20,001 code points (the load then encodes the short
   text live).

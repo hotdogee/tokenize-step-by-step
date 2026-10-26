@@ -13,7 +13,8 @@
  *   renumbering, and the truncation sentinel (`died = stepCount` for merges after `maxSteps`) becomes the new step count,
  *   so `replay(timeline, stepCount)` still equals the window's final token boundaries;
  * - a normalized (NFKC) result's source map is not carried into a window (`normalization: null`): the window shows the
- *   normalized text the tokens refer to.
+ *   normalized text the tokens refer to. The caret, a UTF-16 offset into the text as typed, reaches that text through
+ *   the source map (`byteAtCaret`), so a long NFKC window stays around the caret however much normalization shifts it.
  */
 import type { ChunkTable, MergeTimeline, TokenTable, TokenizationResult } from '@tsbs/core';
 import { ALIVE, NEVER, TokenFlag } from '@tsbs/core/model/result';
@@ -47,6 +48,24 @@ export function byteAtUtf16(result: TokenizationResult, utf16: number): number {
   if (utf16 >= (chars.utf16Start[chars.count] ?? 0)) return utf8.length;
   const i = lowerBound(chars.utf16Start, utf16 + 1, 0, chars.count + 1) - 1;
   return chars.byteStart[Math.max(0, i)] ?? 0;
+}
+
+/**
+ * The byte offset in `result.text` of the caret at UTF-16 offset `utf16` into the text as typed (`result.input.text`).
+ * A normalized result maps it through the NFKC source map (03 §B.4): to the first output code point whose input run
+ * ends after the caret's code point (runs follow input order), so a caret inside a run that changed length lands on
+ * that run; otherwise this is `byteAtUtf16`.
+ */
+export function byteAtCaret(result: TokenizationResult, utf16: number): number {
+  const { chars, utf8 } = result;
+  const runEnd = chars.sourceRunEnd;
+  if (runEnd === null) return byteAtUtf16(result, utf16);
+  const typed = result.input.text;
+  const end = Math.min(Math.max(0, utf16), typed.length);
+  let codePoint = 0;
+  for (let i = 0; i < end; i++) if ((typed.charCodeAt(i) & 0xfc00) !== 0xdc00) codePoint++;
+  const c = lowerBound(runEnd, codePoint + 1, 0, chars.count);
+  return c >= chars.count ? utf8.length : (chars.byteStart[c] ?? 0);
 }
 
 /** True when byte offset `b` is a code-point, grapheme and token boundary of `result` (0 and the end always are). */

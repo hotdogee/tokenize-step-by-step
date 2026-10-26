@@ -213,8 +213,6 @@ export class AppState {
   inspectorFocus: 'grid' | 'panel' = $state('grid');
   result: TokenizationResult | null = $state.raw(null);
   resultSource: 'precomputed' | 'live' = $state('precomputed');
-  /** Stale = the text changed since the last on-demand run (AD-27). */
-  resultStale = $state(false);
   loading: Progress | null = $state.raw(null);
   error: UiError | null = $state.raw(null);
   longInput: LongInputMode = $state('live');
@@ -389,7 +387,8 @@ export class AppState {
       const text = this.analysed;
       const slicer = this.#slicer;
       if (result !== null && slicer !== null && !this.composing && this.#isCurrent(result)) {
-        const window = slicer.windowAround(result, slicer.byteAtUtf16(result, Math.min(this.caret, text.length)));
+        // The caret is an offset into the typed text; an NFKC result maps it through its source map.
+        const window = slicer.windowAround(result, slicer.byteAtCaret(result, Math.min(this.caret, text.length)));
         // A caret move inside the same window keeps the same slice object, so the board does not re-render.
         const cached = this.#slice;
         if (cached?.of !== result || cached.start !== window.start || cached.end !== window.end)
@@ -437,7 +436,8 @@ export class AppState {
   /**
    * The counts line's tokens · partial: the current result's; in an on-demand tier the last on-demand run's on this
    * tokenizer and token options, even when the text has changed since (shown with the "stale" badge, AD-27) and while
-   * the next run is in flight.
+   * the next run is in flight; while an IME composition is open, the last result's on this tokenizer and token options
+   * (the provisional text is not encoded, 05 §6; also shown "stale").
    */
   get tokenCounts(): TokenCounts | null {
     if (isOnDemand(this.longInput)) {
@@ -445,7 +445,22 @@ export class AppState {
       return run !== null && run.tokenizer === this.tokenizer && sameTokenOptions(run, this.options) ? run : null;
     }
     const result = this.result;
-    return result !== null && this.#isCurrent(result) ? result.stats : null;
+    if (result?.tokenizer !== this.tokenizer || !sameTokenOptions(result.options, this.options)) return null;
+    return this.composing || result.input.text === this.analysed ? result.stats : null;
+  }
+
+  /**
+   * The counts line's tokens answer another text than the current one (its "stale" badge; `tokenCounts` already holds
+   * the tokenizer and token options): the last on-demand run's text in an on-demand tier — edited since, or while the run
+   * was in flight (AD-27) — or the last result's during an IME composition. Derived, so no switch or toggle can clear it
+   * while the text still differs.
+   */
+  get resultStale(): boolean {
+    if (isOnDemand(this.longInput)) {
+      const run = this.#onDemand;
+      return run !== null && run.text !== this.analysed;
+    }
+    return this.composing && this.result !== null && this.result.input.text !== this.analysed;
   }
 
   /**
@@ -485,7 +500,6 @@ export class AppState {
     this.options = optionsFor(tokenizerEntry(id), this.options);
     this.error = null;
     this.#started = true;
-    if (isOnDemand(this.longInput)) this.resultStale = false;
     this.#lookupPrecomputed();
     await this.#client.unload();
     await this.#load(id, previous);
@@ -565,7 +579,6 @@ export class AppState {
     if (this.longInput !== 'capped') this.#analysed = { text: '', value: '' };
     if (isOnDemand(this.longInput)) {
       this.#loadSlicer();
-      this.resultStale = this.#onDemand !== null && this.#onDemand.text !== this.analysed;
       this.#announceTier(was);
       return;
     }
@@ -581,7 +594,6 @@ export class AppState {
       this.running = false;
       this.#seq++;
     }
-    this.resultStale = false;
     if (this.composing) return;
     if (immediate) this.encodeNow();
     else this.scheduleEncode();
@@ -705,8 +717,6 @@ export class AppState {
       this.#onDemand = onDemand ? onDemandRun(result) : null;
       this.result = result;
       this.resultSource = source;
-      // A run whose text was edited while it was in flight is stale at once (AD-27).
-      this.resultStale = onDemand && result.input.text !== this.analysed;
       this.running = false;
       this.#clampAnchors(result.utf8.length);
       if (this.#urlStep !== null && source === 'live' && this.#isCurrent(result)) {
@@ -743,8 +753,8 @@ export class AppState {
   /** Sets one encode option (only the toggles the tokenizer declares are shown). */
   setOption<K extends 'specialTokens' | 'addBos' | 'normalize'>(key: K, value: EncodeOptions[K]): void {
     this.options = { ...this.options, [key]: value };
-    if (isOnDemand(this.longInput)) this.resultStale = this.#onDemand !== null;
-    else this.encodeNow();
+    // An on-demand tier waits for the button: `tokenCounts` shows the last run only on its own options.
+    if (!isOnDemand(this.longInput)) this.encodeNow();
   }
 
   setByteView(view: ByteView): void {

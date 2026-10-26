@@ -55,7 +55,8 @@ export async function domParts(page: Page): Promise<Part[]> {
 /**
  * `dom` with the id of every part that `expected` leaves unnamed (`-`) masked: since WP13 the board names such parts
  * through the Worker's vocabulary lookup (single bytes before their first merge), which a fixture replay cannot do.
- * Every id the replay does name must still match, and so must every part's bytes.
+ * Every id the replay does name must still match, and so must every part's bytes. The lookup's own ids are asserted
+ * where they are known: 台灣台南 on o200k at stop 4 (integration-load.spec.ts).
  */
 export function maskUnnamed(dom: readonly Part[], expected: readonly Part[] | undefined): Part[] {
   return dom.map((part, i) => {

@@ -158,6 +158,25 @@ describe('the board: final, stale, text (PA-11, AD-19, 05 §12)', () => {
     expect(loaded.board.result.input.text).toBe('こん');
   });
 
+  it('keeps the last result’s counts, marked stale, while an IME composition is open (05 §6)', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    const shown = app.result;
+    const before = client.encodes.length;
+    app.composing = true;
+    app.setText('台灣台南こ');
+    expect(client.encodes.length).toBe(before); // the provisional text is not encoded
+    expect(app.tokenCounts).toBe(shown?.stats);
+    expect(app.resultStale).toBe(true);
+    // The commit is encoded; its answer is current, not stale.
+    app.composing = false;
+    app.setText('台灣台南こ', true);
+    client.encodes.at(-1)?.answer();
+    await flush();
+    expect(app.tokenCounts?.tokens).toBe(5);
+    expect(app.resultStale).toBe(false);
+  });
+
   it('keeps the last result through a tokenizer switch until the new engine answers (strict one-resident)', async () => {
     const client = new FakeClient();
     const app = await loadedApp(client);
@@ -365,6 +384,50 @@ describe('long input tiers (AD-27)', () => {
     void app.selectTokenizer('openai-cl100k_base');
     expect(app.tokenCounts).toBeNull();
     expect(app.awaitingRun).toBe(true);
+  });
+
+  it('keeps the tokens stale through a tokenizer switch and back while the text differs from the run’s', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    const text = 'k'.repeat(27_000);
+    app.setText(text, true);
+    const run = app.runOnDemand();
+    client.encodes.at(-1)?.answer();
+    await run;
+    expect(app.resultStale).toBe(false);
+    app.setText(`${text}l`);
+    expect(app.resultStale).toBe(true);
+    const away = app.selectTokenizer('openai-cl100k_base');
+    await flush();
+    client.loads.at(-1)?.finish();
+    await away;
+    expect(app.tokenCounts).toBeNull(); // no run on cl100k
+    expect(app.awaitingRun).toBe(true);
+    const back = app.selectTokenizer('openai-o200k_base');
+    await flush();
+    client.loads.at(-1)?.finish();
+    await back;
+    expect(app.tokenCounts?.tokens).toBe(27_000); // the o200k run's tokens are back…
+    expect(app.resultStale).toBe(true); // …and still not the text's
+    app.setText(text); // the run's text again
+    expect(app.resultStale).toBe(false);
+  });
+
+  it('shows the run again, not stale, after a token option is toggled and back on the same text', async () => {
+    const client = new FakeClient();
+    const app = await loadedApp(client);
+    app.setText('m'.repeat(26_000), true);
+    const run = app.runOnDemand();
+    client.encodes.at(-1)?.answer();
+    await run;
+    const before = client.encodes.length;
+    app.setOption('specialTokens', 'match');
+    expect(app.tokenCounts).toBeNull(); // the run answers other options: the tokens wait for the button
+    expect(app.awaitingRun).toBe(true);
+    app.setOption('specialTokens', 'as-text');
+    expect(app.tokenCounts?.tokens).toBe(26_000);
+    expect(app.resultStale).toBe(false);
+    expect(client.encodes.length).toBe(before); // an on-demand tier encodes nothing on a toggle
   });
 
   it('runs without a timeline above 100,000 code points and analyses only the first 200,000 beyond that', async () => {

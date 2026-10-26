@@ -31,7 +31,7 @@
   import type { TokenizationResult } from '@tsbs/core';
   import type { Stage } from '../app/app-state.svelte.ts';
   import { appState } from '../app/context.ts';
-  import { TRACED_MAX } from '../app/long-input.ts';
+  import { isOnDemand, TRACED_MAX } from '../app/long-input.ts';
   import { viewOf } from '../board/view-cache.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
@@ -90,10 +90,11 @@
     if (scope.kind === 'chunk')
       lines.push(i18n.t('status.replayScope', { index: scope.chunk + 1, count: scope.chunks }));
     if (scope.kind === 'window') lines.push(i18n.t('status.replayWindow', { start: scope.start, end: scope.end }));
-    // A long input's run (AD-27, WP13): the cap of its recorded prefix, or no timeline at all above 100,000 code points.
+    // A long input's run (AD-27, WP13): the cap of its recorded prefix, or no timeline at all above 100,000 code points
+    // (both on-demand tiers: a capped text's 200,000 analysed code points are untraced too).
     if (result.timeline?.truncated === true)
       lines.push(i18n.t('status.replayLimited', { n: app.replayLimit ?? result.timeline.stepCount }));
-    else if (result.timeline === null && result.options.trace === false && app.longInput === 'on-demand')
+    else if (result.timeline === null && result.options.trace === false && isOnDemand(app.longInput))
       lines.push(i18n.t('status.replayOff', { n: TRACED_MAX }));
     return lines.join(i18n.t('a11y.sep'));
   });
