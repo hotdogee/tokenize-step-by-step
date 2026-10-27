@@ -85,42 +85,42 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: oklch(0.13 0 0);
-    --surface: oklch(0.17 0 0);
-    --surface-2: oklch(0.22 0 0);
-    --surface-3: oklch(0.3 0 0);
-    --fg: oklch(0.95 0 0);
-    --fg-muted: oklch(0.72 0 0);
-    --border: oklch(0.72 0 0);
-    --accent: oklch(0.75 0.12 200);
-    --tok-h0: oklch(0.3 0.08 20);
-    --tok-h1: oklch(0.38 0.08 65);
-    --tok-h2: oklch(0.3 0.08 110);
-    --tok-h3: oklch(0.38 0.08 155);
-    --tok-h4: oklch(0.3 0.08 200);
-    --tok-h5: oklch(0.38 0.08 245);
-    --tok-h6: oklch(0.3 0.08 290);
-    --tok-h7: oklch(0.38 0.08 335);
+    --bg: oklch(0.2 0.012 255);
+    --surface: oklch(0.24 0.014 255);
+    --surface-2: oklch(0.285 0.016 255);
+    --surface-3: oklch(0.35 0.018 255);
+    --fg: oklch(0.94 0.008 250);
+    --fg-muted: oklch(0.74 0.014 250);
+    --border: oklch(0.74 0.02 250);
+    --accent: oklch(0.8 0.11 200);
+    --tok-h0: oklch(0.37 0.075 20);
+    --tok-h1: oklch(0.45 0.075 65);
+    --tok-h2: oklch(0.37 0.075 110);
+    --tok-h3: oklch(0.45 0.075 155);
+    --tok-h4: oklch(0.37 0.075 200);
+    --tok-h5: oklch(0.45 0.075 245);
+    --tok-h6: oklch(0.37 0.075 290);
+    --tok-h7: oklch(0.45 0.075 335);
   }
 }
 
 :root[data-theme='dark'] {
-  --bg: oklch(0.13 0 0);
-  --surface: oklch(0.17 0 0);
-  --surface-2: oklch(0.22 0 0);
-  --surface-3: oklch(0.3 0 0);
-  --fg: oklch(0.95 0 0);
-  --fg-muted: oklch(0.72 0 0);
-  --border: oklch(0.72 0 0);
-  --accent: oklch(0.75 0.12 200);
-  --tok-h0: oklch(0.3 0.08 20);
-  --tok-h1: oklch(0.38 0.08 65);
-  --tok-h2: oklch(0.3 0.08 110);
-  --tok-h3: oklch(0.38 0.08 155);
-  --tok-h4: oklch(0.3 0.08 200);
-  --tok-h5: oklch(0.38 0.08 245);
-  --tok-h6: oklch(0.3 0.08 290);
-  --tok-h7: oklch(0.38 0.08 335);
+  --bg: oklch(0.2 0.012 255);
+  --surface: oklch(0.24 0.014 255);
+  --surface-2: oklch(0.285 0.016 255);
+  --surface-3: oklch(0.35 0.018 255);
+  --fg: oklch(0.94 0.008 250);
+  --fg-muted: oklch(0.74 0.014 250);
+  --border: oklch(0.74 0.02 250);
+  --accent: oklch(0.8 0.11 200);
+  --tok-h0: oklch(0.37 0.075 20);
+  --tok-h1: oklch(0.45 0.075 65);
+  --tok-h2: oklch(0.37 0.075 110);
+  --tok-h3: oklch(0.45 0.075 155);
+  --tok-h4: oklch(0.37 0.075 200);
+  --tok-h5: oklch(0.45 0.075 245);
+  --tok-h6: oklch(0.37 0.075 290);
+  --tok-h7: oklch(0.45 0.075 335);
 }
 
 :root[data-theme='light'] {
