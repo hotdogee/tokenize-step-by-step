@@ -6,7 +6,8 @@
  * the scrollbar at the bottom of the viewport while the page scrolls; the Advanced disclosure opens from a link with
  * `s=` and from the `5` key; 320 px reflow (the table and, with Advanced open, the board are the only exempt regions);
  * axe on the long table in three locales × two themes; a focused chip is never under the header or the pinned box,
- * nor is a caption select or the grid's tab stop reached by Tab / Shift+Tab (WCAG 2.4.11); typing at 8 characters a
+ * nor is a caption select or the grid's tab stop reached by Tab / Shift+Tab (WCAG 2.4.11), while a press on a button
+ * half under the pinned scrollbar scrolls nothing before its release, so the click lands; typing at 8 characters a
  * second never dims a live row.
  */
 import AxeBuilder from '@axe-core/playwright';
@@ -277,6 +278,33 @@ for (const [width, height] of [
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
       expect(await page.evaluate(() => window.scrollY), 'a press on the pinned scrollbar').toBe(before);
       await page.mouse.up();
+    });
+
+    test('a press on a button half under the pinned scrollbar lands: the page holds still until the release', async ({
+      page,
+    }) => {
+      await openShell(page, 'en');
+      await chooseExample(page, 'zh-tw-paragraph');
+      await page.getByTestId('row-select-anthropic').selectOption('anthropic-api');
+      const button = row(page, 'anthropic').getByTestId('row-live-check');
+      await expect(button).toBeVisible();
+      // Its top in sight above the pinned scrollbar, its bottom under it, all of it inside the viewport.
+      await button.evaluate((element) => {
+        const bar = document.querySelector('.cmp-sbar')?.getBoundingClientRect();
+        const { bottom } = element.getBoundingClientRect();
+        window.scrollBy(0, bottom - (bar?.bottom ?? window.innerHeight) + 2);
+      });
+      const { live, bar } = await rects(page, { live: '[data-testid="row-live-check"]', bar: '.cmp-sbar' });
+      expect(bar?.bottom ?? 0).toBeCloseTo(height, 0); // pinned to the bottom of the viewport
+      expect(live?.bottom ?? 0).toBeGreaterThan((bar?.top ?? height) + 4);
+      expect(live?.bottom ?? height).toBeLessThan(height);
+      const before = await page.evaluate(() => window.scrollY);
+      await page.mouse.move((live?.left ?? 0) + 12, (live?.top ?? 0) + 6);
+      await page.mouse.down();
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+      expect(await page.evaluate(() => window.scrollY), 'a press on the Live check button').toBe(before);
+      await page.mouse.up();
+      await expect(page.getByTestId('live-check-toggle')).toHaveAttribute('aria-expanded', 'true');
     });
   });
 

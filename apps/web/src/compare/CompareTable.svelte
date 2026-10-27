@@ -337,16 +337,21 @@
     gridFocused = false;
   }
 
+  /** A press is focusing what it landed on: set on `mousedown` (whose default action focuses), cleared a task later. */
+  let pressing = false;
+
   /**
-   * Focus that lands under the pinned header box or the pinned scrollbar (a Tab, a Shift+Tab, a click at the edge): the
-   * browser scrolls nothing it counts as on screen, sticky boxes or not, so the table scrolls it into view itself — its
+   * Focus that lands under the pinned header box or the pinned scrollbar (a Tab, a Shift+Tab): the browser scrolls
+   * nothing it counts as on screen, sticky boxes or not, so the table scrolls it into view itself — its
    * `scroll-margin-block` then clears both boxes (WCAG 2.4.11). The header box's own controls are never under it, and the
    * pinned scrollbar (`tabindex="-1"`: a press on it focuses it) is the box itself — scrolling it into view would move
-   * the page under the pointer that grabs it.
+   * the page under the pointer that grabs it. A press (mouse, or a tap's compatibility `mousedown`) never scrolls: what
+   * it focuses is under the pointer, and moving it before the release would send the click elsewhere.
    */
   function revealFocused(event: FocusEvent): void {
     const target = event.target;
     if (
+      pressing ||
       !(target instanceof HTMLElement) ||
       thead === undefined ||
       sbar === undefined ||
@@ -377,6 +382,13 @@
     const observer = new ResizeObserver(schedule);
     for (const element of [tbody, track, probe, thead, sbar]) if (element !== undefined) observer.observe(element);
     section?.addEventListener('focusin', revealFocused);
+    const onPress = (): void => {
+      pressing = true;
+      setTimeout(() => {
+        pressing = false;
+      });
+    };
+    section?.addEventListener('mousedown', onPress, true);
     let scrollFrame = 0;
     const onPageScroll = (): void => {
       if (scrollFrame !== 0) return;
@@ -412,6 +424,7 @@
     thead?.addEventListener('pointercancel', onPointerEnd);
     return () => {
       section?.removeEventListener('focusin', revealFocused);
+      section?.removeEventListener('mousedown', onPress, true);
       thead?.removeEventListener('wheel', onWheel);
       thead?.removeEventListener('pointerdown', onPointerDown);
       thead?.removeEventListener('pointermove', onPointerMove);

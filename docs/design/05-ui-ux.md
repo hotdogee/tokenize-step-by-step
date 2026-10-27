@@ -334,7 +334,7 @@ App
 
 ## 5. Inspector (AD-34)
 
-*PA-19: the inspector lives with the board in the Advanced disclosure; the header is sticky, and `html`'s `scroll-padding-block-start` counts it, so a focus move never lands under it (WCAG 2.4.11). The table's chips, caption selects and buttons add the pinned header box's and scrollbar's heights as their `scroll-margin-block` (`--cmp-head-h` / `--cmp-foot-h`, kept current on `section#compare`), and a Tab or Shift+Tab that lands under either box scrolls the control into view, which the browser does not do for an element it counts as on screen.*
+*PA-19: the inspector lives with the board in the Advanced disclosure; the header is sticky, and `html`'s `scroll-padding-block-start` counts it, so a focus move never lands under it (WCAG 2.4.11). The table's chips, caption selects and buttons add the pinned header box's and scrollbar's heights as their `scroll-margin-block` (`--cmp-head-h` / `--cmp-foot-h`, kept current on `section#compare`), and a Tab or Shift+Tab that lands under either box scrolls the control into view, which the browser does not do for an element it counts as on screen; a press never does (what it focuses is under the pointer, and moving it before the release would send the click elsewhere).*
 
 **Surface by viewport width only** (the same rule as §1, §3.3, §3.5, §9): **≥ 1024 px** a panel in the side rail; **768–1023 px** an anchored panel beside the active cell (manual placement with flip; CSS anchor positioning when available — Chrome 125 / Firefox 147 / Safari 26, §7.2; `[popover]`-free); **< 768 px** a bottom sheet (`position: fixed`, collapsed 56 px, expanded 40 vh). Pointer type never changes the surface.
 
