@@ -5,10 +5,14 @@
    * text's code points and bytes, and the scroll hint while the table is wider than the screen) above the character row
    * and the byte row(s) in the chosen byte view (`b=both`: hex and decimal), all on the rows' byte-column axis and in the
    * same column window. Both rows are ARIA rows of the table's grid (`cmp-r-char`, `cmp-r-hex`, `cmp-r-dec`, owned
-   * through `aria-owns`) with `columnheader` cells.
+   * through `aria-owns`) with `columnheader` cells. Above 20,000 code points (AD-27) the caption also says the rows wait
+   * and offers "Tokenize now" (the board's run, then the rows'), so the closed Advanced disclosure that holds the
+   * long-input banner is not the only way to tokenize a long text.
    */
   import type { ResolvedTextLang } from '@tsbs/core';
   import type { TextAnalysis } from '@tsbs/core/text/analyze';
+  import { appState } from '../app/context.ts';
+  import { isOnDemand } from '../app/long-input.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { headerCells } from './compare-cells.ts';
   import CompareByte from './CompareByte.svelte';
@@ -29,6 +33,7 @@
   }
   let { analysis, window, marker, byteViews, lang, overflow, pinned, element = $bindable() }: Props = $props();
 
+  const app = appState();
   const cells = $derived(headerCells(analysis, { window, marker, t: i18n.t }));
 </script>
 
@@ -40,7 +45,17 @@
           aria-hidden="true">·</span
         ><span>{i18n.t('counts.bytes', { n: analysis.utf8.length })}</span>{#if overflow}<span aria-hidden="true"
             >·</span
-          ><i class="cmp-hint">{i18n.t('compare.scrollHint')}</i>{/if}</span
+          ><i class="cmp-hint">{i18n.t('compare.scrollHint')}</i>{/if}{#if isOnDemand(app.longInput)}<span
+            aria-hidden="true">·</span
+          ><span>{i18n.t('longInput.banner')}</span><button
+            type="button"
+            class="btn"
+            aria-disabled={app.running}
+            data-testid="compare-run"
+            onclick={() => {
+              if (!app.running) void app.runOnDemand();
+            }}>{i18n.t('longInput.run')}</button
+          >{/if}</span
       >
     </div>
     <div role="row" id="cmp-r-char" class="cmp-row" aria-rowindex={1} aria-label={i18n.t('board.tier.char')}>
