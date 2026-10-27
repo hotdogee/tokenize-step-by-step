@@ -261,7 +261,7 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
     const timings = Object.fromEntries((budgets?.timings ?? []).map((entry) => [entry.metric, entry.budget]));
     expect(timings).toEqual({
       'first-contentful-paint': 1500,
-      'largest-contentful-paint': 2000,
+      'largest-contentful-paint': 2500, // PA-18
       'total-blocking-time': 150,
       'cumulative-layout-shift': 0.02,
     });
