@@ -73,7 +73,7 @@ ci.yml  (push to main, pull_request; concurrency group cancels superseded PR run
   e2e        needs build · matrix [chromium, firefox, webkit] × 3 shards (+ Pixel 5, iPhone 12, 320/360/2560 projects) · playwright install --with-deps
              e2e (functional, vite preview + headersMiddleware) + axe + parity harness + visual · upload traces on failure
   e2e-headers needs build · wrangler dev --assets apps/web/dist (workerd applies _headers / html_handling / not_found_handling) · pnpm e2e:headers
-  preview    needs build (pull_request only) · wrangler preview --name pr-<n> · comment the URL · run e2e:headers against the preview URL
+  preview    needs build (pull_request only) · wrangler preview --name pr-<n> · comment the URL · run e2e:headers (E2E_PREVIEW=1) and deploy:smoke --preview against the preview URL
   lighthouse needs preview · lhci autorun --url <preview url> (lighthouserc.json budgets; real edge compression, _headers and HTTP/3)
   fuzz-smoke (only when packages/core/src/{engines,agenda,unicode}/** changed) · test:fuzz --seed fixed --n 2000
 preview.yml  folded into ci.yml above (preview + lighthouse are ci jobs on pull_request); preview deleted on PR close by a `pull_request: closed` job
@@ -149,7 +149,7 @@ The `/tok/*` block removes any `Content-Type` the asset server derived from `.bi
 **Deploy verification** (curl against the production URL: `https://tokens.hanlin.uk` once attached, the workers.dev URL before):
 6. `curl -sI -H 'Accept-Encoding: zstd, br, gzip' <largest /tok/*.bin>` → `200`, **no** `Content-Encoding`, `Content-Length` = `bytesCompressed`, `Content-Type` **exactly** `application/octet-stream` (one value, §6), `Cache-Control: … immutable`, `X-Content-Type-Options: nosniff` (research §6.5 item 7; record transferred bytes and the loader's `layer`/`contentEncoding` diagnostics in `docs/perf-log.md`).
 7. `/assets/*.js` and `/examples/*.json` → `Content-Encoding` present (zstd/br/gzip), strong or weak ETag, `304` on `If-None-Match`.
-8. `/` → CSP header exactly as §6; `/index.html` → 307 to `/`; `/nope` → `404.html` with status 404; no dotfile reachable (`/.env` → 404).
+8. `/` → CSP header exactly as §6; `/index.html` → 307 to `/`; `/nope` → `404.html` with status 404; no dotfile reachable (`/.env` → 404). A Workers Preview (`wrangler preview`) answers `/nope` with a platform "Not found" and status 404 — `not_found_handling` is not applied to Previews (observed on PR #1, 2026-10-27) — so the preview job's `e2e:headers` (`E2E_PREVIEW=1`) and `deploy:smoke --preview` check the status and content type only; production compares the body.
 9. Lighthouse on the production URL meets §3; Safari 16.4 / iOS 16.4 smoke on BrowserStack (Playwright WebKit is newer than the floor); one mid-range Android Chrome run timed and recorded; a manual macOS Safari morph check (Web Inspector › Timelines, the stop 2→3 morph at 600 cells = 150 ideographs, longest frame and dropped frames recorded in `docs/perf-log.md`), since the §3 morph bound is measured per main-thread task in chromium only.
 
 **Legal and content**:

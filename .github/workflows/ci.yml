@@ -328,8 +328,9 @@ jobs:
         run: pnpm e2e:headers
         env:
           E2E_BASE_URL: ${{ steps.preview.outputs.preview-url }}
+          E2E_PREVIEW: '1' # a Workers Preview answers unknown paths with a platform "Not found", not 404.html (06 §7)
       - name: Deploy smoke (06 §7) against the preview
-        run: pnpm deploy:smoke --url "$URL"
+        run: pnpm deploy:smoke --url "$URL" --preview
         env:
           URL: ${{ steps.preview.outputs.preview-url }}
 

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
 import { runSmoke, targetFromDist } from '../../scripts/lib/smoke.ts';
@@ -48,7 +49,9 @@ test('/ tokenizes typed text live in the Worker with zero CSP violations', async
 // immutable + 304, /licenses max-age. Running them here proves the smoke script against a real workerd on every PR.
 test('the 06 §7 deploy smoke checks pass', async ({ baseURL }) => {
   test.skip(!existsSync(DIST), 'apps/web/dist is missing; build first');
-  const results = await runSmoke(targetFromDist(baseURL ?? '', DIST), (url, init) => fetch(url, init));
+  // E2E_PREVIEW=1 (the preview job): a Workers Preview answers /nope with a platform "Not found", not 404.html.
+  const preview = process.env['E2E_PREVIEW'] === '1';
+  const results = await runSmoke(targetFromDist(baseURL ?? '', DIST, { preview }), (url, init) => fetch(url, init));
   for (const result of results)
     test.info().annotations.push({
       type: result.skipped ? 'skipped' : result.ok ? 'pass' : 'FAIL',

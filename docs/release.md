@@ -11,8 +11,9 @@ what has to be set up once, and the checklist signed off before the first produc
    conformance gate, `vocab:build`, guards), `unit`, `build` (`vite build` → `check:dist` → `wrangler deploy --dry-run`,
    uploads `dist`), `e2e` (the full Playwright matrix on `vite preview`, see below), `e2e-headers` (Playwright on
    `wrangler dev --assets apps/web/dist`, plus the deploy smoke checks). When the Cloudflare secrets exist, `preview`
-   publishes `pr-<n>` with `wrangler preview`, comments its URL on the PR, runs `e2e:headers` and `deploy:smoke` against
-   it, and `lighthouse` runs LHCI against it. Closing the PR deletes the preview (`preview-cleanup`).
+   publishes `pr-<n>` with `wrangler preview`, comments its URL on the PR, runs `e2e:headers` and `deploy:smoke --preview`
+   against it (a Preview answers unknown paths with a platform "Not found", so the 404 body is compared on production
+   only), and `lighthouse` runs LHCI against it. Closing the PR deletes the preview (`preview-cleanup`).
    - **The e2e matrix** (06 §1, §4): `E2E_FULL_MATRIX=1`, one job per engine × 3 shards — `e2e (chromium n/3)` runs the
      chromium, Pixel 5, 320 × 568, 360 × 780, 2560 × 1440@2× and `visual` projects; `e2e (firefox n/3)` firefox;
      `e2e (webkit n/3)` webkit and iPhone 12 (one retry in CI; every other project has none). Each job installs only its

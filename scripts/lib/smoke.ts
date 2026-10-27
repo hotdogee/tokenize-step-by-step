@@ -28,7 +28,11 @@ export interface SmokeTarget {
   readonly asset: string | null;
   readonly examples: string | null;
   readonly licence: string | null;
-  /** `dist/404.html`, which `/nope` must return byte for byte (`not_found_handling: 404-page`). */
+  /**
+   * `dist/404.html`, which `/nope` must return byte for byte (`not_found_handling: 404-page`); null when the body is not
+   * compared: a Workers Preview (`wrangler preview`) answers unknown paths with a platform "Not found" instead of the
+   * configured 404 page (observed on PR #1, 2026-10-27), so the preview job checks the status and content type only.
+   */
   readonly notFoundBody: string | null;
 }
 
@@ -68,17 +72,22 @@ function largest(dist: string, files: readonly string[]): { path: string; bytes:
   return best;
 }
 
-/** Builds the smoke target from the deployed `dist` directory. */
-export function targetFromDist(baseUrl: string, dist: string): SmokeTarget {
+/** Builds the smoke target from the deployed `dist` directory; `preview` skips the 404 body comparison (`notFoundBody`). */
+export function targetFromDist(
+  baseUrl: string,
+  dist: string,
+  options: { readonly preview?: boolean } = {},
+): SmokeTarget {
   const blocks = parseHeadersFile(readFileSync(join(dist, '_headers'), 'utf8'));
   const root = blocks.find((block) => block.pattern === '/*');
   if (root === undefined) throw new Error(`${join(dist, '_headers')} has no "/*" block`);
   let notFoundBody: string | null = null;
-  try {
-    notFoundBody = readFileSync(join(dist, '404.html'), 'utf8');
-  } catch {
-    notFoundBody = null;
-  }
+  if (options.preview !== true)
+    try {
+      notFoundBody = readFileSync(join(dist, '404.html'), 'utf8');
+    } catch {
+      notFoundBody = null;
+    }
   return {
     baseUrl,
     pageHeaders: blockHeaders(root),
@@ -175,7 +184,10 @@ export async function runSmoke(target: SmokeTarget, fetcher: Fetcher): Promise<S
       `content-type is ${res.headers.get('content-type') ?? 'missing'}`,
     );
     if (target.notFoundBody !== null) e.that(text === target.notFoundBody, 'body differs from dist/404.html');
-    return e.result('/nope is the 404 page', '404 with 404.html');
+    return e.result(
+      '/nope is the 404 page',
+      target.notFoundBody === null ? '404 (body not compared)' : '404 with 404.html',
+    );
   });
 
   for (const path of ['/.env', '/.assetsignore']) {

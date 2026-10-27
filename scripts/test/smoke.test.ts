@@ -30,6 +30,8 @@ interface Flaws {
   readonly noRedirect?: boolean;
   readonly uncompressedAssets?: boolean;
   readonly noRevalidation?: boolean;
+  /** Not a flaw of the deployment: a Workers Preview answers unknown paths with a platform "Not found", not 404.html. */
+  readonly platformNotFound?: boolean;
 }
 
 /** A tiny stand-in for the Workers asset server, configured like `_headers` + `wrangler.jsonc`. */
@@ -94,7 +96,7 @@ function handler(flaws: Flaws) {
       res.writeHead(200).end('SECRET=1');
       return;
     }
-    page(404, NOT_FOUND);
+    page(404, flaws.platformNotFound === true ? 'Not found' : NOT_FOUND);
   };
 }
 
@@ -104,10 +106,10 @@ async function serve(flaws: Flaws): Promise<{ server: Server; url: string }> {
   return { server, url: `http://127.0.0.1:${String((server.address() as AddressInfo).port)}` };
 }
 
-async function smoke(flaws: Flaws): Promise<SmokeResult[]> {
+async function smoke(flaws: Flaws, options: { readonly preview?: boolean } = {}): Promise<SmokeResult[]> {
   const { server, url } = await serve(flaws);
   try {
-    return await runSmoke(targetFromDist(url, dist), (target, init) => fetch(target, init));
+    return await runSmoke(targetFromDist(url, dist, options), (target, init) => fetch(target, init));
   } finally {
     server.close();
   }
@@ -154,6 +156,17 @@ describe('deploy smoke', () => {
       '/examples/*.json compressed, immutable, revalidates',
       '/licenses/* cache',
     ]);
+  });
+
+  it('compares the 404 body on production only: a Workers Preview serves a platform "Not found"', async () => {
+    const production = await smoke({ platformNotFound: true });
+    expect(failed(production)).toEqual(['/nope is the 404 page']);
+    expect(production.find((r) => r.name === '/nope is the 404 page')?.detail).toContain(
+      'body differs from dist/404.html',
+    );
+    const preview = await smoke({ platformNotFound: true }, { preview: true });
+    expect(failed(preview)).toEqual([]);
+    expect(preview.find((r) => r.name === '/nope is the 404 page')?.detail).toBe('404 (body not compared)');
   });
 
   it('fails on a duplicated or compressed /tok Content-Type', async () => {
