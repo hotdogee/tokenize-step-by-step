@@ -261,10 +261,10 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   inspector (Enter opens the board at the same byte); xAI's API path stays in the drawer (no "Grok 4.x · API key" row
   mode); no `og:image` yet; under the ja UI, Han-only text resolves to `ja` (the owner asked for `auto`); the
   `/__tsbs-index` is advisory across Workers.
-  *Implemented* (WP1 cac2ee1, WP3 75e2361, WP2 on `pa19/default-view`, 2026-10-27): Main JS **76.42 kB** brotli of
+  *Implemented* (WP1 cac2ee1, WP3 75e2361, WP2 on `pa19/default-view`, 2026-10-27): Main JS **76.40 kB** brotli of
   82.94 kB (81 KiB; 82.83 kB before WP2, 64.51 kB once the board, rail, inspector and motion director became the
-  `lazy-AdvancedBoard` chunk and before the table), i18n chunk **9.46 kB** of 10.24 kB, CSS **14.82 kB** of 20.48 kB
-  (20 KiB kept: the 128 placement classes fit), `index.html` **8.34 kB** brotli-11 of 14.34 kB and 11,949 B at zstd-3
+  `lazy-AdvancedBoard` chunk and before the table), i18n chunk **9.46 kB** of 10.24 kB, CSS **14.90 kB** of 20.48 kB
+  (20 KiB kept: the 128 placement classes fit), `index.html` **8.36 kB** brotli-11 of 14.34 kB and 11,953 B at zstd-3
   (one template per locale with the five rows; the closed Advanced body renders on first open; before PA-19: 9.13 kB,
   12,862 B at zstd-3, with five board variants). Local Lighthouse (`pnpm lhci-local`, 3 runs, wrangler dev, report
   only): performance 0.99, accessibility 1, best practices 1, FCP 1,215 / 1,376 / 1,373 ms, LCP 1,972 / 1,965 /
