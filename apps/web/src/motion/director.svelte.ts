@@ -6,13 +6,14 @@
  * change counts as fast scrubbing when it moves more than one step or comes < 100 ms after the previous one, and a new
  * result is never animated (WP13 owns the precomputed → live crossfade).
  *
- * At stop 5 it also marks the part the current step formed: `data-just-merged` (the star, motion.css), the hidden
- * "merged at this step" description added to the cell's `aria-describedby` (restored before the next commit, so the
- * board's own attributes are never left changed), the byte-tier caret under a merge's junction (`data-merge-caret`), the
- * pulse after a forward step and, in follow mode, a `scrollIntoView({ block: 'nearest' })` with the reduced-motion
- * behaviour — after every step change, also one that arrives at stop 5 from another stop ("show this step" or a
- * merge-list row from stop 6). On a virtualized board the board keeps the row holding that part mounted (Board.svelte
- * `mergedRow`), so the cells are there to mark and scroll to however far the jump went.
+ * At stop 5 it also marks the part the current step formed: `data-just-merged` (the star, or a 1 px ring on a 1-column
+ * cell, motion.css), the hidden "merged at this step" description added to the cell's `aria-describedby` (restored
+ * before the next commit, so the board's own attributes are never left changed), the byte-tier caret under a merge's
+ * junction (`data-merge-caret`), the pulse after a forward step and, in follow mode, a
+ * `scrollIntoView({ block: 'nearest' })` with the reduced-motion behaviour — after every step change, also one that
+ * arrives at stop 5 from another stop ("show this step" or a merge-list row from stop 6). On a virtualized board the
+ * board keeps the row holding that part mounted (Board.svelte `mergedRow`), so the cells are there to mark and scroll
+ * to however far the jump went.
  *
  * The choreography (choreography.ts + flip.ts) is a lazy chunk loaded on the first interaction with the page; until it
  * arrives changes are discrete. Once loaded it also slides the bottom sheet in when it expands (`watchSheet`).

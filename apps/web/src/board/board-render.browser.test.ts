@@ -14,7 +14,6 @@ import axe from 'axe-core';
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import { page } from 'vitest/browser';
-import type { TokenizationResult } from '@tsbs/core';
 import { packRows } from '@tsbs/core/layout/pack-rows';
 import { TokenizationView } from '@tsbs/core/model/view';
 import type { AppState } from '../app/app-state.svelte.ts';
@@ -26,6 +25,7 @@ import {
   fixtureResult,
   frames,
   mountBoard,
+  rowEndSplit,
   syntheticResult,
   type MountedBoard,
 } from './board.test-helper.ts';
@@ -400,51 +400,6 @@ describe('token ids inside every chip (PA-17)', () => {
     return mounted;
   }
 
-  /**
-   * K + `tail` ASCII bytes in one-byte tokens (`ids`, then filler ids) but the last, a token of 1 + `tail` bytes (`last`)
-   * that the row end cuts into a 1-column fragment and a `tail`-column one, each with a continuation mark under its id.
-   * Its merges join its tail bytes left to right (ids 300, 301, …), then its first byte to them, so at stop 5 the last
-   * step (`tail`) forms it: a live part cut 1 | `tail` by the row end (1 | 1 by default, one merge step).
-   */
-  async function rowEndSplit(k: number, ids: readonly number[], last: number, tail = 1): Promise<TokenizationResult> {
-    const { buildResult } = await import('@tsbs/core/model/build-result');
-    const { analyzeText } = await import('@tsbs/core/text/analyze');
-    const { ALIVE, StepKind } = await import('@tsbs/core/model/result');
-    const single = Array.from({ length: k - 1 }, (_, i) => ids[i] ?? 10 + i);
-    const end = k + tail;
-    const died = new Int32Array(end + 1).fill(ALIVE);
-    for (let j = 1; j < tail; j++) died[k + j] = j; // step j joins byte k + j to the tail
-    died[k] = tail; // the row end's boundary inside the last token, removed by the last step
-    const steps = Array.from({ length: tail }, (_, j) =>
-      j < tail - 1 ? { left: k, mid: k + j + 1, end: k + j + 2, id: 300 + j } : { left: k - 1, mid: k, end, id: last },
-    );
-    return buildResult({
-      tokenizer: 'openai-o200k_base',
-      family: 'bytelevel-bpe',
-      analysis: analyzeText('a'.repeat(end)),
-      chunks: { byteStart: [0, end], kind: [0] },
-      tokens: {
-        id: [...single, last],
-        byteStart: [...single.map((_, i) => i), k - 1, end],
-        kind: Array.from({ length: k }, () => 0),
-      },
-      timeline: {
-        stepCount: tail,
-        leadingZeroWidthPart: false,
-        boundaryBorn: new Int32Array(end + 1),
-        boundaryDied: died,
-        stepKind: Uint8Array.from(steps, () => StepKind.Merge),
-        stepLeft: Uint32Array.from(steps, (step) => step.left),
-        stepMid: Uint32Array.from(steps, (step) => step.mid),
-        stepEnd: Uint32Array.from(steps, (step) => step.end),
-        stepRank: Float32Array.from(steps, (step) => step.id),
-        stepResultId: Int32Array.from(steps, (step) => step.id),
-        stepChunk: new Uint32Array(tail),
-        truncated: false,
-      },
-    });
-  }
-
   for (const width of [360, 600, 1440]) {
     it(`puts every id of cl100k 台灣台南 inside its chip at ${String(width)} px, in the digits subset`, async () => {
       await page.viewport(width, width === 360 ? 780 : 900);
@@ -460,7 +415,7 @@ describe('token ids inside every chip (PA-17)', () => {
   it('narrows the width axis first, then shrinks the size (1-column chips with 1-, 4- and 6-digit ids)', async () => {
     await page.viewport(1440, 900);
     const k = expectedColumns(1440);
-    const board = await show(await rowEndSplit(k, [7, 4321], 654321));
+    const board = await show(rowEndSplit(k, [7, 4321], 654321));
     await digitsLoaded();
     expect(board.grid.getAttribute('aria-colcount')).toBe(String(k));
     expectIdsInside(board, shownIds(board));
@@ -529,7 +484,7 @@ describe('token ids inside every chip (PA-17)', () => {
       document.documentElement.dataset['cellSize'] = size;
       expect(cellPx()).toBe(cellSize);
       const k = expectedColumns(width);
-      const board = await showAt(appWith(await rowEndSplit(k, [], 654321)), size);
+      const board = await showAt(appWith(rowEndSplit(k, [], 654321)), size);
       await digitsLoaded();
       expect(board.grid.getAttribute('aria-colcount')).toBe(String(k));
       const fragments = cells(board, `[data-tier="token"][data-index="${String(k - 1)}"]`);
@@ -618,7 +573,7 @@ describe('token ids inside every chip (PA-17)', () => {
         },
         // The synthetic row end's 2-byte part, cut 1 | 1: both fragments 1 column, continued and continuing.
         {
-          result: await rowEndSplit(expectedColumns(width), [], 654321),
+          result: rowEndSplit(expectedColumns(width), [], 654321),
           step: 1,
           frame: undefined,
           id: '654321',
@@ -665,7 +620,7 @@ describe('token ids inside every chip (PA-17)', () => {
       for (const tail of [2, 3]) {
         mounted?.destroy();
         // The row end cuts the 1 + tail byte part 1 | tail: its continuation fragment (cl100k “ 台” cut 20 | E5 8F).
-        const result = await rowEndSplit(expectedColumns(width), [], 654321, tail);
+        const result = rowEndSplit(expectedColumns(width), [], 654321, tail);
         const board = await showAt(appWith(result, { stage: 5, step: tail }), size);
         await digitsLoaded();
         const merged = cells(
@@ -771,7 +726,7 @@ describe('token ids inside every chip (PA-17)', () => {
     const narrowLine = narrowVis?.querySelector('.bd-chip-line') ?? null;
     if (vis === null || id === null || line === null || narrowVis === null || narrowLine === null)
       throw new Error('no just-merged part cut into a 1-column and a wider fragment');
-    // The 1-column fragment draws no star and keeps its whole line (the pulse outline still marks the cell).
+    // The 1-column fragment draws no star and keeps its whole line (its pulse outline stays as a 1 px ring, motion.css).
     expect(getComputedStyle(narrowVis, '::after').content).toBe('none');
     expect(getComputedStyle(narrowLine).paddingRight).toBe('0px');
     // The wider one carries the star, absolutely placed in the chip's padding box from its right and bottom.

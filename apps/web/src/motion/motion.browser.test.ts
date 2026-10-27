@@ -3,17 +3,18 @@
  * animation, the boxes' stop-2 geometry) and then FLIPs the char boxes (glyphs counter-scaled) and unfolds the byte
  * cells, and a change before the start restores the board's own geometry; leaving stop 5 fades a copy of the chunk
  * brackets out; a merge step FLIPs the changed chips, slides a copy of the right part into the left one, draws the
- * byte-tier caret and marks the merged part (star, pulse, "merged at this step"); the bottom sheet slides in when it
- * expands; rapid scrubbing
- * cancels the running FLIP (`Animation.cancel()`) and only crossfades, so `document.getAnimations()` drains; the in-app
- * reduced-motion switch leaves zero transform animations, opacity swaps ≤ 150 ms, `scrollIntoView` with
- * `behavior: 'auto'` and the loading bar without a transition; the switch crossfade uses a View Transition when
- * `document.startViewTransition` exists and an opacity fade on the board when it does not.
+ * byte-tier caret and marks the merged part (star, pulse, "merged at this step"), and a 1-column cell's pulse, or its
+ * reduced-motion outline, settles to a 1 px ring at the chip's edge that stays; the bottom sheet slides in when it
+ * expands; rapid scrubbing cancels the running FLIP (`Animation.cancel()`) and only crossfades, so
+ * `document.getAnimations()` drains; the in-app reduced-motion switch leaves zero transform animations, opacity swaps ≤
+ * 150 ms, `scrollIntoView` with `behavior: 'auto'` and the loading bar without a transition; the switch crossfade uses
+ * a View Transition when `document.startViewTransition` exists and an opacity fade on the board when it does not.
  */
 import '../theme/base.css';
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { appWith, fixtureResult, frames } from '../board/board.test-helper.ts';
+import { page } from 'vitest/browser';
+import { appWith, cellPx, fixtureResult, frames, rowEndSplit } from '../board/board.test-helper.ts';
 import { animatesTransform, durations, mountRail, type MountedRail } from '../pipeline/pipeline.test-helper.ts';
 import { cancelAll, heldCount, runningCount } from './flip.ts';
 import { MOTION_KEY, MotionPrefs, motionPrefs } from './motion-prefs.svelte.ts';
@@ -205,6 +206,83 @@ describe('merge steps (05 §7)', () => {
     expect(document.getAnimations()).toEqual([]);
     expect(runningCount()).toBe(0);
   });
+});
+
+describe('the 1-column just-merged ring (PA-17)', () => {
+  afterEach(async () => {
+    document.documentElement.dataset['cellSize'] = 'M';
+    await page.viewport(1440, 900);
+  });
+
+  /** The cell's `::before` outline as computed, its animation included. */
+  const outline = (cell: Element): { opacity: string; width: string; offset: string } => {
+    const style = getComputedStyle(cell, '::before');
+    return { opacity: style.opacity, width: style.outlineWidth, offset: style.outlineOffset };
+  };
+  const px = (value: string): number => Number.parseFloat(value);
+
+  for (const [width, size, cellSize] of [
+    [1280, 'S', 27],
+    [600, 'M', 36],
+  ] as const) {
+    for (const reduced of [false, true]) {
+      it(`settles a 1-column cell's pulse to a 1 px ring at the chip's edge, ${reduced ? 'reduced' : 'full'} motion, ${String(cellSize)} px cell`, async () => {
+        await page.viewport(width, 900);
+        document.documentElement.dataset['cellSize'] = size;
+        expect(cellPx()).toBe(cellSize);
+        motionPrefs.override = reduced ? 'reduce' : 'full';
+        // A 3-byte part the row end cuts 1 | 2, formed by the second of two merge steps (the board's K first).
+        mounted = await mountRail(appWith(rowEndSplit(8, [], 654321, 2), { stage: 5, step: 1 }));
+        const k = Number(mounted.grid.getAttribute('aria-colcount'));
+        mounted.destroy();
+        const board = await mountRail(appWith(rowEndSplit(k, [], 654321, 2), { stage: 5, step: 1 }));
+        mounted = board;
+        await drained();
+        await sleep(150); // not a fast scrub
+        await go(board, { step: 2 });
+        const merged = [...board.grid.querySelectorAll<HTMLElement>('[data-tier="token"][data-just-merged]')];
+        expect(merged.map((cell) => cell.getAttribute('aria-colspan'))).toEqual(['1', '2']);
+        const [narrow, wide] = merged;
+        if (narrow === undefined || wide === undefined) throw new Error('no part cut 1 | 2');
+        if (!reduced) {
+          // The WAAPI pulse: the 1-column cell's ends at the ring, the wider one's at opacity 0.
+          const last = (cell: Element): Keyframe | undefined =>
+            cell
+              .getAnimations({ subtree: true })
+              .map((animation) => animation.effect)
+              .find(
+                (effect): effect is KeyframeEffect =>
+                  effect instanceof KeyframeEffect && effect.pseudoElement === '::before',
+              )
+              ?.getKeyframes()
+              .at(-1);
+          expect(last(narrow)).toMatchObject({ opacity: '1', outlineWidth: '1px', outlineOffset: '0px' });
+          expect(last(wide)).toMatchObject({ opacity: '0' });
+          expect(last(wide)).not.toHaveProperty('outlineWidth');
+        } else expect(narrow.hasAttribute('data-merge-outline')).toBe(true);
+        await sleep(150);
+        expect(outline(narrow)).toMatchObject({ width: '2px', offset: '1px' }); // the pulse's 2 px geometry
+        if (reduced) expect(outline(narrow).opacity).toBe('1');
+        await sleep(850); // 1 s after the step
+        expect(outline(narrow)).toEqual({ opacity: '1', width: '1px', offset: '0px' });
+        expect(outline(wide).opacity).toBe('0');
+        expect(getComputedStyle(wide.querySelector('.bd-chip') ?? wide, '::after').content).not.toBe('none'); // star
+        // The ring lies on the chip's border box: the cell's `::before` is inset 0 1px, as the chip is.
+        const before = getComputedStyle(narrow, '::before');
+        const box = narrow.getBoundingClientRect();
+        const chip = (narrow.querySelector('.bd-chip') ?? narrow).getBoundingClientRect();
+        expect(box.left + px(before.left)).toBeCloseTo(chip.left, 2);
+        expect(box.top + px(before.top)).toBeCloseTo(chip.top, 2);
+        expect(px(before.width)).toBeCloseTo(chip.width, 2);
+        expect(px(before.height)).toBeCloseTo(chip.height, 2);
+        // Reached by scrubbing (no pulse), the cell carries the ring at once.
+        await go(board, { step: 1 });
+        await go(board, { step: 2 });
+        const scrubbed = board.grid.querySelector('[data-tier="token"][data-just-merged].s1') ?? board.grid;
+        expect(outline(scrubbed)).toEqual({ opacity: '1', width: '1px', offset: '0px' });
+      });
+    }
+  }
 });
 
 describe('bottom sheet (< 768 px)', () => {
