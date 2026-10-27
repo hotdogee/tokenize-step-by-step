@@ -6,12 +6,15 @@
 
 Two static pages (Vite MPA) plus `404.html`: `/` (the tool) and `/about/` (About · Fidelity · Licences & provenance · Engine · Keyboard · Privacy · Diagnostics). On `/`, regions in DOM order (= tab order):
 
-1. **Header** — wordmark; tokenizer picker button with the tokenizer's fidelity badge; UI-language menu (文/A); theme toggle (auto/light/dark); `?` help.
-2. **Input** — auto-growing `<textarea>` (3–8 rows); text-language chip (auto / zh-Hant / ja / en); example chips (one tab stop); option toggles (only those the tokenizer declares: special tokens · BOS · NFKC); hex/dec control; grapheme-brackets switch; counts line (code points · graphemes · bytes · tokens · partial-character tokens).
-3. **Pipeline rail** — six stops (`role="radiogroup"`, §8); step scrubber visible at stop 5; Play button; speed.
-4. **Board** — the three-tier alignment grid (one tab stop).
-5. **Inspector + merge list** — surface chosen by **viewport width only** (AD-34; the same rule is repeated in §3.3, §3.5, §5 and §9): **≥ 1024 px** a side rail (320 px; 420 px at ≥ 2560) holding the merge list and the inspector panel; **768–1023 px** an anchored inspector panel beside the active cell and the merge list as a collapsible section under the board; **< 768 px** a bottom-sheet inspector (collapsed 56 px, expanded 40 vh) and the collapsible merge list. The inspector is a non-modal `role="region"` in every surface; the board is never made `inert`.
-6. **Notices strip + footer** — the selected tokenizer's `requiredNotices` ("Powered by xAI" while Grok-2 is selected; "Built with Meta Llama 3"; Gemma notice; Claude legacy disclaimer), fidelity sentence, links to About.
+*PA-19 (2026-10-27) made the comparison table the default view and moved the board and its controls into a closed
+"Advanced" disclosure (00-decisions §E PA-19); the list below is that page.*
+
+1. **Header** — sticky (`position: sticky; top: 0`, exactly `--header-h`); skip link "Skip to the tokens" (`#compare`); wordmark "What is a token?" (`lang="en"` in every locale); UI-language menu (文/A); theme toggle (auto/light/dark); `?` help. The tokenizer picker moved into Advanced.
+2. **Input** — auto-growing `<textarea>` (3–8 rows); the **Examples** menu button (one tab stop; §6); the text-language note ("Text language: Auto"); `p.why`, the selected example's sentence.
+3. **Comparison table** (`section#compare`, edge to edge; §4.2) — the header box (characters, UTF-8 bytes) pinned under the header while the page scrolls, one row per lab on its newest local tokenizer with its caption (lab · tokenizer select · counts · fidelity badge), a scrollbar pinned to the bottom of the viewport; one grid tab stop, the row selects around it.
+4. **Advanced** (`details#advanced`, closed by default, URL-driven: §1.1) — the step-by-step group: the tokenizer picker button with the fidelity badge, then the **pipeline rail** (six stops `role="radiogroup"`, §8; scrubber; Play; speed; reduce motion; merge list) and the **board** (the three-tier alignment grid, one tab stop) with its **inspector** (a lazy chunk the first time Advanced opens); then the options group: text language select, the toggles the tokenizer declares (special tokens · BOS · NFKC), hex/dec control, grapheme brackets, "Show token text", "Mark partial-character tokens", the counts line (code points · graphemes · bytes · tokens · partial-character tokens of the board's tokenizer), the long-input banner, Copy link.
+5. **Inspector + merge list** (inside Advanced) — surface chosen by **viewport width only** (AD-34; the same rule is repeated in §3.3, §3.5, §5 and §9): **≥ 1024 px** a side rail (320 px; 420 px at ≥ 2560) holding the merge list and the inspector panel; **768–1023 px** an anchored inspector panel beside the active cell and the merge list as a collapsible section under the board; **< 768 px** a bottom-sheet inspector (collapsed 56 px, expanded 40 vh) and the collapsible merge list. The inspector is a non-modal `role="region"` in every surface; the board is never made `inert`.
+6. **Notices strip + footer** — the union of the `requiredNotices` of every tokenizer on screen (§15: the table's rows, and the board's tokenizer while Advanced is open; "Powered by xAI" by default); links to About. PA-19 dropped the footer's fidelity sentence (each row caption carries its badge).
 7. **BYOK drawer** — "Live check with your own API key", closed by default.
 
 ### 1.1 State model (`apps/web/src/app/app.svelte.ts`, Svelte 5 runes)
@@ -34,7 +37,7 @@ interface AppState {
 }
 ```
 
-Derived: `rows = packRows(result, K)`, `partsAt(step)`, `inspectorModel`, `resolvedTextLang`. Persistence: `localStorage` for theme, locale, byteView, graphemes, cellSize, singleKeyShortcuts, reduced-motion override (every read/write in try/catch). URL (read once at load; `history.replaceState` debounced 500 ms; text only on explicit "Copy link", ≤ 2,000 chars): `?t=<tokenizer>&q=<text>&s=<stage>.<step>&b=hex|dec|both&lang=<ui>&tl=<TextLangChoice>`.
+Derived: `rows = packRows(result, K)`, `partsAt(step)`, `inspectorModel`, `resolvedTextLang`. Persistence: `localStorage` for theme, locale, byteView, graphemes, cellSize, singleKeyShortcuts, reduced-motion override (every read/write in try/catch). URL (read once at load; `history.replaceState` debounced 500 ms; text only on explicit "Copy link", ≤ 2,000 chars): `?t=<tokenizer>&q=<text>&r=<row>,…&s=<stage>.<step>&b=hex|dec|both&lang=<ui>&tl=<TextLangChoice>`, written in that order. PA-19: `advancedOpen` (the Advanced disclosure) is URL-driven and never persisted — a link with `t` or `s` opens it, the writer emits `t` and `s` only while it is open (Copy link the same), and the board's global keys open it; `r` lists the table rows switched away from their lab's primary tokenizer (secondary ids and `anthropic-api`), also persisted as `tsbs:rows` (removed when every row is on its default; the URL wins for the visit); `textLang` defaults to `auto` and examples no longer set it (`tl` still does); the chip toggles persist as `tsbs:chipText` and `tsbs:chipHatch` (both off by default).
 
 ## 2. The step-by-step pipeline and scrubbing
 
@@ -95,6 +98,16 @@ Fragments of one span count as **one** cell for keyboard navigation (focus lands
 | ≥ 2560 (4K) | fine | `clamp(32px, 1.6vw, 44px)` | 420 px | 2400 px | 53 at 3840 (2368 / 44); the 64 clamp is a safety bound, not a target | `calc(var(--cell) * 3.5 + 56px)` | side rail | type scales with `clamp()`; gutters absorb the rest |
 
 Coarse-pointer targets (WCAG 2.5.8, checked by a Playwright touch project): char cell 36 × 40, byte cell 36 × 24, token chip 36 × 28 (gaps ≥ 2 px), marker cell 36 × 28 (a full column — never `--cell/2`), example chips ≥ 40 px tall, scrubber thumb 44 px, sheet handle button 44 px. Row heights are fixed per breakpoint and written to `contain-intrinsic-size`, so the board height is known before paint (CLS ≈ 0) and virtualization is arithmetic (`scrollTop → row`). No row has an id track — token ids sit inside their chips at every width (PA-17, §4) — but from 480 px the row ends with a gap track: 12 px at 480–1023 (2 px of slack stay unused at 768–1023); from 1024 the gap is `1fr`: 39 px with one byte row, 14 px with both (the `[bytes2]` track is `auto`, as tall as the dec row when it shows). So a row's chips sit farther from the next row's characters than from their own bytes at every width (14 / 18 → 18 / 22 → 16 / 46 px at 600 / 800 / 1440 px; 16 / 21 px with both byte rows; at ≥ 2560 px `cell / 4 + 7` / `cell + 15`). The BYOK live tier (§13) is one more track right under the token tier, before the gap.
+
+**The comparison table (PA-19).** `/` has no page max-width: `.frame` keeps its 16 px gutters and no cap, and
+`section#compare` breaks out of them (`margin-inline: calc(-1 * var(--gutter))`), so the first chip's border sits 2 px from
+the viewport edge (1 px row inset + the chip's 1 px inset). The board keeps its own cap: `--board-max` plus the side rail
+on its layout, as above. The table's column pitch is `--cell` (the board's: cells inset 1 px, so neighbours keep a 2 px
+gap); its rows are 22 px of caption + 7 + **44 px chips** + 7 = 80 px; the header box is a 22 px caption + a 60 px
+character row (56 px below 768) + a 28 px byte row (+ 2 px and a second 28 px row with `b=both`) + 6 px; from 2560 px the
+chips are `calc(var(--cell) * 1.4)` tall, the characters `calc(var(--cell) + 26px)`, the bytes `calc(var(--cell) / 2 +
+10px)`. U+ labels follow the board's rule (≥ 2 columns, ≥ 480 px; CSS). Coarse pointers: chips 36 × 44, selects 24 px
+tall.
 
 ### 3.4 Sketches
 
@@ -191,8 +204,13 @@ All numbers below are formula outputs from §3.3 and fixture facts from `fixture
 
 ```text
 App
-├─ Header (Wordmark, PickerButton→PickerDialog, LocaleMenu, ThemeToggle, HelpButton→HelpDialog)
-├─ InputPanel (TextArea, TextLangChip, ExampleChips, OptionToggles, ByteViewControl, GraphemeSwitch, CountsLine)
+├─ Header (sticky; SkipLink→#compare, Wordmark, LocaleMenu, ThemeToggle, HelpButton→HelpDialog)
+├─ InputPanel (TextArea, ExamplesMenu (menu button → role=menu of groups of menuitemradio), TextLangNote, p.why)
+├─ CompareTable (section#compare: an empty role=grid owning its rows through aria-owns; PA-19, §4.2)
+│   ├─ CompareHeader (.cmp-thead, sticky under the header: caption; row cmp-r-char of CompareChar columnheaders; row cmp-r-hex|dec of CompareByte)
+│   ├─ CompareRow×5 (.cmp-tbody: caption with the tokenizer select — outside the grid — then row cmp-row-<lab> of CompareChip gridcells, or the Anthropic API note)
+│   └─ .cmp-sbar (aria-hidden scrollbar, sticky at the bottom)
+├─ Advanced (details#advanced: summary; step by step: PickerButton→PickerDialog, AdvancedBoard (lazy: PipelineRail + Board); options: OptionsRow, CountsLine, LongInputBanner, CopyLink)
 ├─ PipelineRail (StopRadio×6 in a radiogroup, Scrubber, PlayButton, SpeedSelect, ScopeStatus)
 ├─ Board (role=grid)
 │   └─ Row×n (fixed height; virtualized window that always includes the focused/pinned row)
@@ -203,9 +221,9 @@ App
 │       └─ TokenChip / PartChip (fragments with SVG continuation marks; hatched edges; id inside, ChipId)
 ├─ InspectorHost — ≥1024: SideRail (MergeList, InspectorPanel) | 768–1023: AnchoredPanel (InspectorPanel) + MergeList (collapsible) | <768: BottomSheet (InspectorPanel) + MergeList (collapsible)
 │   └─ InspectorPanel (role=region, aria-labelledby, non-modal in every surface; §5)
-├─ NoticesStrip (requiredNotices of the selected tokenizer)
+├─ NoticesStrip (the union of requiredNotices over the tokenizers on screen, §15)
 ├─ LiveCheckDrawer (AnthropicCountPanel, XaiTokenizePanel, LiveTokenTier adapter)
-├─ Footer (counts summary, fidelity note, About/Licences links)
+├─ Footer (About/Licences links, privacy line, build stamp)
 └─ StatusRegion (role=status, aria-live=polite) · AlertRegion (role=alert)
 ```
 
@@ -223,7 +241,9 @@ App
 | Play | `<button aria-pressed>` (Space/Enter native) | — |
 | Board | §8 (grid, rowindex/colindex/colspan, describedby) | merge steps announced only on manual stepping |
 | Inspector | `role="region" aria-labelledby="<inspector heading id>"`; sheet handle `<button aria-expanded aria-controls>` | "pinned: …" via status |
-| Example chips | `role="listbox"`, chips `role="option" aria-selected`, each with `lang` of its `ResolvedTextLang`; hatch mark SVG `aria-hidden` + visually hidden `a11y.chipSplits` ("splits a character on this tokenizer") | — |
+| Examples menu (PA-19) | `button[aria-haspopup="menu"][aria-expanded]` "Examples"; `div[role="menu"]` of `role="group"` (labelled by the group heading) of `button[role="menuitemradio"][aria-checked]`, each item's text with `lang` of its `ResolvedTextLang`; ↑/↓ (wrapping), Home/End, Esc and a choice return focus to the button | — |
+| Comparison table (PA-19) | `role="grid"` (`aria-labelledby` the visually hidden "Tokens by lab", `aria-rowcount` = header rows + chip rows, `aria-colcount` = columns incl. the marker column, `aria-owns` the row ids); header rows of `columnheader`s, chip rows `aria-label` "{lab} · {tokenizer}" of `gridcell`s (`aria-colindex`/`aria-colspan` absolute, `aria-label` = `tokenLabel`, which names the token's text); captions and their selects (`aria-label` "{lab} tokenizer") outside the grid; a visually hidden `span[data-source]` per row | — |
+| Advanced (PA-19) | native `<details>`/`<summary>`; group headings `h3` | — |
 | Markers | §4 table: SVG `aria-hidden="true"` + visually hidden localized text or cell `aria-label` | — |
 
 ## 4. Rendering rules
@@ -273,7 +293,35 @@ App
 | NFKC mode (Claude legacy) | normalized-text row above (from `sourceRunStart/End`, 03 §B.4): `fullwidth-latin` `ｆｕｌｌｗｉｄｔｈ ＡＢＣ１２３ → fullwidth ABC123`, `halfwidth-katakana-dakuten` `ﾀﾞ → ダ` (2 → 1) with changed runs underlined and arrows; tiers refer to the normalized text | — | — |
 | Forced colours (`forced-colors: active`) | borders `CanvasText`; hatches `Highlight` | | |
 
+### 4.2 The comparison table (PA-19)
+
+- **One axis.** Every row's options are fixed (`specialTokens: 'as-text'`, `addBos: false`, `normalize: 'none'`), so
+  every result indexes the input text's UTF-8 and the header box (characters, bytes) is shared by all rows. A zero-width
+  leading token (Grok-1's dummy prefix) takes one marker column before byte 1, which every row then has; the other rows
+  leave it blank.
+- **Header cells carry no tint** (a deviation from §4's sliced char backgrounds: the header is shared; alignment rests on
+  the columns). Characters reuse the board's `.bd-box` (glyph, stand-ins, dotted-circle bases, U+ label); bytes the
+  board's `.bd-face` (lead bytes bolder).
+- **Chips carry the id only** (`.bd-chip`, tint = token index mod 8, the PA-17 id sizing; a 1-column chip with nothing but
+  its id and ≥ 5 digits sets two lines). The hatched cut edges of a partial token, the lock, the SPECIAL badge, the
+  byte-fallback `<0xNN>` and the dummy-prefix marker always show; the token text (from 4 columns) and the SVG
+  partial-character mark only with the "Show token text" / "Mark partial-character tokens" toggles, which the board
+  follows too. The chip's `aria-label` always names the token's text ("token 3 of 29, id 3236, 下, 3 bytes").
+- **Never wrapped.** Three horizontal scrollers stay in step: the header box (clipped, moved by script; a sideways wheel
+  or touch drag on it is forwarded), the rows (captions pinned to the left edge) and the scrollbar pinned to the bottom of
+  the viewport. Every scroller renders the same **column window** of at most 128 columns (the generated `.c1…c128` /
+  `.s1…s128`, rebased to the window start; 24 columns of overscan; the window moves only when the visible columns leave
+  its inner part). A focus move to a chip off the window scrolls the table there first.
+- **Captions** (22 px, small text, sticky left): lab · tokenizer select (the lab's tokenizers by their short names;
+  Anthropic also "Claude 5.5 · API key") · *N tokens* · *k partial-character tokens* · fidelity badge unless confirmed ·
+  "loading 43 %" / the error with Retry / "waiting for the tokenizer" · the visually hidden source badge.
+- **States.** A row draws its current result; while a loaded tokenizer encodes a new text, its last result muted; no
+  chips while loading, waiting, failed or in an on-demand tier (the header caption then offers "Tokenize now"). Empty
+  text: "0 code points · 0 bytes" and an empty row per lab.
+
 ## 5. Inspector (AD-34)
+
+*PA-19: the inspector lives with the board in the Advanced disclosure; the header is sticky, and `html`'s `scroll-padding-block-start` counts it (plus the table's pinned header box while a table chip has focus), so a focus move never lands under it (WCAG 2.4.11).*
 
 **Surface by viewport width only** (the same rule as §1, §3.3, §3.5, §9): **≥ 1024 px** a panel in the side rail; **768–1023 px** an anchored panel beside the active cell (manual placement with flip; CSS anchor positioning when available — Chrome 125 / Firefox 147 / Safari 26, §7.2; `[popover]`-free); **< 768 px** a bottom sheet (`position: fixed`, collapsed 56 px, expanded 40 vh). Pointer type never changes the surface.
 
@@ -283,6 +331,11 @@ Sections: **Token** (id, rank/priority, bytes hex and dec, `[start,end)`, byte l
 
 ## 6. Examples, picker, toggles, long input, IME
 
+- **Examples menu** (PA-19): the chips became one menu button ("Examples") opening a menu grouped 繁體中文 / 日本語 /
+  English / Mixed and emoji (`shell/example-groups.ts`, by chip key; `lang` as the fallback), each item the example's text
+  on one line (a paragraph shows its label) over its "why" sentence; choosing one applies the text and leaves the text
+  language as it is (`auto` by default). The picker button moved from the header into Advanced. The chips' hatch mark and
+  `a11y.chipSplits` are gone.
 - **Example chips** (`examples.json`, all precomputed from fixtures, AD-16; `chip.text === case.text` byte-for-byte, enforced by `registry:check`, 03 §B.7). The 19 chips, as `fixtureCase` → verbatim text (`lang`): `zh-tw-tainan` 台灣台南 (zh-Hant, default) · `zh-tw-taiwan-formal` 臺灣 (zh-Hant) · `zh-tw-renao` 熱鬧 (zh-Hant) · `cjk-saba` 鯖 (ja) · `cjk-turtle` 龜 (zh-Hant) · `cjk-ext-g-biang` 𰻝 (zh-Hant) · `emoji-family-zwj` 👩‍👩‍👧 (auto) · `emoji-flag-tw` 🇹🇼 (auto) · `emoji-heart-vs16` ❤️ (auto) · `ja-text` 日本語のテキスト (ja) · `ja-shibuya-ramen` 東京都渋谷区のラーメン屋さん (ja) · `mixed-hello-taiwan-tokyo` `Hello 台灣! 東京タワー` (auto) · `zh-date` 2024年10月 (zh-Hant) · `en-contraction-code` `I'm here\n\n code();` (en) · `bopomofo` `ㄅㄆㄇㄈ ㄊㄞˊㄨㄢˇ˙ㄉㄜ` (zh-Hant) · `fullwidth-latin` `ｆｕｌｌｗｉｄｔｈ ＡＢＣ１２３` (en) · `zh-tw-paragraph`, `ja-paragraph`, `en-paragraph` (localized `label` "zh-TW paragraph" etc.; the text is the full corpus paragraph). A chip shows the SVG hatch mark when it yields a partial-character token on the selected tokenizer (precomputed), so the headline feature is one tap away even where the default example does not split (o200k, Llama 4/Muse, Gemma — §9). `role="listbox"`, ←/→ roving focus, active chip `aria-selected`; chip labels never truncate (the row scrolls, `touch-action: pan-x`); each chip carries the `lang` of its resolved text language.
 - **Tokenizer picker**: `<dialog>` listbox (Safari 15.4+; no Popover API) grouped by lab in the brief's order (OpenAI, Anthropic, Google, Meta, xAI); each row: name, vocab size, wire size ("1.0 MB", from the Worker's `ready.assets`, 04 §6) or "downloaded ✓" (a `cache.keys()` probe on open, 03 §C.6), the tokenizer's fidelity badge (✓ confirmed · ≈ inferred · ◷ legacy), covered models as chips with their own badges and dated evidence on expand, licence tag; Anthropic row carries the red "not the Claude 3+ tokenizer" label and a "Claude 3+ → live check" row; secondary tokenizers under "More from <lab>"; typeahead. Selecting switches the board to that tokenizer's own Worker, loading it unless it is resident there already (PA-19; no `unload` at the page level); the chip shows phased progress; the board keeps the last result until the new engine answers.
 - **Toggles**: only those declared in `tokenizers.json.toggles` (special tokens · BOS · NFKC). Byte view (hex / dec / both ≥ 1024) and grapheme brackets are global.
@@ -312,7 +365,9 @@ Rules: `will-change` only for the duration of an animation; animations are cance
 
 ## 8. Keyboard map (AD-22)
 
-**Tab order**: header controls → textarea → example chips (one stop) → toggles → pipeline rail (one stop, a radiogroup; ←/→ move and select the stop) → scrubber → Play → **board (one stop)** → inspector panel (reachable by Tab and by `i`) → merge list → footer links → BYOK drawer.
+**Tab order (PA-19)**: skip link → header controls → textarea → Examples button → the comparison table (its caption selects in DOM order around the grid's one chip tab stop) → Advanced summary → (inside Advanced) picker button → pipeline rail → scrubber → Play → board → inspector → merge list → options → counts → Copy link → footer links → BYOK. **Table keys**: ←/→ along a row, ↑/↓ to the chip of the row above/below covering the same byte, Home/End a row's first/last chip, PageUp/PageDown the first/last row, Enter/Space opens Advanced on that row's tokenizer and focuses the board's token cell at the same byte, Esc back to the textarea; click/tap focuses a chip. The global keys that act on the board (`[` `]` `,` `.` `1`–`6` `t`) open Advanced first.
+
+**Tab order before PA-19**: header controls → textarea → example chips (one stop) → toggles → pipeline rail (one stop, a radiogroup; ←/→ move and select the stop) → scrubber → Play → **board (one stop)** → inspector panel (reachable by Tab and by `i`) → merge list → footer links → BYOK drawer.
 
 **Board = APG layout grid** (binding ARIA contract): `role="grid"` with `aria-rowcount` = packedRows × tiers and `aria-colcount` = K. Every **mounted** `role="row"` carries `aria-rowindex` = `packedRow × tiers + tier + 1` (1-based; tiers in order char, byte-hex, byte-dec, chunk, token for the ones currently shown), every cell `role="gridcell"` carries `aria-colindex` = its first column + 1 and `aria-colspan` = the columns of **that fragment**. Rows outside the virtual window are unmounted, but **the window always includes the row holding the focused or pinned cell**, and after any remount focus is restored to the cell at the same byte offset and tier (nearest existing cell if that offset is gone), so roving `tabindex` never drops to `<body>`. A span fragmented over several rows is one logical cell (focus lands on the first fragment; all fragments get `data-active`); every fragment references a visually hidden `<span id="frag-<spanId>">` holding the localized `a11y.fragment` text "token 3, continued (part 2 of 2)" via `aria-describedby`. `aria-label` per cell, e.g. "byte 4 of 12: E7, decimal 231, first byte of 灣, in token 2 of 5 (id 66285, partial)".
 
@@ -359,7 +414,7 @@ Rules: `will-change` only for the duration of an animation; animations are cance
 - Catalogs: `en.ts` (source of truth, typed keys → `MessageKey` union), `zh-TW.ts`, `ja.ts`; `t(key, params)` with **named placeholders only** (`{n} 位元組`, `{glyph} の先頭 {n} バイト`), so every locale may reorder parameters; plurals via `Intl.PluralRules`; CI fails if any locale misses a key or has an unused one, and a catalog test renders **every** template in all three locales with sample params (no leftover `{…}`). ≈ 190 strings (UI, notices, inspector sentences, a11y labels, marker SR text). Legal strings (xAI notice, Llama/Gemma notices, licence texts) are **not** translated; UI explanations around them are.
 - **Numbers**: counts, sizes and durations use `Intl.NumberFormat(locale)` with grouping ("1,025 KB", "12 位元組"); **token ids, ranks, hex/dec byte values, byte offsets and step indices are raw ASCII digits with `font-variant-numeric: tabular-nums` and no grouping** ("133072", never "133,072" — copy-paste, mono alignment and the chip width budget depend on it).
 - Locale resolution (`boot.js`, before first paint): `?lang` → `localStorage` → `navigator.languages` (`zh-TW`/`zh-Hant*`/`zh` → zh-TW; `ja*` → ja; else en). `<html lang>` = `zh-TW` / `ja` / `en`; `<title>`/`<meta name=description>` localised at runtime; runtime switching, no routes (AD-29).
-- **Text language** chip (for the input mirror, the char tier and the inspector glyph — not the UI): `TextLangChoice = auto | zh-Hant | ja | en` (03 §B.7). Resolution to `ResolvedTextLang`: `zh-Hant` → **`zh-Hant-TW`** (so the UI root `zh-TW` and glyph cells resolve to the same font stack); `ja`, `en` as is; `auto`: kana → `ja`; Hangul → `ko`; Han only → `zh-Hant-TW` unless the UI locale is ja → `ja`; Latin/other → `und` (inherits the UI font). Example chips set the chip from their `lang` (`auto` for mixed-script cases).
+- **Text language** (PA-19: defaults to `auto`; examples no longer set it; `tl=` still does; the wordmark "What is a token?" is English in every locale, `lang="en"`) chip (for the input mirror, the char tier and the inspector glyph — not the UI): `TextLangChoice = auto | zh-Hant | ja | en` (03 §B.7). Resolution to `ResolvedTextLang`: `zh-Hant` → **`zh-Hant-TW`** (so the UI root `zh-TW` and glyph cells resolve to the same font stack); `ja`, `en` as is; `auto`: kana → `ja`; Hangul → `ko`; Han only → `zh-Hant-TW` unless the UI locale is ja → `ja`; Latin/other → `und` (inherits the UI font). Example chips set the chip from their `lang` (`auto` for mixed-script cases).
 - Font stacks (system fonts plus two bundled subsets, the stand-ins and the token-id digits; no CJK web fonts): **`:lang(zh)`** (matches `zh-TW`, `zh-Hant`, `zh-Hant-TW` — `:lang(zh-Hant)` would **not** match the `zh-TW` root, since `Hant` never matches the `TW` subtag under extended filtering) → `"PingFang TC", "Noto Sans TC", "Noto Sans CJK TC", "Microsoft JhengHei", "Source Han Sans TC", system-ui, sans-serif`; `:lang(ja)` → `"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", Meiryo, system-ui, sans-serif`; `:lang(ko)` → `"Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", "Malgun Gothic", system-ui, sans-serif`; UI/Latin/`und` → `system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif`; bytes/ids → `ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Noto Sans Mono", monospace` with `font-variant-numeric: tabular-nums`; token ids inside the board's chips → the bundled digits subset first (`--font-digits`: Noto Sans's ten figures, © 2022 The Noto Project Authors, SIL OFL 1.1, tabular figures baked in, width axis 62.5–100 kept, a 2,360 B WOFF2 preloaded from `index.html` right after the stylesheet, so the static first paint does not wait for it with empty chips; credited on About › Required notices; PA-17, §4); stand-in cells → the bundled subset WOFF2 first (§4); emoji fallback `"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji"`. Glyph cells set `font-size` by script (CJK 22 px vs Latin 20 px at desktop) so ideograph and x-height balance. E2E (06 §1): in the zh-TW locale on the Linux CI image (`fonts-noto-cjk`) `getComputedStyle(uiLabel).fontFamily` and `getComputedStyle(glyphCell).fontFamily` resolve to the same TC family.
 - Typography and copy: `word-break: keep-all` **only on single-line controls** (buttons, chips, tabs, radio labels); all sentence-length copy (notices strip, inspector sentences, help, fidelity sentence, banners) uses `line-break: strict; word-break: normal; overflow-wrap: anywhere` so CJK wraps at 360 px (E2E overflow assertion in zh-TW and ja, 06 §1); user text `overflow-wrap: anywhere`; fullwidth punctuation in zh-TW (「」，。) and ja (「」、。); no italics for CJK (emphasis by weight/colour); control labels never truncate with ellipsis (chips/tabs scroll); layouts tolerate ×1.6 string length (en is longest). Tone: plain, present tense, second person sparingly; numbers always with units; "token" never translated as 標記. Glossary (binding for sketches, catalogs and the counts line): token 詞元 / トークン · byte 位元組 / バイト · code point 碼位 / コードポイント · grapheme cluster 字位簇 / 書記素クラスタ · merge 合併 / マージ · chunk 切塊 / チャンク · tokenizer 分詞器 / トークナイザー · partial-character token 部分字元詞元 / 部分文字トークン · zero-width 零寬 / ゼロ幅 · byte fallback 位元組回退 / バイトフォールバック · confirmed 已確認 / 確認済み · inferred 推定 / 推定 · legacy 舊版 / レガシー. A native-speaker review pass of zh-TW and ja copy is a launch-checklist item (06 §7).
 - **Marker SR text** (keys under `a11y.marker.*`, en shown): `continued` "continued from the previous row" · `continues` "continues on the next row" · `zeroWidthDummy` "dummy prefix, 0 bytes" · `zeroWidthBos` "beginning-of-sequence token, 0 bytes" · `splits` "splits a character on this tokenizer" · `partialCut` "token boundary inside this character" · `byteFallback` "byte-fallback piece {hex}" · `userDefined` "pre-matched symbol, never merges" · `special` "special token" · `justMerged` "merged at this step" · `combining` "combining mark {cp} attached to {base}".
@@ -384,9 +439,22 @@ CSS custom properties on `:root` (light), redefined under `@media (prefers-color
 
 ## 12. Loading and empty states
 
+*PA-19, the table's rows:* the five default rows of 台灣台南 are inlined and on screen at first paint ("precomputed");
+o200k loads after first paint as before (the OpenAI row and the board share its result); the other rows' vocabularies
+load on the first free-text edit, a row switch or the board's need — example texts answer from the precomputed files
+for all nine tokenizers — and an idle prefetch of the other default rows (Cache API only) starts 10 s after the load
+trigger unless Save-Data. A row's caption says "loading 43 %" while its tokenizer loads and shows its errors with Retry;
+the toast stays the board's. Above 20,000 code points the rows wait for "Tokenize now", which runs the board, then the
+rows one after another; a row's whole-text result is released as soon as the text leaves it (AD-27).
+
 While the first tokenizer loads, the board shows the precomputed result of the current chip (badge "precomputed"); typed text shows stops 1–3 live from `analyzeText` on the main thread and a skeleton for stops 4–6 ("tokenizer loading… 64 %"). When the engine answers, the badge flips to "live" and the board crossfades (View Transition). Errors: `fetch` non-retryable → "A new version is available — reload"; `integrity` → auto-refetch once, then "Download was corrupted — retry"; `oom` → "Not enough memory to load Gemma 4 on this device — try o200k_base" with a back action that returns to the previous tokenizer (still resident in its own Worker, PA-19, else reloaded from cache); `quota` is informational (works without Cache API).
 
 ## 13. BYOK panels (opt-in drawer; OD-5, AD-24)
+
+*PA-19:* the table's Anthropic row offers "Claude 5.5 · API key", which replaces its chips with "Current Claude models
+count tokens through the API. Nothing is sent until you add a key." and a "Live check…" button that opens this drawer
+on the Anthropic panel; once the panel has counted the text on screen, the caption shows "N tokens via the API, about f
+of them frame". No chips: the API gives no boundaries. xAI's API path stays in the drawer.
 
 Closed by default behind "Live check with your own API key"; opening shows the warning: the key stays in this tab's memory, is sent only to the provider over HTTPS, and is forgotten on reload; the site has no backend and no analytics. Keys live in a module-level `$state`, never persisted, cleared on "Forget key", on drawer collapse and on `pagehide`; requests use `credentials: 'omit'`; CSP `connect-src` allows only `'self' https://api.anthropic.com https://api.x.ai`. Manual trigger only (one request per click; button disabled while pending).
 
@@ -399,4 +467,9 @@ Sections: (1) what the site shows and does not claim (Anthropic legacy disclaime
 
 ## 15. Notices strip rule
 
-While tokenizer T is selected, every key in `tokenizers.json[T].requiredNotices` renders in the notices strip above the footer, in the UI locale for explanatory text and verbatim for legal strings; the strip is never collapsed below 360 px (it wraps). `registry:check` guarantees each key has strings in all three locales; an E2E test asserts "Powered by xAI" is visible after selecting Grok-2 and absent after selecting o200k.
+PA-19: the strip shows the deduplicated union of the `requiredNotices` of every tokenizer **visible** on the page — the
+table's five rows, and the board's tokenizer while Advanced is open — prominent legal notices first, then the other
+legal ones, then the explanatory ones (the first occurrence of a key wins); its label names up to three tokenizers,
+else counts them ("Notices for 5 tokenizers"). "Powered by xAI" is therefore visible by default and absent only when
+the xAI row shows Grok-1 and the board is not on Grok-2 (`shell-notices.spec.ts`). Before PA-19: while tokenizer T is
+selected, every key in `tokenizers.json[T].requiredNotices` renders in the notices strip above the footer, in the UI locale for explanatory text and verbatim for legal strings; the strip is never collapsed below 360 px (it wraps). `registry:check` guarantees each key has strings in all three locales; an E2E test asserts "Powered by xAI" is visible after selecting Grok-2 and absent after selecting o200k.

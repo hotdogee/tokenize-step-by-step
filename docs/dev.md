@@ -92,8 +92,23 @@ One `AppState` (`apps/web/src/app/app-state.svelte.ts`, 05 §1.1) drives the boa
 drawer, over the result hub (`result-hub.svelte.ts`, PA-19), which holds one result per tokenizer and token options for
 every view and owns the pool of clients:
 
-- **Startup.** The precomputed default rows (台灣台南 on each lab's primary tokenizer, inlined) seed the hub, and the
-  board's (o200k) is on screen at first paint, badge "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
+- **The page (PA-19).** `App.svelte`: the sticky header, the input panel (`TextInput`, `ExamplesMenu`), the comparison
+  table (`compare/CompareTable.svelte`), the Advanced disclosure (`shell/Advanced.svelte`: the picker button, then
+  `board/AdvancedBoard.svelte` — the rail and the board, a lazy chunk imported the first time it opens — then the
+  options, the counts line, the long-input banner and Copy link), the notices strip (the union over the tokenizers on
+  screen) and the footer. `AppState.advancedOpen` is URL-driven (`t`/`s` open it; the writer emits them only while it
+  is open) and the board's global keys open it; `AppState.rows` (`compare/rows.svelte.ts`) keeps the row choices
+  (`tsbs:rows`, `r=`).
+- **The table's rows.** CompareTable holds every visible row's hub entry (`hub.retain`/`release`, `ROW_OPTIONS`) and asks
+  for it on every text change of a live tier after the board's 40 ms debounce (the board's traced request goes first, so
+  the OpenAI row shares it), on a row switch (`hub.ensureRows` loads the new tokenizer) and after the board's on-demand
+  run (`AppState.rowRun`, one row after another); a row's whole-text result that the text has left is forgotten at
+  once (AD-27). The header box describes the text's UTF-8 (`headerText`) and analyses only its column window's slice;
+  every scroller renders the same window of ≤ 128 columns (`compare-window.ts`), placed with the generated `.c<n>`/`.s<n>`
+  classes; `scroll-sync.ts` keeps the three scrollers in step. `App.svelte` starts `hub.prefetchIdle` for the other
+  default rows once `app.start()` has loaded the board's tokenizer (10 s later, skipped under Save-Data).
+- **Startup.** The precomputed default rows (台灣台南 on each lab's primary tokenizer, inlined) seed the hub and are on
+  screen in the table at first paint (one static template per locale, PA-15), badge "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
   the first paint entry (`largest-contentful-paint`, else `paint`) and two animation frames (`load-trigger.ts`, 06 §3);
   `integration-load.spec.ts` asserts the Worker script and the `.bin` start after the last LCP entry. While a tokenizer
   loads, an example chip answers from the precomputed examples (`precomputed.ts`); the engine's first answer replaces a
@@ -122,7 +137,7 @@ every view and owns the pool of clients:
   and is no live region of its own). A run asked for while the tokenizer loads runs on `loaded`, also after a failed
   load is retried, and is dropped when the text goes back under 20,001 code points (the load then encodes the short
   text live).
-- **URL state** (`url-state.ts`): `?t=&q=&s=<stage>.<step>&b=&lang=&tl=` is read once (`bootstrap.ts`), invalid values
+- **URL state** (`url-state.ts`): `?t=&q=&r=&s=<stage>.<step>&b=&lang=&tl=` is read once (`bootstrap.ts`; `t`/`s` open Advanced and are written only while it is open, `r` carries the table rows' choices, PA-19), invalid values
   ignored; every change but the text is written with `history.replaceState` 500 ms later; "Copy link" alone puts the text
   in `q` (≤ 2,000 code points) and confirms it.
 - **Errors** (`errors.ts`, 05 §12 / 04 §5) surface as one `role="alert"` toast with its action: reload (stale deploy),

@@ -20,7 +20,8 @@ decimal) → pre-tokenizer chunks → BPE merges, one at a time → tokens with 
 The work packages of [`docs/design/07-implementation-plan.md`](docs/design/07-implementation-plan.md) through wave 4's
 integration (WP13a) are in place: both engines, the Worker, the board, the pipeline rail and scrubber, the inspector,
 the live-check drawer, long-input tiers, URL state, error handling and diagnostics. The launch checklist (WP13b) is
-`docs/release.md`.
+`docs/release.md`. PA-19 (2026-10-27) made the comparison table the default view and moved the step-by-step board into
+the Advanced disclosure (`docs/design/00-decisions.md` §E).
 
 ## Architecture
 
@@ -28,12 +29,12 @@ the live-check drawer, long-input tiers, URL state, error handling and diagnosti
  build time (Node, CI)                                     run time (the browser only — no server code anywhere)
  ─────────────────────                                     ──────────────────────────────────────────────────────
  tools/oracle (Python)                                     main thread: apps/web (Svelte 5)
-   pinned upstream vocabularies → data/vocab/raw             boot.js (lang, theme) → app shell → AppState
-   reference tokenizers → fixtures/*.json (golden)           first paint: the precomputed default example
- @tsbs/vocab-tools (tsbs-vocab)                              board · pipeline rail · inspector · live-check drawer
+   pinned upstream vocabularies → data/vocab/raw             boot.js (lang, theme) → app shell → AppState + result hub
+   reference tokenizers → fixtures/*.json (golden)           first paint: the table's five precomputed default rows
+ @tsbs/vocab-tools (tsbs-vocab)                              table · Advanced (board · rail · inspector) · drawer
    raw vocab → TSBV1 .bin (gzip) + manifest                    │ postMessage (typed arrays, transferred)
    conformance against the fixtures before any write           ▼
-   precomputed example results, licence data               Web Worker: @tsbs/worker
+   precomputed example results, licence data               Web Workers: @tsbs/worker, one per tokenizer on screen
  vite build → apps/web/dist (+ dist/tok/*.bin)               loader: Cache API → fetch /tok/<id>/<sha>.bin → sha256 → gunzip
    → Cloudflare Workers static assets (CI deploys)           engines (lazy chunks): byte-level BPE · SentencePiece BPE
 ```
@@ -48,10 +49,11 @@ the live-check drawer, long-input tiers, URL state, error handling and diagnosti
   protocol (load, encode with cancellation, lookup) and caches vocabularies in the Cache API. `@tsbs/registry` is the
   data: tokenizers, model mappings with dated evidence, licences and notices, example chips, BYOK endpoints — validated
   by zod at build time, imported as plain JSON at run time.
-- **The Worker.** The page posts `load` for the default tokenizer only after its first paint; the Worker downloads the
-  vocabulary (or reads it from the Cache API), verifies its sha256, builds the tables, and answers encodes with results
-  whose typed arrays are transferred, never copied. A newer keystroke cancels an older encode; a crashed Worker is
-  respawned once.
+- **The Workers.** The page runs one Worker per tokenizer on screen (at most six: the five table rows and the board's).
+  It posts `load` for the default tokenizer only after its first paint; the other rows load on the first free-text
+  edit or a row switch (example texts are precomputed). Each Worker downloads its vocabulary (or reads it from the
+  Cache API), verifies its sha256, builds the tables, and answers encodes with results whose typed arrays are
+  transferred, never copied. A newer keystroke cancels an older encode; a crashed Worker is respawned once.
 - **The data pipeline.** `tools/oracle` pins every upstream vocabulary by URL and sha256 and generates the golden
   fixtures with the reference libraries (tiktoken, sentencepiece, Hugging Face tokenizers). `tsbs-vocab build` converts
   each vocabulary into a compact `.bin`, refusing to write one whose tables fail its fixture, and emits the precomputed
