@@ -1,9 +1,9 @@
 /**
- * Hydration parity of the static first paint (PA-15): for every UI locale and board variant, the markup the build
- * prerenders (src/app/prerender.ts, server-rendered by the test server through the `renderFirstPaint` command) is the
- * client's own first render of the same state, and `hydrate()` adopts it without re-creating a node or warning. The
- * client renders with the variant's view (app/first-paint.ts), as main.ts does, so every variant is checked here at the
- * test viewport. E2E (e2e/specs/first-paint.spec.ts) repeats the adoption on the built page in each browser.
+ * Hydration parity of the static first paint (PA-15): for every UI locale, the markup the build prerenders
+ * (src/app/prerender.ts, server-rendered by the test server through the `renderFirstPaint` command) is the client's own
+ * first render of the same state — the comparison table with its five precomputed default rows, Advanced closed (PA-19:
+ * one template per locale, no viewport variants) — and `hydrate()` adopts it without re-creating a node or warning. E2E
+ * (e2e/specs/first-paint.spec.ts) repeats the adoption on the built page in each browser.
  */
 import '../theme/base.css';
 import { hydrate, mount, unmount } from 'svelte';
@@ -13,20 +13,13 @@ import { i18n } from '../i18n/locale.svelte.ts';
 import { LOCALES } from '../i18n/types.ts';
 import App from './App.svelte';
 import { AppState } from './app-state.svelte.ts';
-import { defaultResult } from './bootstrap.ts';
+import { defaultResults } from './bootstrap.ts';
 import { FakeClient, hubOf } from './fake-client.test-helper.ts';
-import { setFirstPaintView, type FirstPaintView } from './first-paint.ts';
 import { STORAGE_KEYS } from './storage.ts';
-
-interface BoardVariant {
-  readonly media: string;
-  readonly view: FirstPaintView;
-}
 
 declare module 'vitest/browser' {
   interface BrowserCommands {
-    renderFirstPaint: (locale: string, view: FirstPaintView) => Promise<string>;
-    firstPaintVariants: () => Promise<readonly BoardVariant[]>;
+    renderFirstPaint: (locale: string) => Promise<string>;
   }
 }
 
@@ -69,9 +62,9 @@ function shape(root: Node): string[] {
   return lines;
 }
 
-/** The page state the prerender renders: the precomputed default example, no URL state (FakeClient: no Worker). */
+/** The page state the prerender renders: the precomputed default rows, no URL state (FakeClient: no Worker). */
 function firstState(): AppState {
-  return new AppState(hubOf(new FakeClient(), { seeds: [defaultResult()] }), {});
+  return new AppState(hubOf(new FakeClient(), { seeds: Object.values(defaultResults()) }), {});
 }
 
 /** A container for one render, removed after the test. */
@@ -87,7 +80,6 @@ function container(): HTMLElement {
 afterEach(() => {
   for (const component of components.splice(0)) void unmount(component);
   for (const element of containers.splice(0)) element.remove();
-  setFirstPaintView(null);
   i18n.current = 'en';
 });
 
@@ -102,43 +94,34 @@ beforeEach(() => {
   }
 });
 
-describe('the static first paint (PA-15)', async () => {
-  const variants = await commands.firstPaintVariants();
+describe('the static first paint (PA-15)', () => {
+  for (const locale of LOCALES) {
+    it(`${locale}: the server's markup is the client's first render, and hydration adopts it`, async () => {
+      const markup = await commands.renderFirstPaint(locale);
+      expect(markup).toContain('data-testid="compare"');
+      expect(markup).not.toContain('board-region');
+      const parsed = document.createElement('template');
+      parsed.innerHTML = markup;
+      i18n.current = locale;
 
-  it('has a variant per width range, packed for the smallest K of its range', () => {
-    expect(variants.map((variant) => variant.view.k)).toEqual([12, 12, 12, 9, 8]);
-  });
+      // The client's own first render of the same state (template effects only: user effects have not run yet).
+      const fresh = container();
+      const first = mount(App, { target: fresh, props: { app: firstState() } });
+      expect(shape(parsed.content)).toEqual(shape(fresh));
+      void unmount(first);
 
-  for (const locale of LOCALES)
-    for (const { media, view } of variants) {
-      it(`${locale} ${media}: the server's markup is the client's first render, and hydration adopts it`, async () => {
-        const markup = await commands.renderFirstPaint(locale, view);
-        const parsed = document.createElement('template');
-        parsed.innerHTML = markup;
-        i18n.current = locale;
-
-        // The client's own first render of the same state (template effects only: user effects have not run yet).
-        const fresh = container();
-        setFirstPaintView(view);
-        const first = mount(App, { target: fresh, props: { app: firstState() } });
-        setFirstPaintView(null);
-        expect(shape(parsed.content)).toEqual(shape(fresh));
-        void unmount(first);
-
-        // Hydration of the markup as the clone script inserts it: every node adopted, no mismatch warning.
-        const target = container();
-        target.append(parsed.content.cloneNode(true));
-        const before = [...target.querySelectorAll('*')];
-        const warn = vi.spyOn(console, 'warn');
-        setFirstPaintView(view);
-        components.push(hydrate(App, { target, props: { app: firstState() } }));
-        setFirstPaintView(null);
-        const warnings = warn.mock.calls.map((call) => call.map(String).join(' '));
-        warn.mockRestore();
-        expect(warnings.filter((warning) => /hydrat/i.test(warning))).toEqual([]);
-        expect(before.filter((node) => !target.contains(node)).map((node) => node.outerHTML.slice(0, 100))).toEqual([]);
-        expect(target.querySelectorAll('*')).toHaveLength(before.length);
-        expect(shape(target)).toEqual(shape(parsed.content));
-      });
-    }
+      // Hydration of the markup as the clone script inserts it: every node adopted, no mismatch warning.
+      const target = container();
+      target.append(parsed.content.cloneNode(true));
+      const before = [...target.querySelectorAll('*')];
+      const warn = vi.spyOn(console, 'warn');
+      components.push(hydrate(App, { target, props: { app: firstState() } }));
+      const warnings = warn.mock.calls.map((call) => call.map(String).join(' '));
+      warn.mockRestore();
+      expect(warnings.filter((warning) => /hydrat/i.test(warning))).toEqual([]);
+      expect(before.filter((node) => !target.contains(node)).map((node) => node.outerHTML.slice(0, 100))).toEqual([]);
+      expect(target.querySelectorAll('*')).toHaveLength(before.length);
+      expect(shape(target)).toEqual(shape(parsed.content));
+    });
+  }
 });

@@ -30,6 +30,7 @@ import {
   type MountedBoard,
 } from './board.test-helper.ts';
 import { columnsFor } from './geometry.ts';
+import { preferences } from '../shell/preferences.svelte.ts';
 
 declare module 'vitest/browser' {
   interface BrowserCommands {
@@ -43,6 +44,19 @@ afterEach(() => {
   mounted?.destroy();
   mounted = null;
 });
+
+/**
+ * Turns the chip toggles on for one test (PA-19: token text and the partial-character mark are off by default; the
+ * descriptors still carry them, only the rendering waits for the preferences).
+ */
+function withChipMarks(): void {
+  preferences.setChipText(true);
+  preferences.setChipHatch(true);
+  onTestFinished(() => {
+    preferences.setChipText(false);
+    preferences.setChipHatch(false);
+  });
+}
 
 async function show(...args: Parameters<typeof appWith>): Promise<MountedBoard> {
   mounted = await mountBoard(appWith(...args));
@@ -60,6 +74,7 @@ const cell = (board: MountedBoard, selector: string): HTMLElement => {
 
 describe('05 §4.1 hard cases', () => {
   it('partial-character token: sliced background, hatched cuts, aria-label (cl100k 灣)', async () => {
+    withChipMarks();
     await page.viewport(1440, 900);
     const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
     const wan = cell(board, '[data-tier="char"][data-index="1"]');
@@ -151,6 +166,7 @@ describe('05 §4.1 hard cases', () => {
   });
 
   it('fused dummy prefix: the first chip reads ▁Hello and its label says so (Grok-1 Hello)', async () => {
+    withChipMarks();
     await page.viewport(1440, 900);
     const board = await show(fixtureResult('xai-grok1', 'en-hello-world'));
     expect(cells(board, '[data-variant="marker"]')).toHaveLength(0);
@@ -165,6 +181,7 @@ describe('05 §4.1 hard cases', () => {
   });
 
   it('whitespace and control stand-ins ␠ ⏎ in the subset font, named in the labels (o200k code)', async () => {
+    withChipMarks();
     await page.viewport(1440, 900);
     const board = await show(fixtureResult('openai-o200k_base', 'en-contraction-code'));
     for (const [index, glyph, name] of [
@@ -534,6 +551,7 @@ describe('token ids inside every chip (PA-17)', () => {
   }
 
   it('stacks a narrow chip’s marks on one line under its id, padded 1 px and 5 px at a hatched edge (cl100k 96, 66285)', async () => {
+    withChipMarks();
     await page.viewport(1440, 900);
     const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
     await digitsLoaded();

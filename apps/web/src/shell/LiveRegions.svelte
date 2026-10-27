@@ -4,7 +4,8 @@
    * toast (`role="alert"`, assertive, once) for errors with their 05 §12 copy and action (05 §3.5 ARIA table). The
    * message and action come from `app/errors.ts` (WP13); the toast floats above the bottom sheet, so it never shifts the
    * page. Its buttons remove it, so keyboard focus first moves to a control that stays (05 §8): the picker button for
-   * "back" (a tokenizer switch), the textarea for every other action and for dismiss.
+   * "back" (a tokenizer switch) while the Advanced disclosure that holds it is open, else the textarea, as for every other
+   * action and for dismiss.
    */
   import { appState } from '../app/context.ts';
   import { errorView, type ErrorView } from '../app/errors.ts';
@@ -28,7 +29,10 @@
     const active = document.activeElement;
     if (!(active instanceof HTMLElement) || !(toast?.contains(active) ?? false) || !active.matches(':focus-visible'))
       return;
-    document.getElementById(target)?.focus();
+    const element = document.getElementById(target);
+    // The picker button lives in the Advanced disclosure (PA-19): closed, it cannot take focus, so the textarea does.
+    if (element?.closest('details:not([open])') === null) element.focus();
+    else document.getElementById('text-input')?.focus();
   }
 
   function act(action: NonNullable<ErrorView['action']>): void {

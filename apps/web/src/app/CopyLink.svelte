@@ -14,18 +14,7 @@
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   async function copy(): Promise<void> {
-    const { url, withText } = shareLink(
-      location.href,
-      {
-        tokenizer: app.tokenizer,
-        stage: app.stage,
-        step: app.step,
-        byteView: app.byteView,
-        locale: i18n.current,
-        textLang: app.textLang,
-      },
-      app.text,
-    );
+    const { url, withText } = shareLink(location.href, app.urlSnapshot(), app.text);
     history.replaceState(history.state, '', url);
     let copied = true;
     try {

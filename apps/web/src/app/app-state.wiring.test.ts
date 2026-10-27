@@ -745,9 +745,15 @@ describe('URL state (05 §1.1)', () => {
     expect(app.step).toBe(3);
   });
 
-  it('takes a chip’s text language for a chip text and auto for free text', () => {
+  it('keeps the text language auto for any text, an example’s too, unless tl sets it (PA-19)', () => {
     const chip = EXAMPLES.find((c) => c.key === 'ja-shibuya-ramen');
-    expect(new AppState(hubOf(new FakeClient()), { text: chip?.text ?? '' }).textLang).toBe('ja');
+    expect(new AppState(hubOf(new FakeClient()), { text: chip?.text ?? '' }).textLang).toBe('auto');
     expect(new AppState(hubOf(new FakeClient()), { text: 'free text' }).textLang).toBe('auto');
+    expect(new AppState(hubOf(new FakeClient()), { text: chip?.text ?? '', textLang: 'ja' }).textLang).toBe('ja');
+  });
+
+  it('opens Advanced when the link carries t or s, and never otherwise (PA-19)', () => {
+    expect(new AppState(hubOf(new FakeClient()), {}).advancedOpen).toBe(false);
+    expect(new AppState(hubOf(new FakeClient()), { advanced: true, stage: 3 }).advancedOpen).toBe(true);
   });
 });

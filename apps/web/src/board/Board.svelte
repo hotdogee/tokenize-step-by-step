@@ -32,7 +32,6 @@
   import { hexByte } from '@tsbs/core/text/utf8';
   import { appState } from '../app/context.ts';
   import { tokenizerEntry } from '../app/registry.ts';
-  import { firstPaintView } from '../app/first-paint.ts';
   import { readStored, STORAGE_KEYS, writeStored } from '../app/storage.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { formatPercent } from '../i18n/t.ts';
@@ -70,9 +69,7 @@
   const ENGAGE_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'focusin'] as const;
 
   const app = appState();
-  /** A hydrated static first paint (PA-15): the first render uses its variant's K and viewport facts, then measures. */
-  const first = firstPaintView();
-  const viewport = new BoardViewport(first);
+  const viewport = new BoardViewport();
 
   let layout: HTMLDivElement | undefined = $state();
   let main: HTMLDivElement | undefined = $state();
@@ -97,7 +94,7 @@
   const view = $derived(viewOf(result, lang));
   const stage = $derived(app.stage);
   const step = $derived(Math.min(Math.max(0, app.step), view.stepCount));
-  const K = $derived(cellPx > 0 ? columnsFor(contentWidth + 2 * GUTTER, cellPx) : (first?.k ?? MIN_COLUMNS));
+  const K = $derived(cellPx > 0 ? columnsFor(contentWidth + 2 * GUTTER, cellPx) : MIN_COLUMNS);
   const baseRows = $derived(packRows(result, K));
   const parts = $derived(!pending && tokenMode(stage) === 'parts' ? view.partsAt(stage === 4 ? 0 : step) : null);
   const rows = $derived(parts === null ? baseRows : withParts(baseRows, result, parts));
@@ -512,11 +509,9 @@
   }
 
   onMount(() => {
-    viewport.watch();
-    // After hydrating a static first paint the ResizeObserver's first notification measures, a frame later: the K change
-    // re-renders in its own task, not in the hydration task (PA-15; TBT). Mounted from scratch it measures now, before the
-    // first paint.
-    if (first === null) measure();
+    // The board is never part of the static first paint (PA-19: it lives in the Advanced disclosure, a lazy chunk), so it
+    // measures as soon as it is mounted.
+    measure();
     // A resting pointer is no interaction: browsers also send `pointermove` at its unchanged position when the page
     // appears or the content under it changes (headless chromium on Linux: one at (0, 0) during startup), so a move
     // counts only at a position other than the previous move's.
@@ -597,9 +592,9 @@
   });
 
   // The sheet's height (plus an 8 px gap in the CSS below) feeds scroll-padding-block-end so the focused row is never
-  // under it (WCAG 2.4.11).
+  // under it (WCAG 2.4.11); none while the Advanced disclosure holding the board is closed (PA-19).
   $effect(() => {
-    const height = viewport.surface === 'sheet' ? (sheetExpanded ? '40vh' : '56px') : null;
+    const height = viewport.surface === 'sheet' && app.advancedOpen ? (sheetExpanded ? '40vh' : '56px') : null;
     if (height === null) document.documentElement.style.removeProperty('--sheet-height');
     else document.documentElement.style.setProperty('--sheet-height', height);
   });
@@ -618,6 +613,17 @@
   function track(..._values: unknown[]): void {
     // dependencies only
   }
+
+  // The table's Enter (PA-19): focus the token cell at that byte once the board shows a current result.
+  $effect(() => {
+    const byte = app.boardFocus;
+    if (byte === null || board.kind !== 'final' || grid === undefined) return;
+    untrack(() => {
+      app.boardFocus = null;
+      const ref = resolveAnchor(local({ tier: 'token', byte, slot: -1 }));
+      if (ref !== null) void moveFocus(ref);
+    });
+  });
 
   // Hover refs belong to one layout; drop them when it changes.
   $effect(() => {
@@ -748,10 +754,14 @@
     min-height: var(--row-h);
   }
 
+  /* The board keeps the 05 §3.3 cap (`--board-max` plus the side rail, within the page gutters; none below 1440 px, where
+     the token is `none` and the declaration is invalid at computed-value time): the page itself has no max-width since
+     PA-19, so the cap moved here from `.frame`. */
   .layout {
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
+    max-width: calc(var(--board-max) + var(--rail-w) - 2 * var(--gutter));
   }
 
   @media (min-width: 1024px) {
@@ -825,14 +835,8 @@
     }
   }
 
-  /* The sheet height plus a gap, so a focused cell scrolled "nearest" never sits flush against the sheet: flush, its
-     focus ring is cut off, and a sub-pixel layout difference (fonts, scrollbars) already counts as overlap. The same gap
-     at the top edge keeps the ring of a cell scrolled up to it (Ctrl+Home, a long jump upward) whole. */
-  :global(html) {
-    scroll-padding-block-start: 8px;
-    scroll-padding-block-end: calc(var(--sheet-height, 0px) + 8px);
-  }
-
+  /* The sheet height plus a gap keeps a focused cell scrolled "nearest" clear of the sheet (the html scroll padding in
+     base.css, with the sticky header above); the body's padding lets the last row scroll above the sheet. */
   :global(body) {
     padding-block-end: var(--sheet-height);
   }

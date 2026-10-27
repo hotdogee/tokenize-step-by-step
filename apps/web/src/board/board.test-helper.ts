@@ -59,6 +59,7 @@ export interface BoardSetup {
 /** An AppState showing `result` (its tokenizer and text) at `stage`. */
 export function appWith(result: TokenizationResult, setup: BoardSetup = {}): AppState {
   const app = new AppState(hubOf(idleClient(), { seeds: [result] }));
+  app.advancedOpen = true; // the board lives in the Advanced disclosure (PA-19)
   app.tokenizer = result.tokenizer;
   app.text = result.input.text;
   app.textLang = 'auto';

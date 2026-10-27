@@ -18,6 +18,7 @@ import { AppState } from './app-state.svelte.ts';
 import type { PrecomputedSource } from './precomputed.ts';
 import { EXAMPLES_INDEX, TOKENIZERS, tokenizerEntry } from './registry.ts';
 import { ResultHub } from './result-hub.svelte.ts';
+import { ROW_CHOICES } from '../compare/rows.svelte.ts';
 import { parseUrlState, type UrlState } from './url-state.ts';
 
 /** The inlined default rows: one wire per lab's primary tokenizer, each with the default chip only (PA-19). */
@@ -44,11 +45,12 @@ export function defaultResults(): Partial<Record<TokenizerId, TokenizationResult
   return results;
 }
 
-/** The page URL's state (read once at load), among the tokenizers the picker offers. */
+/** The page URL's state (read once at load), among the tokenizers the picker offers and the table rows' choices. */
 export function initialUrlState(search: string = 'location' in globalThis ? globalThis.location.search : ''): UrlState {
   return parseUrlState(
     search,
     TOKENIZERS.filter((entry) => entry.withdrawn !== true).map((entry) => entry.id),
+    ROW_CHOICES,
   );
 }
 

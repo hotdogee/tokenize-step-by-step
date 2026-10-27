@@ -6,7 +6,7 @@ import type { TokenizerId } from '@tsbs/core';
 import { describe, expect, it } from 'vitest';
 import { MANIFEST_ASSETS, SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
 import { LICENCE_TAGS, MODELS } from './registry-details.ts';
-import { CHIP_SPLITS, DEFAULT_TOKENIZER, EXAMPLES, notice, noticeText, TOKENIZERS } from './registry.ts';
+import { DEFAULT_TOKENIZER, EXAMPLES, EXAMPLES_INDEX, notice, noticeText, TOKENIZERS } from './registry.ts';
 
 describe('registry view (03 §B.7 rules)', () => {
   it('lists the nine shipped tokenizers with exactly one default (o200k_base)', () => {
@@ -50,15 +50,15 @@ describe('registry view (03 §B.7 rules)', () => {
     ]);
   });
 
-  it('flags exactly the chips whose fixture result has a partial-character token', () => {
+  it('indexes exactly the example cases whose fixture result has a partial-character token', () => {
     for (const [tokenizer, fixture] of SHIPPING_FIXTURES) {
       const expected = EXAMPLES.filter((chip) =>
         fixture.cases.find((c) => c.name === chip.fixtureCase)?.tokens.some((token) => token.partial),
-      ).map((chip) => chip.key);
-      expect([...CHIP_SPLITS[tokenizer as TokenizerId]], tokenizer).toEqual(expected);
+      ).map((chip) => chip.fixtureCase);
+      expect([...(EXAMPLES_INDEX.partial[tokenizer as TokenizerId] ?? [])].sort(), tokenizer).toEqual(expected.sort());
     }
-    expect(CHIP_SPLITS['openai-cl100k_base']).toContain('zh-tw-tainan'); // 灣 = E7 81 + A3 (05 §4.1)
-    expect(CHIP_SPLITS['openai-o200k_base']).not.toContain('zh-tw-tainan');
+    expect(EXAMPLES_INDEX.partial['openai-cl100k_base']).toContain('zh-tw-tainan'); // 灣 = E7 81 + A3 (05 §4.1)
+    expect(EXAMPLES_INDEX.partial['openai-o200k_base'] ?? []).not.toContain('zh-tw-tainan');
   });
 
   it('gives null-tokenizer model rows a live-check panel and the unavailable fidelity', () => {

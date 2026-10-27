@@ -128,7 +128,7 @@ describe('AppState (05 §1.1)', () => {
     if (chip === undefined) throw new Error('chip');
     app.chooseExample(chip);
     expect(app.text).toBe('日本語のテキスト');
-    expect(app.textLang).toBe('ja');
+    expect(app.textLang).toBe('auto'); // PA-19: an example no longer sets the text language
     expect(app.currentResult).toBeNull(); // nothing loaded yet
     await app.selectTokenizer('openai-cl100k_base');
     await flush();

@@ -1,9 +1,9 @@
 /**
  * The static first paint's clone script (PA-15, first-paint-script.ts), compiled as the build emits it and run against a
- * test document: which template and board variant it clones into `#app`, and when it leaves `#app` alone (the query
- * cases run in e2e/specs/first-paint.spec.ts, on the built page).
+ * test document: which template it clones into `#app` (PA-19: the whole page of one locale, no viewport variants), and
+ * when it leaves `#app` alone (the query cases run in e2e/specs/first-paint.spec.ts, on the built page).
  */
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { commands } from 'vitest/browser';
 
 declare module 'vitest/browser' {
@@ -12,14 +12,9 @@ declare module 'vitest/browser' {
   }
 }
 
-/** The page markup of `locale`, its board in two variants (wide, narrow). */
+/** The page markup of `locale`. */
 function pageTemplate(locale: string): string {
-  return (
-    `<template id="fp-${locale}"><header>${locale}</header><main>` +
-    `<template data-mq="(min-width: 9999px)" data-fp='{"k":12}'><section class="board">wide</section></template>` +
-    `<template data-mq="(max-width: 9999px)" data-fp='{"k":9}'><section class="board">narrow</section></template>` +
-    `</main></template>`
-  );
+  return `<template id="fp-${locale}"><header>${locale}</header><main><section id="compare">rows</section></main></template>`;
 }
 
 let code = '';
@@ -54,7 +49,7 @@ afterEach(() => {
   for (const element of added.splice(0)) element.remove();
   document.documentElement.lang = lang;
   localStorage.removeItem('tsbs:byteView');
-  vi.unstubAllGlobals();
+  localStorage.removeItem('tsbs:rows');
 });
 
 describe('the clone script', () => {
@@ -65,26 +60,11 @@ describe('the clone script', () => {
     expect(code.length).toBeLessThan(1024);
   });
 
-  it('clones the template of <html lang> with the first board variant whose media query matches, and names its view', () => {
+  it('clones the whole page template of <html lang> into #app', () => {
     const app = run({ lang: 'ja' });
     expect(app.querySelector('header')?.textContent).toBe('ja');
-    expect(app.querySelector('.board')?.textContent).toBe('narrow');
+    expect(app.querySelector('#compare')?.textContent).toBe('rows');
     expect(app.querySelectorAll('template')).toHaveLength(0);
-    expect(app.querySelectorAll('.board')).toHaveLength(1);
-    expect(app.dataset['fp']).toBe('{"k":9}');
-  });
-
-  it('takes the first matching variant when several match', () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true }));
-    const app = run();
-    expect(app.querySelector('.board')?.textContent).toBe('wide');
-    expect(app.dataset['fp']).toBe('{"k":12}');
-  });
-
-  it('leaves #app empty when no variant matches', () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: false }));
-    const app = run();
-    expect(app.childNodes).toHaveLength(0);
     expect(app.dataset['fp']).toBeUndefined();
   });
 
@@ -92,7 +72,14 @@ describe('the clone script', () => {
     localStorage.setItem('tsbs:byteView', 'dec');
     expect(run({ keep: 'tsbs%3AbyteView=hex&b=hex' }).childNodes).toHaveLength(0);
     localStorage.setItem('tsbs:byteView', 'hex');
-    expect(run({ keep: 'tsbs%3AbyteView=hex&b=hex' }).dataset['fp']).toBe('{"k":9}');
+    expect(run({ keep: 'tsbs%3AbyteView=hex&b=hex' }).childNodes.length).toBeGreaterThan(0);
+  });
+
+  it('treats a key kept with an empty value as "must be unset" (PA-19: t, s, r, tsbs:rows)', () => {
+    localStorage.setItem('tsbs:rows', 'xai-grok1');
+    expect(run({ keep: 'tsbs%3Arows=&t=' }).childNodes).toHaveLength(0);
+    localStorage.removeItem('tsbs:rows');
+    expect(run({ keep: 'tsbs%3Arows=&t=' }).childNodes.length).toBeGreaterThan(0);
   });
 
   it('leaves #app alone when it is not empty or the locale has no template', () => {

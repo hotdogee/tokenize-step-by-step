@@ -28,7 +28,10 @@
  *   (the board converts at its boundary with `BoardState.offset`); they survive re-tokenization, tokenizer switches and
  *   window moves and are clamped to a shorter text. The board restores DOM focus from them.
  * - **URL state** (`url-state.ts`) is read once by `bootstrap.ts`; a deep link's merge step is re-applied when the live
- *   result arrives (the precomputed one may have no timeline).
+ *   result arrives (the precomputed one may have no timeline). A link with `t` or `s` opens the Advanced disclosure.
+ * - **The table's rows** (PA-19): AppState keeps the rows' choices (`rows`, persisted and in the URL); the comparison
+ *   table holds and requests their hub entries itself. After the board's on-demand run (an on-demand tier) `rowRun` asks
+ *   the table to run the rows on the same text, one after another.
  */
 import type {
   AssetSummary,
@@ -39,10 +42,11 @@ import type {
   TokenizationResult,
   TokenizerId,
 } from '@tsbs/core';
-import type { ExampleChip, TokenizerEntry } from '@tsbs/registry';
+import type { ExampleChip, Lab, TokenizerEntry } from '@tsbs/registry';
 import type { CellSize } from '@tsbs/ui-tokens';
 import { DEFAULT_OPTIONS } from '@tsbs/core/model/result';
 import { textOnlyResult } from '../board/text-only.ts';
+import { CompareRows } from '../compare/rows.svelte.ts';
 import { viewOf } from '../board/view-cache.ts';
 import { i18n } from '../i18n/locale.svelte.ts';
 import { resolveTextLang } from '../i18n/text-lang.ts';
@@ -67,11 +71,11 @@ import {
   type LongInputMode,
 } from './long-input.ts';
 import { isNoPrecomputedResult } from './no-precomputed.ts';
-import { DEFAULT_TOKENIZER, EXAMPLES, tokenizerEntry } from './registry.ts';
-import type { HubAnswer, ResultHub, TokenOptions } from './result-hub.svelte.ts';
+import { DEFAULT_TOKENIZER, tokenizerEntry } from './registry.ts';
+import { ROW_OPTIONS, type HubAnswer, type ResultHub, type TokenOptions } from './result-hub.svelte.ts';
 import { readStored, STORAGE_KEYS, writeStored } from './storage.ts';
 import { textStats } from './text-stats.ts';
-import type { UrlState } from './url-state.ts';
+import type { UrlSnapshot, UrlState } from './url-state.ts';
 import type { ViewResolvers, VocabLookup } from './vocab-lookup.ts';
 import type { ViewResolverSource } from '../board/view-cache.ts';
 import type * as WindowSliceModule from './window-slice.ts';
@@ -197,7 +201,7 @@ function textWindowRange(text: string, caret: number): readonly [start: number, 
 export class AppState {
   // ---- 05 §1.1 ----
   text: string = $state(DEFAULT_EXAMPLE);
-  textLang: TextLangChoice = $state('zh-Hant');
+  textLang: TextLangChoice = $state('auto');
   tokenizer: TokenizerId = $state(DEFAULT_TOKENIZER);
   options: EncodeOptions = $state.raw(DEFAULT_OPTIONS);
   stage: Stage = $state(6);
@@ -225,6 +229,18 @@ export class AppState {
   caret = $state(0);
   /** An on-demand run is in flight (the banner's button shows "tokenizing"). */
   running = $state(false);
+  /**
+   * The Advanced disclosure (the board, its controls and the options) is open (PA-19): URL-driven, never persisted — a
+   * link with `t` or `s` opens it, and the URL writer emits those keys only while it is open.
+   */
+  advancedOpen = $state(false);
+  /**
+   * A byte whose token cell the board focuses once it shows a current result (the table's Enter, PA-19); the board clears
+   * it when it has moved focus there.
+   */
+  boardFocus: number | null = $state(null);
+  /** The last on-demand run of the board's tokenizer finished on `text`: the table runs its rows on it (AD-27, PA-19). */
+  rowRun: { readonly text: string; readonly seq: number } | null = $state.raw(null);
 
   /** Bumps when lookup answers arrive (views built after it carry them). */
   lookupVersion = $state(0);
@@ -236,6 +252,8 @@ export class AppState {
 
   /** The results of every tokenizer on the page and their Workers (PA-19); the shell's table reads its rows here. */
   readonly hub: ResultHub;
+  /** The comparison table's row choices (PA-19). */
+  readonly rows: CompareRows;
   /** The hub entry the board holds (its tokenizer and token options), so the hub keeps its result (AD-27). */
   #held: { readonly id: TokenizerId; readonly options: TokenOptions } | null = null;
   #seq = 0;
@@ -281,6 +299,7 @@ export class AppState {
       },
       resolversFor: (result) => this.#resolversFor(result),
     };
+    this.rows = new CompareRows(url.rows);
     this.#applyUrl(url);
     this.options = optionsFor(tokenizerEntry(this.tokenizer));
     this.#hold();
@@ -377,16 +396,18 @@ export class AppState {
     return this.#slicerImport ?? Promise.resolve();
   }
 
-  /** Applies what a deep link asks for (invalid values were dropped by `parseUrlState`). */
+  /**
+   * Applies what a deep link asks for (invalid values were dropped by `parseUrlState`). The text language stays `auto`
+   * unless `tl` says otherwise (PA-19: an example's text no longer sets it).
+   */
   #applyUrl(url: UrlState): void {
+    if (url.advanced === true) this.advancedOpen = true;
     if (url.tokenizer !== undefined) this.tokenizer = url.tokenizer;
     if (url.text !== undefined) {
       this.text = url.text;
       this.#codePoints = countCodePoints(url.text);
       this.longInput = longInputMode(this.#codePoints);
       if (isOnDemand(this.longInput)) this.#loadSlicer();
-      const chip = EXAMPLES.find((candidate) => candidate.text === url.text);
-      this.textLang = chip?.lang ?? 'auto';
     }
     if (url.textLang !== undefined) this.textLang = url.textLang;
     if (url.byteView !== undefined) this.byteView = url.byteView; // this visit only; the stored preference stays
@@ -397,6 +418,20 @@ export class AppState {
         this.#urlStep = this.step;
       }
     }
+  }
+
+  /** What the URL writer and "Copy link" serialize (url-state.ts; `t` and `s` only while Advanced is open). */
+  urlSnapshot(): UrlSnapshot {
+    return {
+      tokenizer: this.tokenizer,
+      stage: this.stage,
+      step: this.step,
+      byteView: this.byteView,
+      locale: i18n.current,
+      textLang: this.textLang,
+      advanced: this.advancedOpen,
+      rows: this.rows.nonDefault(),
+    };
   }
 
   get theme(): ThemeChoice {
@@ -718,6 +753,19 @@ export class AppState {
     void this.#request(this.text, traceFor(this.#codePoints), 'encode');
   }
 
+  /** A row's error action (PA-19): load its tokenizer again, or ask again for its result once it is loaded. */
+  retryRow(lab: Lab): void {
+    const id = this.rows.entryFor(lab)?.id;
+    if (id === undefined) return;
+    if (this.hub.loaded(id)) void this.hub.request(id, this.analysed, ROW_OPTIONS, { trace: false });
+    else this.hub.load(id).catch(() => undefined); // the entry's `error` says what failed
+  }
+
+  /** Opens the Advanced disclosure (the summary, the table's Enter and the board's global keys, PA-19). */
+  openAdvanced(): void {
+    this.advancedOpen = true;
+  }
+
   /** The on-demand run (AD-27): the WHOLE analysed text, with the trace policy of its length. */
   async runOnDemand(): Promise<void> {
     if (!isOnDemand(this.longInput)) return;
@@ -739,6 +787,7 @@ export class AppState {
     const seq = this.#seq;
     await run;
     if (seq === this.#seq) this.running = false;
+    this.rowRun = { text, seq };
   }
 
   #encodeFailed(error: unknown, seq: number, phase: ErrorPhase): void {
@@ -813,9 +862,8 @@ export class AppState {
     if (this.pinned !== null && this.pinned.byte > last) this.pinned = { byte: last, tier: this.pinned.tier };
   }
 
-  /** Applies an example chip: verbatim text and its text-language choice; tokenizes immediately. */
-  chooseExample(chip: Pick<ExampleChip, 'text' | 'lang'>): void {
-    this.textLang = chip.lang;
+  /** Applies an example: its verbatim text, tokenized immediately (PA-19: the text language is left as it is). */
+  chooseExample(chip: Pick<ExampleChip, 'text'>): void {
     this.setText(chip.text, true);
   }
 

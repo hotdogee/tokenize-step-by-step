@@ -1,5 +1,9 @@
 /**
- * URL state (05 §1.1), pure: `?t=<tokenizer>&q=<text>&s=<stage>.<step>&b=hex|dec|both&lang=<ui>&tl=<TextLangChoice>`.
+ * URL state (05 §1.1), pure: `?t=<tokenizer>&q=<text>&r=<row>,…&s=<stage>.<step>&b=hex|dec|both&lang=<ui>&tl=<TextLangChoice>`.
+ *
+ * - PA-19: `t` and `s` belong to the Advanced disclosure (the step-by-step board): the page opens it when either is
+ *   present, and the writer emits them only while it is open, so a link copied with Advanced closed opens the table.
+ *   `r` lists the table rows switched away from their lab's primary tokenizer (secondary ids and `anthropic-api`).
  *
  * - Read once at load (`parseUrlState`); an invalid value is ignored and its default kept. `lang` is applied by boot.js
  *   before first paint (AD-29), so it is parsed here only for completeness.
@@ -28,6 +32,10 @@ export interface UrlState {
   readonly byteView?: ByteView;
   readonly locale?: Locale;
   readonly textLang?: TextLangChoice;
+  /** `r=`: the table's row choices that differ from the defaults (validated against `rowChoices`). */
+  readonly rows?: readonly string[];
+  /** `t` or `s` asked for something: the page opens the Advanced disclosure (PA-19). */
+  readonly advanced?: boolean;
 }
 
 /** The state the URL writer serializes. */
@@ -38,13 +46,17 @@ export interface UrlSnapshot {
   readonly byteView: ByteView;
   readonly locale: Locale;
   readonly textLang: TextLangChoice;
+  /** The Advanced disclosure is open: only then are `t` and `s` written (PA-19). */
+  readonly advanced: boolean;
+  /** The table's row choices that differ from the defaults (`r`, omitted when empty). */
+  readonly rows: readonly string[];
 }
 
 const BYTE_VIEWS: readonly ByteView[] = ['hex', 'dec', 'both'];
 const LOCALES: readonly Locale[] = ['zh-TW', 'ja', 'en'];
 const TEXT_LANGS: readonly TextLangChoice[] = ['auto', 'zh-Hant', 'ja', 'en'];
 /** Keys this module owns, in the order it writes them. */
-const KEYS = ['t', 'q', 's', 'b', 'lang', 'tl'] as const;
+const KEYS = ['t', 'q', 'r', 's', 'b', 'lang', 'tl'] as const;
 
 const pick = <T extends string>(allowed: readonly T[], value: string | null): T | undefined =>
   allowed.find((candidate) => candidate === value);
@@ -57,21 +69,32 @@ function parseStage(value: string | null): Pick<UrlState, 'stage' | 'step'> {
   return stage === 5 && match[2] !== undefined ? { stage, step: Number(match[2]) } : { stage };
 }
 
-/** The state `search` (a `location.search`) asks for, among the tokenizers the page offers. */
-export function parseUrlState(search: string, tokenizers: readonly TokenizerId[]): UrlState {
+/**
+ * The state `search` (a `location.search`) asks for, among the tokenizers the page offers and the table's row choices
+ * (`rowChoices`: the labs' secondary tokenizers and `anthropic-api`; unknown and repeated values are dropped).
+ */
+export function parseUrlState(
+  search: string,
+  tokenizers: readonly TokenizerId[],
+  rowChoices: readonly string[] = [],
+): UrlState {
   const params = new URLSearchParams(search);
   const tokenizer = pick(tokenizers, params.get('t'));
   const text = params.get('q');
+  const stage = parseStage(params.get('s'));
   const byteView = pick(BYTE_VIEWS, params.get('b'));
   const locale = pick(LOCALES, params.get('lang'));
   const textLang = pick(TEXT_LANGS, params.get('tl'));
+  const rows = [...new Set((params.get('r') ?? '').split(','))].filter((value) => rowChoices.includes(value));
   return {
     ...(tokenizer === undefined ? {} : { tokenizer }),
     ...(text === null || text === '' ? {} : { text }),
-    ...parseStage(params.get('s')),
+    ...(rows.length === 0 ? {} : { rows }),
+    ...stage,
     ...(byteView === undefined ? {} : { byteView }),
     ...(locale === undefined ? {} : { locale }),
     ...(textLang === undefined ? {} : { textLang }),
+    advanced: tokenizer !== undefined || stage.stage !== undefined,
   };
 }
 
@@ -81,16 +104,18 @@ export function stageParam(stage: Stage, step: number): string {
 }
 
 /**
- * The page URL for `snapshot`: `href` with the owned keys rewritten in order and every other parameter kept. With
- * `text`, `q` carries it (callers check `MAX_LINK_TEXT`); without, `q` is removed.
+ * The page URL for `snapshot`: `href` with the owned keys rewritten in order (`t`, `q`, `r`, `s`, `b`, `lang`, `tl`) and
+ * every other parameter kept. With `text`, `q` carries it (callers check `MAX_LINK_TEXT`); without, `q` is removed. `t`
+ * and `s` are written only while the Advanced disclosure is open, `r` only when a row differs from its default.
  */
 export function urlFor(href: string, snapshot: UrlSnapshot, text?: string): string {
   const url = new URL(href);
   const kept = [...url.searchParams].filter(([key]) => !(KEYS as readonly string[]).includes(key));
   const owned: Record<(typeof KEYS)[number], string | null> = {
-    t: snapshot.tokenizer,
+    t: snapshot.advanced ? snapshot.tokenizer : null,
     q: text ?? null,
-    s: stageParam(snapshot.stage, snapshot.step),
+    r: snapshot.rows.length === 0 ? null : snapshot.rows.join(','),
+    s: snapshot.advanced ? stageParam(snapshot.stage, snapshot.step) : null,
     b: snapshot.byteView,
     lang: snapshot.locale,
     tl: snapshot.textLang,
