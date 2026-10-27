@@ -8,7 +8,9 @@
  *
  * - `headerCells`: the header box's character cells (the glyph over its byte columns, stand-ins and dotted-circle bases
  *   as on the board, the U+ label of a character of ≥ 2 columns — CSS hides it below 480 px —, no tint: the header is
- *   shared by every row) and byte cells (hex, decimal, lead bytes bolder), for the columns of a window.
+ *   shared by every row) and byte cells (hex, decimal, lead bytes bolder), for the columns of a window. The table keeps
+ *   only the text's UTF-8 (`headerText`); each window analyses its own slice of the text (`analyzeText`, no grapheme
+ *   segmenter), so a 200,000-code-point text costs its bytes, not a whole-text analysis (AD-27).
  * - `rowChips`: a result's chips in a window — the id inside every chip (`digitsOf`/`idLines` with the PA-17 rule: a
  *   1-column chip with nothing but its id and ≥ 5 digits sets two lines), the tint by token index, the hatched cut edges
  *   of a partial token, the byte-fallback piece, the lock, the SPECIAL badge, the zero-width marker, the text (shown only
@@ -18,7 +20,7 @@
 import type { TokenizationResult } from '@tsbs/core';
 import type { TokenizerEntry } from '@tsbs/registry';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
-import type { TextAnalysis } from '@tsbs/core/text/analyze';
+import { analyzeText } from '@tsbs/core/text/analyze';
 import { isCombiningMark, standInFor } from '@tsbs/core/text/stand-ins';
 import { codePointLabel, hexByte } from '@tsbs/core/text/utf8';
 import { digitsOf, idLines } from '../board/cells.ts';
@@ -119,37 +121,73 @@ export function fusesDummy(result: TokenizationResult, entry: TokenizerEntry): b
   return result.utf8.length > 0;
 }
 
+/** The text the header box describes: the string, its UTF-8 (TextEncoder semantics, as every engine) and its code points. */
+export interface HeaderText {
+  readonly text: string;
+  readonly utf8: Uint8Array;
+  readonly codePoints: number;
+}
+
+const continuation = (byte: number): boolean => (byte & 0xc0) === 0x80;
+
+/** `text` as the header box needs it (see `HeaderText`). */
+export function headerText(text: string): HeaderText {
+  const utf8 = new TextEncoder().encode(text);
+  let codePoints = 0;
+  for (const byte of utf8) if (!continuation(byte)) codePoints++;
+  return { text, utf8, codePoints };
+}
+
 /** The header box's cells for the columns of `window` (`marker`: 1 when the marker column is there, else 0). */
 export function headerCells(
-  analysis: TextAnalysis,
+  source: HeaderText,
   options: { readonly window: ColumnWindow; readonly marker: number; readonly t: Translate },
 ): { readonly chars: CompareCharModel[]; readonly bytes: CompareByteModel[] } {
   const { window, marker, t } = options;
-  const { chars, utf8 } = analysis;
+  const { text, utf8, codePoints } = source;
   const firstByte = Math.max(0, window.start - marker);
   const lastByte = Math.min(utf8.length, window.end - marker);
   const charCells: CompareCharModel[] = [];
   const byteCells: CompareByteModel[] = [];
   if (lastByte <= firstByte) return { chars: charCells, bytes: byteCells };
-  for (let i = runOf(chars.byteStart, chars.count, firstByte); i < chars.count; i++) {
-    const start = chars.byteStart[i] ?? 0;
-    if (start >= lastByte) break;
-    const span = (chars.byteStart[i + 1] ?? start + 1) - start;
+  // The whole code points the window touches: their first code point's index and UTF-16 offset, by counting lead bytes
+  // (a 4-byte sequence is a surrogate pair; a lone surrogate arrived as EF BF BD, one unit, like every other 3 bytes).
+  let first = firstByte;
+  while (first > 0 && continuation(utf8[first] ?? 0)) first--;
+  let last = lastByte;
+  while (last < utf8.length && continuation(utf8[last] ?? 0)) last++;
+  let index = 0;
+  let from = 0;
+  for (let b = 0; b < first; b++) {
+    const byte = utf8[b] ?? 0;
+    if (continuation(byte)) continue;
+    index++;
+    from += byte >= 0xf0 ? 2 : 1;
+  }
+  let to = from;
+  for (let b = first; b < last; b++) {
+    const byte = utf8[b] ?? 0;
+    if (!continuation(byte)) to += byte >= 0xf0 ? 2 : 1;
+  }
+  const part = analyzeText(text.slice(from, to), { segmenter: null });
+  const { chars } = part;
+  for (let i = 0; i < chars.count; i++) {
+    const start = (chars.byteStart[i] ?? 0) + first;
+    const span = (chars.byteStart[i + 1] ?? 0) + first - start;
     const cp = chars.cp[i] ?? 0;
-    const glyph = visualGlyph(analysis, i);
     const standIn = standInFor(cp) !== null;
     charCells.push({
-      index: i,
+      index: index + i,
       col: start + marker,
       span,
-      glyph,
+      glyph: visualGlyph(part, i),
       standIn,
       combining: !standIn && isCombiningMark(cp),
       cjk: cp >= CJK_FROM,
       uLabel: span >= 2 ? codePointLabel(cp) : null,
       label: joinParts(
         [
-          t('a11y.cell.char', { index: i + 1, count: chars.count, glyph: spokenGlyph(analysis, i, t) }),
+          t('a11y.cell.char', { index: index + i + 1, count: codePoints, glyph: spokenGlyph(part, i, t) }),
           !isCombiningMark(cp) && codePointLabel(cp),
           t('counts.bytes', { n: span }),
         ],
@@ -164,12 +202,12 @@ export function headerCells(
       col: b + marker,
       hex: hexByte(value),
       dec: value,
-      lead: chars.byteStart[analysis.byteToChar[b] ?? 0] === b,
+      lead: !continuation(value),
       label: joinParts(
         [
           t('a11y.cell.byte', { index: b + 1, count: utf8.length, hex: hexByte(value) }),
           t('a11y.cell.decimal', { dec: value }),
-          byteRole(analysis, b, t, (i) => spokenGlyph(analysis, i, t)),
+          byteRole(part, b - first, t, (i) => spokenGlyph(part, i, t)),
         ],
         t,
       ),

@@ -22,17 +22,16 @@
    * also loads the new tokenizer, `ensureRows`) and after the board's on-demand run (`app.rowRun`, one row after another).
    * The hub answers from the precomputed examples while a row's tokenizer is not loaded, and loads it for free text.
    */
-  import { onMount, tick } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import type { TokenizationResult, TokenizerId } from '@tsbs/core';
   import type { Lab } from '@tsbs/registry';
-  import { analyzeText } from '@tsbs/core/text/analyze';
   import { ENCODE_DEBOUNCE_MS } from '../app/app-state.svelte.ts';
   import { appState } from '../app/context.ts';
-  import { isOnDemand } from '../app/long-input.ts';
+  import { isOnDemand, longInputMode } from '../app/long-input.ts';
   import { ROW_OPTIONS } from '../app/result-hub.svelte.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
   import { resolveTextLang } from '../i18n/text-lang.ts';
-  import { hasLeadingMarker, tokenAtByte } from './compare-cells.ts';
+  import { hasLeadingMarker, headerText, tokenAtByte } from './compare-cells.ts';
   import CompareHeader from './CompareHeader.svelte';
   import CompareRow from './CompareRow.svelte';
   import { nextWindow, type ColumnWindow } from './compare-window.ts';
@@ -46,7 +45,7 @@
 
   // ---- data ----
   const text = $derived(app.analysed);
-  const analysis = $derived(analyzeText(text, { segmenter: null }));
+  const source = $derived(headerText(text));
   const lang = $derived(resolveTextLang(app.textLang, app.text, i18n.current));
   const byteViews: ReadonlyArray<'hex' | 'dec'> = $derived(app.byteView === 'both' ? ['hex', 'dec'] : [app.byteView]);
   const onDemand = $derived(isOnDemand(app.longInput));
@@ -71,9 +70,13 @@
   );
   /** One marker column before byte 1 when a row starts with a zero-width token (Grok-1's dummy prefix). */
   const marker = $derived(views.some((view) => view.result !== null && hasLeadingMarker(view.result)) ? 1 : 0);
-  const cols = $derived(analysis.utf8.length + marker);
+  const cols = $derived(source.utf8.length + marker);
   const chipRows = $derived(views.filter((view) => view.state !== 'api'));
-  const navigable = $derived(views.filter((view) => view.result !== null && view.result.tokens.count > 0));
+  /**
+   * The rows with chips, in order. A function, not a `$derived`: a derived read only through lazy props would keep its
+   * last array — and the whole-text results in it — alive after the hub let them go (AD-27).
+   */
+  const navigable = (): typeof views => views.filter((view) => view.result !== null && view.result.tokens.count > 0);
   const owns = $derived(
     [
       'cmp-r-char',
@@ -129,6 +132,25 @@
     })();
   });
 
+  // A whole-text result that no longer answers the text goes at once (AD-27, the 8 MiB rule per entry): in an on-demand
+  // tier a row shows no chips until the run (rowState `onDemand`), and an on-demand run's result is never the "stale"
+  // result of another text, so no previous run is held while the next one is in flight or next to a short text.
+  $effect(() => {
+    const text = app.analysed;
+    const waiting = isOnDemand(app.longInput);
+    for (const id of app.rows.visibleTokenizers()) {
+      const result = app.hub.entry(id).result;
+      if (
+        result !== null &&
+        result.input.text !== text &&
+        (waiting || isOnDemand(longInputMode(result.input.codePoints)))
+      )
+        untrack(() => {
+          app.hub.forget(id);
+        });
+    }
+  });
+
   /** A row's select (PA-19 load policy b): the new tokenizer loads and answers the text at once. */
   function selectRow(lab: Lab, value: RowChoice): void {
     app.rows.select(lab, value);
@@ -179,7 +201,8 @@
 
   /** The tab stop: the focused byte's chip of the focused row when it is mounted, else the row's first mounted chip. */
   const tabStop = $derived.by(() => {
-    const view = navigable.find((candidate) => candidate.row.lab === focus.lab) ?? navigable[0];
+    const rows = navigable();
+    const view = rows.find((candidate) => candidate.row.lab === focus.lab) ?? rows[0];
     const result = view?.result ?? null;
     if (view === undefined || result === null) return null;
     let index = indexAt(result, view.row.lab === focus.lab ? focus.byte : 0);
@@ -214,7 +237,7 @@
     const element = tbody?.querySelector<HTMLElement>(`[data-lab="${lab}"][data-index="${String(index)}"]`);
     if (element === null || element === undefined) return;
     element.focus({ preventScroll: true });
-    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' }); // instant, never smooth (reduced motion)
   }
 
   /** Enter/Space: the board on that row's tokenizer, its token cell at `byte` focused (the board clears the request). */
@@ -232,15 +255,16 @@
     if (cell === null) return;
     const lab = cell.dataset['lab'] as Lab;
     const index = Number(cell.dataset['index']);
-    const at = navigable.findIndex((view) => view.row.lab === lab);
-    const view = navigable[at];
+    const rows = navigable();
+    const at = rows.findIndex((view) => view.row.lab === lab);
+    const view = rows[at];
     const result = view?.result ?? null;
     if (view === undefined || result === null) return;
     const { byte } = columnsOf(result, index);
     const count = result.tokens.count;
     type Target = { lab: Lab; result: TokenizationResult; index: number } | null;
     /** The chip of another row covering the same byte. */
-    const other = (row: (typeof navigable)[number] | undefined): Target =>
+    const other = (row: (typeof rows)[number] | undefined): Target =>
       row?.result === null || row?.result === undefined
         ? null
         : { lab: row.row.lab, result: row.result, index: indexAt(row.result, byte) };
@@ -259,16 +283,16 @@
         target = { lab, result, index: count - 1 };
         break;
       case 'ArrowUp':
-        target = other(navigable[at - 1]);
+        target = other(rows[at - 1]);
         break;
       case 'ArrowDown':
-        target = other(navigable[at + 1]);
+        target = other(rows[at + 1]);
         break;
       case 'PageUp':
-        target = other(navigable[0]);
+        target = other(rows[0]);
         break;
       case 'PageDown':
-        target = other(navigable.at(-1));
+        target = other(rows.at(-1));
         break;
       case 'Enter':
       case ' ':
@@ -328,7 +352,35 @@
       });
     };
     window.addEventListener('scroll', onPageScroll, { passive: true });
+    // The header box clips its overflow instead of scrolling (no scroll container without a tab stop, axe
+    // scrollable-region-focusable): a sideways wheel or a horizontal touch drag on it moves the table.
+    const onWheel = (event: WheelEvent): void => {
+      if (sync === null || tbody === undefined || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      event.preventDefault();
+      scrollLeft = sync.to(tbody.scrollLeft + event.deltaX);
+    };
+    let drag: { readonly id: number; readonly x: number; readonly left: number } | null = null;
+    const onPointerDown = (event: PointerEvent): void => {
+      if (event.pointerType === 'touch' && tbody !== undefined)
+        drag = { id: event.pointerId, x: event.clientX, left: tbody.scrollLeft };
+    };
+    const onPointerMove = (event: PointerEvent): void => {
+      if (drag?.id === event.pointerId && sync !== null) scrollLeft = sync.to(drag.left - (event.clientX - drag.x));
+    };
+    const onPointerEnd = (): void => {
+      drag = null;
+    };
+    thead?.addEventListener('wheel', onWheel, { passive: false });
+    thead?.addEventListener('pointerdown', onPointerDown);
+    thead?.addEventListener('pointermove', onPointerMove);
+    thead?.addEventListener('pointerup', onPointerEnd);
+    thead?.addEventListener('pointercancel', onPointerEnd);
     return () => {
+      thead?.removeEventListener('wheel', onWheel);
+      thead?.removeEventListener('pointerdown', onPointerDown);
+      thead?.removeEventListener('pointermove', onPointerMove);
+      thead?.removeEventListener('pointerup', onPointerEnd);
+      thead?.removeEventListener('pointercancel', onPointerEnd);
       sync?.stop();
       sync = null;
       observer.disconnect();
@@ -364,7 +416,7 @@
     aria-owns={owns}
     data-testid="compare-grid"
   ></div>
-  <CompareHeader {analysis} window={win} {marker} {byteViews} {lang} {overflow} {pinned} bind:element={thead} />
+  <CompareHeader {source} window={win} {marker} {byteViews} {lang} {overflow} {pinned} bind:element={thead} />
   <!-- svelte-ignore a11y_no_static_element_interactions (keys and focus are delegated from the chips, the grid's cells) -->
   <div class="cmp-tbody" bind:this={tbody} onkeydown={onKeydown} onfocusin={onFocusIn} onfocusout={onFocusOut}>
     <div class="cmp-track" bind:this={track}>

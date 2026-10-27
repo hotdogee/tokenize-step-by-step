@@ -47,7 +47,6 @@
 
 /* ---- The three scrollers ---- */
 
-.cmp-thead,
 .cmp-tbody {
   overflow-x: auto;
   overflow-y: hidden;
@@ -56,12 +55,15 @@
   touch-action: pan-x pan-y pinch-zoom;
 }
 
-.cmp-thead::-webkit-scrollbar,
 .cmp-tbody::-webkit-scrollbar {
   display: none;
 }
 
+/* The header box clips instead of scrolling (script moves it with the others; a sideways wheel or touch drag on it is
+   forwarded, CompareTable): a scroll container with nothing focusable in it would need a tab stop of its own. */
 .cmp-thead {
+  overflow: hidden;
+  touch-action: pan-y pinch-zoom;
   position: sticky;
   top: var(--header-h);
   z-index: 5;

@@ -3,15 +3,14 @@
  * (spans, the hatched cut edges, ids and their two-line rule, the zero-width marker column, byte-fallback pieces) and
  * the labels in all three locales.
  */
-import { analyzeText } from '@tsbs/core/text/analyze';
 import { describe, expect, it } from 'vitest';
 import { tokenizerEntry } from '../app/registry.ts';
 import { caseResult, translator } from '../board/fixture-results.test-helper.ts';
 import { LOCALES } from '../i18n/types.ts';
-import { fusesDummy, hasLeadingMarker, headerCells, rowChips, tokenAtByte } from './compare-cells.ts';
+import { fusesDummy, hasLeadingMarker, headerCells, headerText, rowChips, tokenAtByte } from './compare-cells.ts';
 
 const t = translator('en');
-const TAINAN = analyzeText('台灣台南', { segmenter: null });
+const TAINAN = headerText('台灣台南');
 
 describe('headerCells', () => {
   it('draws the characters over their byte columns, with U+ labels, and every byte with its lead flag', () => {
@@ -42,7 +41,7 @@ describe('headerCells', () => {
   });
 
   it('draws stand-ins and leaves a 1-byte character without a U+ label', () => {
-    const { chars } = headerCells(analyzeText('a b\n', { segmenter: null }), {
+    const { chars } = headerCells(headerText('a b\n'), {
       window: { start: 0, end: 4 },
       marker: 0,
       t,
@@ -56,8 +55,28 @@ describe('headerCells', () => {
     expect(chars[1]?.label).toBe('character 2 of 4: space, U+0020, 1 byte');
   });
 
+  it('names a window deep in a long text by its absolute indices, an emoji and a lone surrogate included', () => {
+    const text = `${'台'.repeat(100)}👩a\ud800b`;
+    const source = headerText(text);
+    expect(source.codePoints).toBe(104);
+    expect(source.utf8.length).toBe(300 + 4 + 1 + 3 + 1);
+    const { chars, bytes } = headerCells(source, { window: { start: 299, end: 309 }, marker: 0, t });
+    // byte 299 is the last of the 100th 台: the whole character is kept (col 297), then 👩 (4 bytes), a, U+FFFD, b.
+    expect(chars.map((cell) => [cell.index, cell.col, cell.span])).toEqual([
+      [99, 297, 3],
+      [100, 300, 4],
+      [101, 304, 1],
+      [102, 305, 3],
+      [103, 308, 1],
+    ]);
+    expect(chars[1]?.label).toBe('character 101 of 104: 👩, U+1F469, 4 bytes');
+    expect(bytes[0]).toMatchObject({ index: 299, col: 299, lead: false });
+    expect(bytes[0]?.label).toBe('byte 300 of 309: B0, decimal 176, last byte of 台');
+    expect(bytes.map((cell) => cell.hex).slice(1, 6)).toEqual(['F0', '9F', '91', 'A9', '61']);
+  });
+
   it('is empty for an empty text', () => {
-    expect(headerCells(analyzeText('', { segmenter: null }), { window: { start: 0, end: 0 }, marker: 0, t })).toEqual({
+    expect(headerCells(headerText(''), { window: { start: 0, end: 0 }, marker: 0, t })).toEqual({
       chars: [],
       bytes: [],
     });

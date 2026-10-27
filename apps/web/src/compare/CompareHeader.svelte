@@ -10,17 +10,16 @@
    * long-input banner is not the only way to tokenize a long text.
    */
   import type { ResolvedTextLang } from '@tsbs/core';
-  import type { TextAnalysis } from '@tsbs/core/text/analyze';
   import { appState } from '../app/context.ts';
   import { isOnDemand } from '../app/long-input.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
-  import { headerCells } from './compare-cells.ts';
+  import { headerCells, type HeaderText } from './compare-cells.ts';
   import CompareByte from './CompareByte.svelte';
   import CompareChar from './CompareChar.svelte';
   import { placeIn, type ColumnWindow } from './compare-window.ts';
 
   interface Props {
-    analysis: TextAnalysis;
+    source: HeaderText;
     window: ColumnWindow;
     marker: number;
     byteViews: ReadonlyArray<'hex' | 'dec'>;
@@ -31,20 +30,19 @@
     pinned: boolean;
     element?: HTMLDivElement | undefined;
   }
-  let { analysis, window, marker, byteViews, lang, overflow, pinned, element = $bindable() }: Props = $props();
+  let { source, window, marker, byteViews, lang, overflow, pinned, element = $bindable() }: Props = $props();
 
   const app = appState();
-  const cells = $derived(headerCells(analysis, { window, marker, t: i18n.t }));
+  const cells = $derived(headerCells(source, { window, marker, t: i18n.t }));
 </script>
 
-<div class="cmp-thead" class:pinned tabindex="-1" bind:this={element} data-testid="compare-head">
+<div class="cmp-thead" class:pinned bind:this={element} data-testid="compare-head">
   <div class="cmp-track">
     <div class="cmp-caption">
       <span class="cmp-cap"
-        ><b>{i18n.t('stage.1')}</b><span>{i18n.t('counts.codePoints', { n: analysis.chars.count })}</span><span
+        ><b>{i18n.t('stage.1')}</b><span>{i18n.t('counts.codePoints', { n: source.codePoints })}</span><span
           aria-hidden="true">·</span
-        ><span>{i18n.t('counts.bytes', { n: analysis.utf8.length })}</span>{#if overflow}<span aria-hidden="true"
-            >·</span
+        ><span>{i18n.t('counts.bytes', { n: source.utf8.length })}</span>{#if overflow}<span aria-hidden="true">·</span
           ><i class="cmp-hint">{i18n.t('compare.scrollHint')}</i>{/if}{#if isOnDemand(app.longInput)}<span
             aria-hidden="true">·</span
           ><span>{i18n.t('longInput.banner')}</span><button

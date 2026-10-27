@@ -61,7 +61,7 @@
     if (list.length === 0) return;
     const item = list[(index + list.length) % list.length];
     item?.focus();
-    item?.scrollIntoView({ block: 'nearest' });
+    item?.scrollIntoView({ block: 'nearest', behavior: 'auto' }); // instant, never smooth (reduced motion)
   }
 
   async function show(at: 'checked' | 'first' | 'last'): Promise<void> {
