@@ -16,11 +16,11 @@ html {
   line-height: 1.5;
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
-  /* The sticky header (PA-19), the comparison table's pinned header box while one of its chips has focus
-     (`--cmp-head-h`) and the board's bottom sheet or the table's pinned scrollbar (`--sheet-height`, `--cmp-foot-h`) never
-     cover what a focus move scrolls to ("nearest"), plus an 8 px gap so its ring stays whole (WCAG 2.4.11). */
-  scroll-padding-block-start: calc(var(--header-h) + var(--cmp-head-h, 0px) + 8px);
-  scroll-padding-block-end: calc(var(--sheet-height, 0px) + var(--cmp-foot-h, 0px) + 8px);
+  /* The sticky header (PA-19) and the board's bottom sheet (`--sheet-height`) never cover what a focus move scrolls to
+     ("nearest"), plus an 8 px gap so its ring stays whole (WCAG 2.4.11); the comparison table's controls add its pinned
+     header box and scrollbar as their own `scroll-margin-block` (compare.css). */
+  scroll-padding-block-start: calc(var(--header-h) + 8px);
+  scroll-padding-block-end: calc(var(--sheet-height, 0px) + 8px);
 }
 
 /*

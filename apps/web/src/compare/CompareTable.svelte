@@ -14,7 +14,10 @@
    * default): ←/→ move along a row, ↑/↓ to the chip of the row above/below covering the same byte, Home/End to a row's
    * ends, PageUp/PageDown to the first/last row, Enter/Space opens Advanced on that row's tokenizer with the board's token
    * cell at that byte focused, Esc returns to the text box. A focus move mounts the chip first (the window follows it),
-   * then scrolls it into view clear of the app header and the pinned header box (`--cmp-head-h`, base.css).
+   * then scrolls it into view clear of the app header and the pinned boxes: the chips, the caption selects and buttons
+   * keep `scroll-margin-block` of the header box's and the scrollbar box's heights (`--cmp-head-h` / `--cmp-foot-h`,
+   * measured on the section all along), and a Tab or Shift+Tab that lands under either box scrolls it clear, which the
+   * browser does not do for an element it counts as on screen (WCAG 2.4.11).
    *
    * The rows' results come from the result hub: this component holds every visible row's entry (`retain`/`release`, fixed
    * `ROW_OPTIONS`) and asks for it on every text change of a live tier, after the board's 40 ms debounce (the board's
@@ -216,6 +219,9 @@
     viewportWidth = tbody.clientWidth;
     pitch = probe?.getBoundingClientRect().width ?? 0;
     overflow = tbody.scrollWidth > tbody.clientWidth + 1;
+    // The pinned boxes' heights, for the scroll margins that keep a focused control clear of them (compare.css).
+    section?.style.setProperty('--cmp-head-h', `${String(thead?.offsetHeight ?? 0)}px`);
+    section?.style.setProperty('--cmp-foot-h', `${String(sbar?.offsetHeight ?? 0)}px`);
   }
 
   /** Scrolls the table sideways just enough for columns `[col, col + span)` to be on screen (the window follows). */
@@ -315,9 +321,6 @@
     if (cell === null) return;
     gridFocused = true;
     focus = { lab: cell.dataset['lab'] as Lab, byte: Number(cell.dataset['byte']) };
-    // The scroll padding that keeps a focused chip clear of the pinned header box and scrollbar (base.css, WCAG 2.4.11).
-    document.documentElement.style.setProperty('--cmp-head-h', `${String(thead?.offsetHeight ?? 0)}px`);
-    document.documentElement.style.setProperty('--cmp-foot-h', `${String(sbar?.offsetHeight ?? 0)}px`);
   }
 
   function onFocusOut(event: FocusEvent): void {
@@ -325,8 +328,23 @@
     if (next instanceof Element && next.closest('[data-lab][data-index]') !== null && tbody?.contains(next) === true)
       return;
     gridFocused = false;
-    document.documentElement.style.removeProperty('--cmp-head-h');
-    document.documentElement.style.removeProperty('--cmp-foot-h');
+  }
+
+  /**
+   * Focus that lands under the pinned header box or the pinned scrollbar (a Tab, a Shift+Tab, a click at the edge): the
+   * browser scrolls nothing it counts as on screen, sticky boxes or not, so the table scrolls it into view itself — its
+   * `scroll-margin-block` then clears both boxes (WCAG 2.4.11). The header box's own controls are never under it.
+   */
+  function revealFocused(event: FocusEvent): void {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || thead === undefined || sbar === undefined || thead.contains(target)) return;
+    const rect = target.getBoundingClientRect();
+    const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
+    if (
+      rect.top < Math.max(header, thead.getBoundingClientRect().bottom) ||
+      rect.bottom > sbar.getBoundingClientRect().top
+    )
+      target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' }); // instant, never smooth
   }
 
   onMount(() => {
@@ -341,7 +359,8 @@
       frame = requestAnimationFrame(measure);
     };
     const observer = new ResizeObserver(schedule);
-    for (const element of [tbody, track, probe]) if (element !== undefined) observer.observe(element);
+    for (const element of [tbody, track, probe, thead, sbar]) if (element !== undefined) observer.observe(element);
+    section?.addEventListener('focusin', revealFocused);
     let scrollFrame = 0;
     const onPageScroll = (): void => {
       if (scrollFrame !== 0) return;
@@ -376,6 +395,7 @@
     thead?.addEventListener('pointerup', onPointerEnd);
     thead?.addEventListener('pointercancel', onPointerEnd);
     return () => {
+      section?.removeEventListener('focusin', revealFocused);
       thead?.removeEventListener('wheel', onWheel);
       thead?.removeEventListener('pointerdown', onPointerDown);
       thead?.removeEventListener('pointermove', onPointerMove);

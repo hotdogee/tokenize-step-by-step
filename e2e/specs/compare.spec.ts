@@ -5,8 +5,9 @@
  * left edge while the rows scroll sideways; on a short viewport the header box stays under the sticky app header and
  * the scrollbar at the bottom of the viewport while the page scrolls; the Advanced disclosure opens from a link with
  * `s=` and from the `5` key; 320 px reflow (the table and, with Advanced open, the board are the only exempt regions);
- * axe on the long table in three locales × two themes; a focused chip is never under the header or the pinned box
- * (WCAG 2.4.11); typing at 8 characters a second never dims a live row.
+ * axe on the long table in three locales × two themes; a focused chip is never under the header or the pinned box,
+ * nor is a caption select or the grid's tab stop reached by Tab / Shift+Tab (WCAG 2.4.11); typing at 8 characters a
+ * second never dims a live row.
  */
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
@@ -203,6 +204,60 @@ test.describe('on a 560 px tall viewport', () => {
     }
   });
 });
+
+for (const [width, height] of [
+  [1280, 560],
+  [360, 640],
+] as const)
+  test.describe(`at ${String(width)} × ${String(height)}`, () => {
+    test.use({ viewport: { width, height } });
+
+    test('Tab and Shift+Tab onto a caption select or the grid’s tab stop land clear of the pinned boxes (WCAG 2.4.11)', async ({
+      page,
+    }) => {
+      await openShell(page, 'en');
+      await chooseExample(page, 'zh-tw-paragraph');
+      /** Scrolls the upper rows under the pinned header box (the reviewer's position: 150 px past the table's top). */
+      const underTheBox = async (): Promise<void> => {
+        await page.evaluate(() => {
+          const top = (document.getElementById('compare')?.getBoundingClientRect().top ?? 0) + window.scrollY;
+          window.scrollTo(0, top + 150);
+        });
+        await expect(table(page).locator('.cmp-thead')).toHaveClass(/pinned/);
+      };
+      const expectClear = async (what: string): Promise<void> => {
+        const { focused, header, head, bar } = await rects(page, {
+          focused: ':focus',
+          header: 'header',
+          head: '.cmp-thead',
+          bar: '.cmp-sbar',
+        });
+        expect(focused, what).not.toBeNull();
+        expect(focused?.top ?? 0, `${what}: below the app header`).toBeGreaterThanOrEqual((header?.bottom ?? 0) - 0.5);
+        expect(focused?.top ?? 0, `${what}: below the header box`).toBeGreaterThanOrEqual((head?.bottom ?? 0) - 0.5);
+        expect(focused?.bottom ?? 0, `${what}: above the scrollbar`).toBeLessThanOrEqual((bar?.top ?? height) + 0.5);
+      };
+      await underTheBox();
+      await page.getByTestId('row-select-google').evaluate((select) => {
+        (select as HTMLElement).focus({ preventScroll: true });
+      });
+      await page.keyboard.press('Shift+Tab');
+      await expect(page.getByTestId('row-select-anthropic')).toBeFocused();
+      await expectClear('Shift+Tab onto the Anthropic select');
+      await underTheBox();
+      await page.keyboard.press('Shift+Tab');
+      await expect(page.locator(':focus')).toHaveAttribute('data-lab', 'openai'); // the grid's tab stop
+      await expectClear('Shift+Tab onto the grid');
+      await underTheBox();
+      await page.keyboard.press('Tab');
+      await expect(page.getByTestId('row-select-anthropic')).toBeFocused();
+      await expectClear('Tab onto the Anthropic select');
+      await underTheBox();
+      await page.keyboard.press('Tab');
+      await expect(page.getByTestId('row-select-google')).toBeFocused();
+      await expectClear('Tab onto the Google select');
+    });
+  });
 
 test('Advanced opens from a link with s= and from the 5 key', async ({ page }) => {
   await page.goto('/?lang=en&s=5.2');

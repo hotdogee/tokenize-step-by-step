@@ -267,6 +267,12 @@
   cursor: pointer;
 }
 
+/* A focused chip, caption select or button scrolls clear of the pinned header box and scrollbar (CompareTable measures
+   both on the section; `html`'s scroll padding adds the app header and the bottom sheet; WCAG 2.4.11). */
+.cmp-tbody :is(.cmp-chip, select, .btn) {
+  scroll-margin-block: calc(var(--cmp-head-h, 0px) + 8px) calc(var(--cmp-foot-h, 0px) + 8px);
+}
+
 .cmp-tbody:focus-within .cmp-chip[data-active] > .bd-vis {
   outline: 2px solid var(--accent);
   outline-offset: -2px;

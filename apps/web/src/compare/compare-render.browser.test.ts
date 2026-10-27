@@ -136,10 +136,12 @@ function expectWithin(inner: Box, outer: Box, what: string, slack = 0): void {
 }
 
 describe('the default rows (台灣台南)', () => {
-  it('renders the five rows with their counts and no style attribute anywhere (the static first paint is CSP safe)', async () => {
+  it('renders the five rows with their counts and no style attribute in the render (the static first paint is CSP safe)', async () => {
     await page.viewport(1280, 900);
     const { section } = await show('zh-tw-tainan');
-    expect(section.hasAttribute('style')).toBe(false);
+    // Only what the mounted table measures afterwards, through the CSSOM (the static paint has no style at all:
+    // prerender.test.ts): the pinned boxes' heights for the focus scroll margins.
+    expect([...section.style].sort()).toEqual(['--cmp-foot-h', '--cmp-head-h']);
     expect(section.querySelectorAll('[style]')).toHaveLength(0);
     expect(section.className).toContain('k12');
     expect(['openai', 'anthropic', 'google', 'meta', 'xai'].map((lab) => chipsOf(section, lab).length)).toEqual([
