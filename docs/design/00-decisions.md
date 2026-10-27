@@ -303,7 +303,7 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   `--border`; the pinned header box draws a full `--border` bottom line (its shadow vanished on the dark background);
   captions cap at the scroller's measured width (`--cmp-view`); explanatory notices read as muted text with a short
   trailing link; the mock client answers the empty text with "0 tokens". Measured on the round's final build: Main JS
-  **76.85 kB** brotli, i18n chunk **9.51 kB**, CSS **14.91 kB**, `index.html` **8.60 kB** brotli-11 and 12,429 B at
+  **76.91 kB** brotli, i18n chunk **9.51 kB**, CSS **14.91 kB**, `index.html` **8.59 kB** brotli-11 and 12,427 B at
   zstd-3 (the reserved hint line and the long partial form are in the static paint); every other budget unchanged.
 
 ## D. Owner answers to the open questions (2026-10-25)
