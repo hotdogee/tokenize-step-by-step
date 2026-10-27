@@ -1,8 +1,12 @@
-# Tokenize step by step
+# What is a token?
 
-A client-side visualizer that shows, one step at a time, how a language-model tokenizer turns text into tokens:
-**text → code points (with grapheme brackets) → UTF-8 bytes (hex and decimal) → pre-tokenizer chunks → BPE merges, one
-at a time → tokens with ids**, including tokens that cover only part of a character. The default example is `台灣台南`.
+A client-side visualizer of how language-model tokenizers turn text into tokens. The page opens on **the newest
+tokenizer of each lab side by side** (the newest that runs in your browser; for Anthropic, the legacy Claude 1/2
+vocabulary): one row per lab, every row lined up on the same UTF-8 bytes of your text, so you can compare byte by byte
+where each tokenizer cuts, including tokens that cover only part of a character. A menu on each row switches it to the
+lab's older tokenizer, or Anthropic's to a live count with your own API key. Under **Advanced**, a step-by-step board
+walks one tokenizer through the whole pipeline: **text → code points (with grapheme brackets) → UTF-8 bytes (hex and
+decimal) → pre-tokenizer chunks → BPE merges, one at a time → tokens with ids**. The default example is `台灣台南`.
 
 - **Tokenizers (v1):** OpenAI o200k_base and cl100k_base; Google Gemma 4 (= Gemini 2.0–3.5) and Gemma 1/2; Meta Llama 4 /
   Muse and Llama 3.x; xAI Grok-2 and Grok-1; the legacy Anthropic Claude 1/2 vocabulary (not the Claude 3+ tokenizer),

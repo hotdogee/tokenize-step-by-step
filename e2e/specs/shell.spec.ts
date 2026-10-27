@@ -8,7 +8,7 @@ test('shows the title and the default example with boot attributes and no CSP vi
       violations.push(message.text());
   });
   await page.goto('/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tokenize step by step');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('What is a token?');
   // The default example is the textarea's value and an example chip; before hydration the static textarea's text node
   // matches a text locator too, so each is asserted by its own locator.
   await expect(page.locator('#text-input')).toHaveValue('台灣台南');

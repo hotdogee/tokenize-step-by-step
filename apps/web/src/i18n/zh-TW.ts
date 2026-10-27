@@ -8,13 +8,12 @@ import type { Catalog } from './en.ts';
 
 export const zhTW = {
   // ---- App and page meta ----
-  'app.name': 'Tokenize step by step',
-  'meta.main.title': 'Tokenize step by step・逐步分詞',
-  'meta.main.description':
-    '看文字如何變成詞元：碼位、UTF-8 位元組、預分詞切塊與每一次 BPE 合併，全部在你的瀏覽器裡完成。',
-  'meta.about.title': '關於・Tokenize step by step',
-  'meta.about.description': '這個分詞視覺化工具呈現了什麼、各分詞器的可信度，以及所附詞彙表的授權。',
-  'meta.notFound.title': '找不到頁面・Tokenize step by step',
+  'app.name': 'What is a token?',
+  'meta.main.title': 'What is a token?・什麼是詞元？',
+  'meta.main.description': '看看各家實驗室最新的分詞器如何逐位元組切分你的文字，並逐步檢視單一分詞器的每一次合併。',
+  'meta.about.title': '關於・What is a token?',
+  'meta.about.description': '這個網站呈現了什麼、各分詞器的可信度，以及所附詞彙表的授權。',
+  'meta.notFound.title': '找不到頁面・What is a token?',
   'notFound.heading': '找不到這個頁面',
   'notFound.body': '這個網址沒有任何內容。',
   'notFound.back': '回到分詞器',

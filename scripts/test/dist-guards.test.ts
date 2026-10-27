@@ -86,7 +86,7 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'tsbs-dist-'));
   dist = join(root, 'dist');
   vocab = join(root, 'vocab');
-  write(dist, 'index.html', page('Tokenize step by step'));
+  write(dist, 'index.html', page('What is a token?'));
   write(dist, 'about/index.html', page('About'));
   write(dist, '404.html', page('Not found'));
   write(dist, BOOT, '(()=>{})();');

@@ -9,14 +9,14 @@ import type { Message } from './types.ts';
 
 export const en = {
   // ---- App and page meta ----
-  'app.name': 'Tokenize step by step',
-  'meta.main.title': 'Tokenize step by step',
+  'app.name': 'What is a token?',
+  'meta.main.title': 'What is a token?',
   'meta.main.description':
-    'Watch text become tokens: code points, UTF-8 bytes, pre-tokenizer chunks and every BPE merge, entirely in your browser.',
-  'meta.about.title': 'About · Tokenize step by step',
+    'See how the newest tokenizer of each lab splits your text, byte by byte, and step through one tokenizer’s merges.',
+  'meta.about.title': 'About · What is a token?',
   'meta.about.description':
-    'What the tokenize-step-by-step visualizer shows, how faithful each tokenizer is, and the licences of every vocabulary it ships.',
-  'meta.notFound.title': 'Not found · Tokenize step by step',
+    'What this site shows, how faithful each tokenizer is, and the licences of every vocabulary it ships.',
+  'meta.notFound.title': 'Not found · What is a token?',
   'notFound.heading': 'Page not found',
   'notFound.body': 'There is nothing at this address.',
   'notFound.back': 'Back to the tokenizer',
