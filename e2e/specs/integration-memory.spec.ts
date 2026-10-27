@@ -51,7 +51,7 @@ test('the main thread releases a whole-text result before the next run and after
   const copyCodePoints = Array.from(copy).length; // code points
   const copies = (codePoints: number): string => copy.repeat(Math.ceil(codePoints / copyCodePoints));
 
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   const cdp = await page.context().newCDPSession(page);
   const baseline = await backingBytes(cdp);
 
@@ -60,6 +60,10 @@ test('the main thread releases a whole-text result before the next run and after
   await setText(page, long, Array.from(long).length.toLocaleString('en-US'));
   await page.getByTestId('long-input-run').click();
   await expect(grid(page)).toHaveAttribute('data-window', /^\d+-\d+$/, { timeout: RUN_TIMEOUT_MS });
+  // The table's rows run after the board, one after another (PA-19): the run is over once every row answers it.
+  await expect(page.locator('[data-testid="compare"] [data-row][data-state="current"]')).toHaveCount(5, {
+    timeout: RUN_TIMEOUT_MS * 2,
+  });
   const held = (await backingBytes(cdp)) - baseline;
   expect(held, 'the probe sees the whole-text result').toBeGreaterThan(8 * MB);
 
@@ -78,7 +82,7 @@ test('the main thread releases a whole-text result before the next run and after
   await setText(page, '熱鬧台南', '4');
   await expect(grid(page)).not.toHaveAttribute('data-window');
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   const after = (await backingBytes(cdp)) - baseline;
   expect(after, 'no whole-text result is held next to the short one').toBeLessThan(KEPT_LIMIT);
 });

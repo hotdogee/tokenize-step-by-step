@@ -8,7 +8,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { watchPage } from '../support/page-guards.ts';
 import { grid } from './board-helpers.ts';
-import { openShell } from './shell-helpers.ts';
+import { openShell, rowSource } from './shell-helpers.ts';
 
 /**
  * The Python oracle's ids (tiktoken 0.14.0 on the pinned o200k_base.tiktoken, encode_ordinary), computed with
@@ -32,7 +32,7 @@ test('typed text is tokenized live in the Worker: こんにちは台灣 123 abc 
   const guards = await watchPage(page);
   const requests: string[] = [];
   page.on('request', (request) => requests.push(new URL(request.url()).pathname));
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   expect(requests.some((path) => /^\/assets\/entry-[\w-]+\.js$/.test(path))).toBe(true);
   expect(requests.some((path) => /^\/assets\/bytelevel-[\w-]+\.js$/.test(path))).toBe(true);
   expect(requests.some((path) => /^\/tok\/openai-o200k_base\/[0-9a-f]{12}\.bin$/.test(path))).toBe(true);
@@ -41,7 +41,7 @@ test('typed text is tokenized live in the Worker: こんにちは台灣 123 abc 
   await page.locator('#text-input').fill(TEXT);
   await expect(page.getByTestId('counts')).toContainText('6 tokens');
   await expect(page.getByTestId('counts')).toContainText('29 bytes');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
   await expect.poll(() => boardIds(page)).toEqual(O200K_IDS);
   expect(await guards.cspViolations()).toEqual([]);
@@ -49,7 +49,7 @@ test('typed text is tokenized live in the Worker: こんにちは台灣 123 abc 
 });
 
 test("the picker's wire sizes come from the Worker's asset summary", async ({ page }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await page.getByTestId('picker-button').click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
@@ -65,7 +65,7 @@ test('?mock=1 keeps the precomputed-examples client: chips answer, free text wai
   const requests: string[] = [];
   page.on('request', (request) => requests.push(new URL(request.url()).pathname));
   await page.goto('/?lang=en&mock=1');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'live');
   await expect(page.getByTestId('counts')).toContainText('4 tokens');
   expect(requests.some((path) => path.startsWith('/tok/'))).toBe(false);
   expect(requests.some((path) => /^\/examples\/openai-o200k_base\.[0-9a-f]+\.json$/.test(path))).toBe(true);

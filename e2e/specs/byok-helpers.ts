@@ -5,7 +5,7 @@
  * storage, IndexedDB, cookies, the URL and the console.
  */
 import { expect, type Page, type Request } from '@playwright/test';
-import { pickTokenizer } from './shell-helpers.ts';
+import { boardSource, openAdvanced, pickTokenizer } from './shell-helpers.ts';
 
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages/count_tokens';
 export const XAI_URL = 'https://api.x.ai/v1/tokenize-text';
@@ -84,10 +84,14 @@ export function recordConsole(page: Page): string[] {
   return lines;
 }
 
-/** Opens `/` in English with the precomputed-examples client and, optionally, selects a tokenizer. */
+/**
+ * Opens `/` in English with the precomputed-examples client, opens the Advanced disclosure that holds the board (PA-19)
+ * and, optionally, selects a tokenizer.
+ */
 export async function openPage(page: Page, tokenizer?: string): Promise<void> {
   await page.goto('/?lang=en&mock=1');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await openAdvanced(page);
+  await expect(boardSource(page)).toHaveAttribute('data-source', 'live');
   if (tokenizer !== undefined) {
     await pickTokenizer(page, tokenizer);
     await expect(page.getByTestId('picker-button')).toContainText(tokenizer);

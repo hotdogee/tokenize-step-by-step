@@ -47,7 +47,7 @@ async function reachToast(page: Page, id: 'error-action' | 'error-dismiss'): Pro
 
 test('"Tokenize now" keeps keyboard focus while its run is in flight and after it', async ({ page }) => {
   test.slow();
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await page.locator('#text-input').fill('a'.repeat(20_001));
   await expect(page.getByTestId('long-input-banner')).toBeVisible();
   await pressTo(page, 'Tab', 'long-input-run');
@@ -68,7 +68,9 @@ test('Retry after an aborted download leaves keyboard focus on the textarea, rig
   await page.unroute('**/tok/**');
   await page.keyboard.press('Enter');
   expect(await active(page)).toEqual({ id: 'text-input', visible: true });
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('[data-row="openai"] [data-source="live"]')).toBeVisible({
+    timeout: LIVE_READY_TIMEOUT_MS,
+  });
   await expect(toast(page)).toHaveCount(0);
   expect(await active(page)).toEqual({ id: 'text-input', visible: true });
 });
@@ -99,6 +101,6 @@ test('"Go back" leaves keyboard focus on the tokenizer picker, right away and af
   await page.keyboard.press('Enter');
   expect(await active(page)).toEqual({ id: 'picker-button', visible: true });
   await expect(page.getByTestId('picker-button')).toContainText('o200k_base');
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   expect(await active(page)).toEqual({ id: 'picker-button', visible: true });
 });

@@ -1,5 +1,6 @@
 /**
- * WP06 acceptance: axe clean (WCAG 2.2 AA tags) on `/` and `/about/` in 3 locales × 2 themes, plus the open dialogs.
+ * WP06 acceptance: axe clean (WCAG 2.2 AA tags) on `/` (the comparison table, PA-19) and `/about/` in 3 locales × 2
+ * themes, plus `/` with Advanced (the board) and the Examples menu open, and the open dialogs.
  * Runs against `vite preview` with headersMiddleware (the strict CSP applies).
  */
 import AxeBuilder from '@axe-core/playwright';
@@ -33,9 +34,18 @@ for (const theme of THEMES) {
 }
 
 for (const theme of THEMES) {
+  test(`/ with Advanced open (the board) and the Examples menu open is axe clean (${theme})`, async ({ page }) => {
+    await useTheme(page, theme);
+    await openShell(page, 'en', { advanced: true });
+    expect(await violations(page)).toEqual([]);
+    await page.getByTestId('examples-button').click();
+    await expect(page.getByTestId('examples-menu')).toBeVisible();
+    expect(await violations(page)).toEqual([]);
+  });
+
   test(`the picker and help dialogs are axe clean (${theme})`, async ({ page }) => {
     await useTheme(page, theme);
-    await openShell(page, 'zh-TW');
+    await openShell(page, 'zh-TW', { advanced: true });
     await page.getByTestId('picker-button').click();
     await expect(page.getByRole('dialog')).toBeVisible();
     expect(await violations(page)).toEqual([]);

@@ -1,13 +1,14 @@
 /**
- * WP13 integration — URL state (05 §1.1): `?t=…&q=…&s=<stage>.<step>&b=…&lang=…&tl=…` read once at load; invalid values
- * fall back to the defaults; `history.replaceState` (500 ms debounce) writes everything but the text; "Copy link" alone
- * writes the text (≤ 2,000 code points) and confirms it visibly — or says the link is in the address bar when the
- * clipboard refuses; a `q` that no longer equals the text leaves the address bar after the next edit.
+ * WP13 integration — URL state (05 §1.1): `?t=…&q=…&r=…&s=<stage>.<step>&b=…&lang=…&tl=…` read once at load; invalid
+ * values fall back to the defaults; `history.replaceState` (500 ms debounce) writes everything but the text — `t` and `s`
+ * only while the Advanced disclosure is open, and a link with either opens it (PA-19); "Copy link" alone writes the text
+ * (≤ 2,000 code points) and confirms it visibly — or says the link is in the address bar when the clipboard refuses; a
+ * `q` that no longer equals the text leaves the address bar after the next edit.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { grid } from './board-helpers.ts';
 import { checkedStop, scrubber } from './pipeline-helpers.ts';
-import { LIVE_READY_TIMEOUT_MS, openShell } from './shell-helpers.ts';
+import { boardSource, LIVE_READY_TIMEOUT_MS, openAdvanced, openShell, rowSource } from './shell-helpers.ts';
 
 const RAMEN = '東京都渋谷区のラーメン屋さん';
 
@@ -48,10 +49,11 @@ test('a deep link restores tokenizer, text, stage and step, byte view, UI locale
   const query = new URLSearchParams({ t: 'xai-grok2', q: RAMEN, s: '5.3', b: 'dec', lang: 'ja', tl: 'ja' });
   await page.goto(`/?${query.toString()}`);
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
+  await expect(page.locator('details#advanced')).toHaveAttribute('open', ''); // t and s open it (PA-19)
   await expect(page.getByTestId('picker-button')).toContainText('Grok-2');
   await expect(page.locator('#text-input')).toHaveValue(RAMEN);
   await expect(page.locator('#text-input')).toHaveAttribute('lang', 'ja');
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(boardSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
   expect(await checkedStop(page)).toBe(5);
   await expect(grid(page)).toHaveAttribute('data-stage', '5');
   await expect(scrubber(page)).toHaveValue('3');
@@ -63,8 +65,11 @@ test('a deep link restores tokenizer, text, stage and step, byte view, UI locale
 });
 
 test('invalid URL values are ignored and the defaults stay', async ({ page }) => {
-  await page.goto('/?t=gpt-9&s=9.1&b=octal&tl=xx&lang=en');
-  await expect(page.locator('[data-source]')).toBeVisible();
+  await page.goto('/?t=gpt-9&s=9.1&b=octal&tl=xx&lang=en&r=nope');
+  await expect(rowSource(page)).toBeAttached();
+  await expect(page.locator('details#advanced')).not.toHaveAttribute('open', ''); // invalid t and s open nothing
+  await expect(page.locator('[data-row="openai"]')).toHaveAttribute('data-tokenizer', 'openai-o200k_base');
+  await openAdvanced(page);
   await expect(page.getByTestId('picker-button')).toContainText('o200k_base');
   await expect(page.locator('#text-input')).toHaveValue('台灣台南');
   expect(await checkedStop(page)).toBe(6);
@@ -79,7 +84,8 @@ test('state changes reach the URL after 500 ms, never the text; "Copy link" writ
   expect(page.url()).not.toContain('?t=');
   await page.locator('#text-input').fill('熱鬧');
   await page.locator('#text-input').blur();
-  await page.keyboard.press('Digit3');
+  await page.keyboard.press('Digit3'); // opens Advanced, then stop 3 (PA-19)
+  await expect(page.locator('details#advanced')).toHaveAttribute('open', '');
   await expect.poll(() => params(page).get('s')).toBe('3');
   expect(params(page).get('t')).toBe('openai-o200k_base');
   expect(params(page).get('lang')).toBe('en');
@@ -98,11 +104,17 @@ test('state changes reach the URL after 500 ms, never the text; "Copy link" writ
     'Link copied without the text (longer than 2,000 characters)',
   );
   expect(params(page).has('q')).toBe(false);
+
+  // Closing Advanced takes t and s out of the address bar again.
+  await page.getByTestId('advanced-summary').click();
+  await expect.poll(() => params(page).has('s')).toBe(false);
+  expect(params(page).has('t')).toBe(false);
 });
 
 test('"Copy link" says the link is in the address bar when the clipboard refuses it', async ({ page }) => {
   await stubClipboard(page, false);
   await openShell(page, 'en');
+  await openAdvanced(page);
   await page.getByTestId('copy-link').click();
   await expect(page.getByTestId('copy-link-status')).toHaveText('Could not copy — the link is in the address bar');
   expect(params(page).get('q')).toBe('台灣台南');
@@ -111,12 +123,13 @@ test('"Copy link" says the link is in the address bar when the clipboard refuses
 test('a q from a deep link or from "Copy link" leaves the address bar once the text is edited', async ({ page }) => {
   await stubClipboard(page, true);
   await page.goto(`/?${new URLSearchParams({ q: RAMEN, lang: 'en' }).toString()}`);
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
   expect(params(page).get('q')).toBe(RAMEN);
   await page.locator('#text-input').fill('熱鬧');
   await expect.poll(() => params(page).has('q')).toBe(false);
   expect(params(page).get('lang')).toBe('en');
 
+  await openAdvanced(page);
   await page.getByTestId('copy-link').click();
   await expect(page.getByTestId('copy-link-status')).toHaveText('Link copied');
   expect(params(page).get('q')).toBe('熱鬧');

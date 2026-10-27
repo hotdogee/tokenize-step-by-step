@@ -14,9 +14,9 @@ import { openShell } from './shell-helpers.ts';
 /** Opens the paragraph with its live (traced) result and reduced motion, so every scroll lands at once. */
 async function openParagraph(page: Page): Promise<void> {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'zh-tw-paragraph');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await expect(scrubber(page)).toBeEnabled();
 }
 

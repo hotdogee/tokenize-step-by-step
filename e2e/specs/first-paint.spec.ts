@@ -1,13 +1,14 @@
 /**
  * PA-15 — the static first paint of `/`. index.html carries the server-rendered first state of the page per UI locale
- * (`<template id="fp-<locale>">`, its board in viewport variants); the classic clone script after `#app` puts the
- * visitor's into `#app` before anything paints, and the app — whose module scripts the page no longer waits for —
- * hydrates it once painted (apps/web/plugins/first-paint.ts, src/app/first-paint-script.ts, src/app/main.ts).
+ * (`<template id="fp-<locale>">`: PA-19's comparison table with its five precomputed default rows, Advanced closed);
+ * the classic clone script after `#app` puts the visitor's into `#app` before anything paints, and the app — whose
+ * module scripts the page no longer waits for — hydrates it once painted (apps/web/plugins/first-paint.ts,
+ * src/app/first-paint-script.ts, src/app/main.ts).
  *
  * The module scripts are held with `page.route` where a test needs the page before the app runs.
  */
 import { devices, expect, test, type Page, type Route } from '@playwright/test';
-import { LIVE_READY_TIMEOUT_MS } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, rowSource } from './shell-helpers.ts';
 
 /** Classic scripts the page runs before it paints (boot.js in <head>, the clone script after #app). */
 const CLASSIC = /\/assets\/(?:boot|first-paint)-[0-9a-f]{8}\.js$/;
@@ -56,7 +57,7 @@ function snapshot(page: Page) {
     const app = document.getElementById('app');
     return {
       lang: document.documentElement.lang,
-      fp: app?.dataset['fp'] ?? null,
+      painted: (app?.childElementCount ?? 0) > 0,
       boot: app?.dataset['boot'] ?? null,
       label: app?.querySelector('label[for="text-input"]')?.textContent ?? null,
       text: app?.textContent ?? '',
@@ -68,7 +69,7 @@ function snapshot(page: Page) {
   });
 }
 
-test('paints the precomputed default example before any module script has arrived (chromium, CPU ×4)', async ({
+test('paints the precomputed default rows before any module script has arrived (chromium, CPU ×4)', async ({
   page,
   browserName,
 }) => {
@@ -83,15 +84,18 @@ test('paints the precomputed default example before any module script has arrive
   expect(fcp).toBeGreaterThan(0);
   expect(modules.held()).toBeGreaterThan(0);
   expect(before.modulesArrived).toBe(0);
-  expect(before.fp).not.toBeNull();
+  expect(before.painted).toBe(true);
   expect(before.boot).toBeNull();
-  await expect(page.getByTestId('board-grid')).toBeVisible();
-  await expect(page.getByTestId('counts')).toContainText('12');
-  await expect(page.locator('[data-source="precomputed"]')).toBeVisible();
+  // The table is there before the modules: the OpenAI row's 4 tokens, precomputed (PA-19; no board in the first paint).
+  await expect(page.getByTestId('compare')).toBeVisible();
+  await expect(page.getByTestId('board-grid')).toHaveCount(0);
+  await expect(page.locator('[data-row="openai"] .cmp-cap')).toContainText('4 tokens');
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'precomputed');
+  await expect(page.getByTestId('compare-head')).toContainText('12');
   await modules.release();
   await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
-  // The load trigger and the precomputed → live crossfade work on the hydrated page.
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  // The load trigger and the precomputed → live answer work on the hydrated page.
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   expect(await csp()).toEqual([]);
 });
@@ -158,23 +162,26 @@ test('text typed into the static text box before the app runs is kept', async ({
   await modules.release();
   await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
   await expect(textbox).toHaveValue('台灣台南!');
-  await expect(page.getByTestId('counts')).toContainText('13');
+  await expect(page.getByTestId('compare-head')).toContainText('13');
 });
 
 test('a page that starts in another state mounts from scratch', async ({ page }) => {
   await page.goto('/?b=dec');
   await expect(page.locator('#app')).toHaveAttribute('data-boot', 'mounted');
-  await expect(page.locator('#app')).not.toHaveAttribute('data-fp', /./);
   await page.evaluate(() => {
-    localStorage.setItem('tsbs:graphemes', 'false');
+    localStorage.setItem('tsbs:rows', 'xai-grok1');
   });
   await page.goto('/');
   await expect(page.locator('#app')).toHaveAttribute('data-boot', 'mounted');
   await page.evaluate(() => {
-    localStorage.removeItem('tsbs:graphemes');
+    localStorage.removeItem('tsbs:rows');
   });
+  // A link with t or s opens Advanced (PA-19): no static paint holds the board, so it mounts.
+  await page.goto('/?t=openai-o200k_base&s=6&lang=en');
+  await expect(page.locator('#app')).toHaveAttribute('data-boot', 'mounted');
+  await expect(page.locator('details#advanced')).toHaveAttribute('open', '');
   // The URL the app writes back for the default state (every parameter at its default) still gets the static paint.
-  await page.goto('/?t=openai-o200k_base&s=6&b=hex&lang=en&tl=zh-Hant');
+  await page.goto('/?lang=en&tl=auto&b=hex');
   await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
 });
 
@@ -196,7 +203,7 @@ test.describe('on the Lighthouse mobile viewport (412 × 823, CPU ×4)', () => {
     });
     await page.goto('/');
     await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
-    await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+    await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
     await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)));
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);

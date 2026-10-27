@@ -32,7 +32,7 @@ test('shell, board, rail, inspector and drawer work together on the live Worker'
   const counts = page.getByTestId('counts');
 
   // First paint: the default example on o200k at stop 6, then the live result.
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await expect(page.locator('#text-input')).toHaveValue(TEXT);
   await expect(counts).toContainText('4 tokens');
   expect(await checkedStop(page)).toBe(6);
@@ -70,14 +70,14 @@ test('shell, board, rail, inspector and drawer work together on the live Worker'
   // Tokenizer switch: Grok-2 answers live on the same text (5 tokens).
   await pickTokenizer(page, 'Grok-2');
   await expect(page.getByTestId('picker-button')).toContainText('Grok-2');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await expect(counts).toContainText('5 tokens');
 
   // Typed text is tokenized live, then the example text typed back key by key.
   const input = page.locator('#text-input');
   await input.fill(TYPED);
   await expect(counts).toContainText('29 bytes');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await input.fill('');
   await input.pressSequentially(TEXT);
   await expect(counts).toContainText('12 bytes');

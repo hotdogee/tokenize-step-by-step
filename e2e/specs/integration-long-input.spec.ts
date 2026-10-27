@@ -15,7 +15,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 import type { TiktokenFixtureCase } from '@tsbs/core';
 import { grid } from './board-helpers.ts';
 import { fixture } from './pipeline-helpers.ts';
-import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, openAdvanced, openShell, pickTokenizer } from './shell-helpers.ts';
 
 /** On-demand runs over 60,000–200,000 code points take a few seconds on a loaded CI runner. */
 const RUN_TIMEOUT_MS = 60_000;
@@ -50,7 +50,7 @@ test('20,001 code points: the on-demand banner, a whole-text run, the 50,000-ste
   page,
 }) => {
   test.slow();
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await setText(page, 'a'.repeat(20_000), '20,000');
   await expect(banner(page)).toHaveCount(0);
   await setText(page, 'a'.repeat(20_001), '20,001');
@@ -107,7 +107,7 @@ test('the board is a window of the whole-text result: ids at both window edges e
     expected.push({ start: k * copyBytes + paragraph.utf8Len, end: (k + 1) * copyBytes, id: null });
   }
 
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await setText(page, text, '20,800');
   await expect(banner(page)).toBeVisible();
   // The caret in the middle of copy 25: the window is cut around it.
@@ -168,7 +168,7 @@ test('above 100,000 code points the run records no timeline; 200,001 shows the c
   page,
 }) => {
   test.slow();
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await setText(page, 'b'.repeat(100_001), '100,001');
   await runOnDemand(page);
   await expect(page.getByTestId('scope-status')).toContainText(
@@ -204,6 +204,7 @@ test('a run asked for while the tokenizer loads is dropped once the text is shor
   // The vocabulary is held, so the live board never signals readiness: wait for hydration itself before typing, or the
   // fill races main.ts's hydration task (which rewrites the textarea) and the typed text lands after the default example.
   await expect(page.locator('#app')).toHaveAttribute('data-boot', /^(hydrated|mounted)$/);
+  await openAdvanced(page);
   await setText(page, '台'.repeat(25_000), '25,000');
   await page.getByTestId('long-input-run').click();
   await expect(page.getByTestId('long-input-run')).toHaveAttribute('aria-busy', 'true');
@@ -213,7 +214,7 @@ test('a run asked for while the tokenizer loads is dropped once the text is shor
 
   holding = false;
   for (const route of held.splice(0)) await route.continue();
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await expect(page.getByTestId('tokens-pending')).toHaveCount(0);
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
 

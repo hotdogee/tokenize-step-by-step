@@ -11,15 +11,22 @@ import { grid } from './board-helpers.ts';
 import { checkedStop } from './pipeline-helpers.ts';
 import { openShell } from './shell-helpers.ts';
 
-/** Records the text of every `encode` message the page posts to the tokenizer Worker. */
+/**
+ * Records the text of every `encode` message the page posts to the board's tokenizer Worker — the first Worker that
+ * receives a message: o200k's, loaded after first paint. The other table rows' Workers (PA-19: one per tokenizer on
+ * screen, loaded on the first free-text edit) get the same one encode per commit; this suite counts the board's.
+ */
 async function recordEncodes(page: Page): Promise<void> {
   await page.addInitScript(() => {
-    const store = window as unknown as { __tsbsEncodes: string[] };
+    const store = window as unknown as { __tsbsEncodes: string[]; __tsbsFirstWorker?: Worker };
     store.__tsbsEncodes = [];
     // eslint-disable-next-line @typescript-eslint/unbound-method -- re-invoked with .call(this) below
     const post = Worker.prototype.postMessage;
     Worker.prototype.postMessage = function (this: Worker, message: unknown, ...rest: unknown[]) {
-      if (typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'encode')
+      store.__tsbsFirstWorker ??= this;
+      const encode =
+        typeof message === 'object' && message !== null && (message as { type?: unknown }).type === 'encode';
+      if (encode && this === store.__tsbsFirstWorker)
         store.__tsbsEncodes.push(String((message as { text?: unknown }).text));
       (post as (this: Worker, ...args: unknown[]) => void).call(this, message, ...rest);
     };
@@ -32,7 +39,7 @@ const encodes = (page: Page): Promise<string[]> =>
 /** Opens the shell with an empty text, every encode so far settled. */
 async function emptyShell(page: Page): Promise<number> {
   await recordEncodes(page);
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await page.locator('#text-input').fill('');
   await expect(page.getByTestId('counts')).toContainText('0 code points');
   await expect.poll(async () => (await encodes(page)).at(-1)).toBe('');

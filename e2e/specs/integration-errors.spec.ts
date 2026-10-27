@@ -19,7 +19,9 @@ test('a failed download shows the retry toast; retrying loads the tokenizer', as
   );
   await page.unroute('**/tok/**');
   await toast(page).getByTestId('error-action').click();
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('[data-row="openai"] [data-source="live"]')).toBeVisible({
+    timeout: LIVE_READY_TIMEOUT_MS,
+  });
   await expect(toast(page)).toHaveCount(0);
 });
 
@@ -73,7 +75,7 @@ test('an out-of-memory build offers "back", which returns to the previous tokeni
   });
   await toast(page).getByTestId('error-action').click();
   await expect(page.getByTestId('picker-button')).toContainText('o200k_base');
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await expect(toast(page)).toHaveCount(0);
   // PA-19: o200k never left its own Worker (AD-19 holds per Worker), so "back" loads nothing.
   expect(downloads).toEqual([]);

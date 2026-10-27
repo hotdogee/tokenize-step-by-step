@@ -1,7 +1,8 @@
 /**
- * Focus visible at every Tab stop (WCAG 2.4.7; 05 §8): with the live-check drawer open, Tab from the textarea through the
- * options row, the pipeline rail, the board, the inspector and the drawer to the last stop of the page, then Shift+Tab
- * back to the textarea and on through the input panel and the header to the first stop of the page. At each stop the
+ * Focus visible at every Tab stop (WCAG 2.4.7; 05 §8): with the Advanced disclosure and the live-check drawer open, Tab
+ * from the textarea through the Examples menu button, the comparison table (its chip tab stop and the row selects), the
+ * Advanced summary, the picker, the pipeline rail, the board, the inspector, the options and the drawer to the last stop
+ * of the page, then Shift+Tab back to the textarea and on through the header to the first stop of the page. At each stop the
  * focused element, one of its direct children (a board cell draws its ring on `.bd-vis`) or its enclosing label / rail
  * stop (an opacity-0 radio rings its `.stop` through `:focus-within`) must draw a computed box-shadow or outline that
  * goes away when focus moves on; an element with opacity 0 does not count.
@@ -40,6 +41,7 @@ function readStop(element: HTMLElement, kind: RingKind): { name: string; rings: 
     ['inspector', 'inspector-host'],
     ['rail', 'pipeline'],
     ['drawer', 'live-check'],
+    ['table', 'compare'],
   ];
   const region = regions.find(([, id]) => element.closest(`[data-testid="${id}"]`) !== null)?.[0] ?? 'page';
   const type = element.getAttribute('type');
@@ -147,6 +149,11 @@ const MUST_VISIT = [
   /^rail input\[type=checkbox\]\[data-testid=reduce-motion\]/,
   /^rail input\[type=range\]\[data-testid=scrubber\]/,
   /^board /,
+  /^table div.*\.cmp-chip/,
+  /^table select/,
+  /^page summary\[data-testid=advanced-summary\]/,
+  /^page button.*\[data-testid=picker-button\]/,
+  /^page button.*\[data-testid=examples-button\]/,
   /^inspector /,
   /^drawer input\[type=radio\]\[data-testid=auth-bearer\]/,
   /^drawer select\[data-testid=anthropic-model\]/,
@@ -174,9 +181,7 @@ async function tour(page: Page, kind: RingKind): Promise<void> {
   expect(textarea, 'the way back leaves focus on the textarea').not.toBeNull();
   if (textarea === null) return;
   const head = await walk(page, 'Shift+Tab', await stopOf(page, textarea, kind), kind);
-  expect(head.names, 'Shift+Tab reaches the picker button').toContainEqual(
-    expect.stringMatching(/^page button.*\[data-testid=picker-button\]/),
-  );
+  expect(head.names, 'Shift+Tab reaches the skip link').toContainEqual(expect.stringMatching(/^page a\.skip-link/));
   const failures = [...forward.failures, ...back.failures, ...head.failures];
   if (head.last !== null) {
     await head.last.handle.focus();
@@ -198,13 +203,13 @@ async function tour(page: Page, kind: RingKind): Promise<void> {
 test('every Tab stop from the header through the rail, board, inspector and drawer shows focus, both ways', async ({
   page,
 }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await tour(page, 'any');
 });
 
 test('in forced colours every Tab stop draws an outline (box-shadow is dropped there), both ways', async ({ page }) => {
   await page.emulateMedia({ forcedColors: 'active' });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   const forced = await page.evaluate(() => matchMedia('(forced-colors: active)').matches);
   test.skip(!forced, 'this browser does not emulate forced colours');
   await tour(page, 'outline');

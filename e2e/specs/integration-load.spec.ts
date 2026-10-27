@@ -16,7 +16,7 @@ import type { TokenizerId } from '@tsbs/core';
 import { watchPage } from '../support/page-guards.ts';
 import { grid } from './board-helpers.ts';
 import { domParts } from './pipeline-helpers.ts';
-import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, openAdvanced, openShell, pickTokenizer, rowSource } from './shell-helpers.ts';
 
 /** Picker names (part of each tokenizer's display name) in the brief's lab order. */
 const TOKENIZERS: ReadonlyArray<readonly [TokenizerId, string]> = [
@@ -76,10 +76,11 @@ function tokenCells(page: Page): Promise<string[]> {
     );
 }
 
-/** Applies a chip and waits for its result from `source`; returns the token cells. */
+/** Applies an example (the Examples menu, PA-19) and waits for its board result from `source`; returns the token cells. */
 async function chipCells(page: Page, key: string, source: 'precomputed' | 'live'): Promise<string[]> {
-  await page.locator(`[data-key="${key}"]`).click();
-  await expect(page.locator(`[data-source="${source}"]`)).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await page.getByTestId('examples-button').click();
+  await page.locator(`[data-testid="examples-menu"] [data-key="${key}"]`).click();
+  await expect(page.locator(`#advanced [data-source="${source}"]`)).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
   return tokenCells(page);
 }
@@ -125,7 +126,8 @@ for (const [id, name] of TOKENIZERS) {
       else await route.continue();
     });
     await page.goto('/?lang=en');
-    await expect(page.locator('[data-source="precomputed"]')).toBeVisible();
+    await openAdvanced(page);
+    await expect(page.locator('#advanced [data-source="precomputed"]')).toBeVisible();
     if (id !== 'openai-o200k_base') {
       await pickTokenizer(page, name);
       await expect(page.getByTestId('picker-button')).toContainText(name);
@@ -136,7 +138,7 @@ for (const [id, name] of TOKENIZERS) {
 
     holding = false;
     for (const route of held.splice(0)) await route.continue();
-    await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS * 2 });
+    await expect(page.locator('#advanced [data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS * 2 });
     for (const key of CHIPS) {
       const live = await chipCells(page, key, 'live');
       const before = precomputed.get(key) ?? [];
@@ -203,7 +205,7 @@ test('a second visit with /tok/* blocked loads o200k from the Cache API; About â
     await route.abort();
   });
   await page.reload();
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
   await expect(page.getByTestId('error-toast')).toHaveCount(0);
   const last = JSON.parse((await page.evaluate(() => sessionStorage.getItem('tsbs:lastLoaded'))) ?? '{}') as {
     fromCache?: boolean;
