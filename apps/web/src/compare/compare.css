@@ -155,12 +155,17 @@
   font-size: 0.75rem;
 }
 
-/* A "·" separator and the item after it: one unbreakable piece, so a wrapped caption never ends a line on the "·". */
+/* A "·" separator and the item after it: one unbreakable piece, so a wrapped caption never ends a line on the "·" (a
+   sentence-long item, `.cmp-wrap`, still wraps inside the piece when it alone is wider than the line). */
 .cmp-item {
   display: inline-flex;
   align-items: center;
   gap: inherit;
   white-space: nowrap;
+}
+
+.cmp-item > .cmp-wrap {
+  white-space: normal;
 }
 
 /* The scroll hint keeps its room while the table fits (the static first paint cannot measure, so it always holds it). */

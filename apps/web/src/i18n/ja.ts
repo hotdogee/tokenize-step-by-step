@@ -132,6 +132,8 @@ export const ja = {
   'compare.apiTotal': 'API 経由で {total} トークン（うち約 {frame} はフレーム）',
   'compare.loading': '読み込み中 {percent}',
   'compare.scrollHint': '横にスクロールすると続きが見られます',
+  'compare.partial': '文字をまたぐ {n}',
+  'compare.claudeLegacy': 'Claude 1/2 レガシー',
 
   // ---- 詳細設定（PA-19） ----
   'advanced.label': '詳細設定',

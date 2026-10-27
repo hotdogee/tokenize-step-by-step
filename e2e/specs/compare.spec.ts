@@ -58,7 +58,16 @@ test('the default rows of 台灣台南 show the oracle counts, and a row switch 
     await expect(row(page, lab).locator('.cmp-cap')).toContainText(`${String(tokens)} tokens`);
     await expect(chips(page, lab)).toHaveCount(tokens);
   }
-  await expect(row(page, 'anthropic').locator('.cmp-cap')).toContainText('2 partial-character tokens');
+  // The caption's short form; the long one for assistive tech.
+  await expect(row(page, 'anthropic').getByTestId('row-partial').locator('[aria-hidden="true"]').nth(1)).toHaveText(
+    '2 partial',
+  );
+  await expect(row(page, 'anthropic').getByTestId('row-partial').locator('.visually-hidden')).toHaveText(
+    '2 partial-character tokens',
+  );
+  await expect(row(page, 'anthropic').getByTestId('row-select-anthropic').locator('option').first()).toHaveText(
+    'Claude 1/2 legacy',
+  );
   await expect(row(page, 'anthropic').locator('[data-fidelity="legacy"]')).toBeVisible();
   await expect(page.getByText('Powered by xAI')).toBeVisible();
 

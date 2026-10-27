@@ -127,6 +127,8 @@ export const zhTW = {
   'compare.apiTotal': '透過 API 計算的 {total} 個詞元（約 {frame} 個為框架）',
   'compare.loading': '載入中 {percent}',
   'compare.scrollHint': '左右捲動可看到其餘的文字',
+  'compare.partial': '{n} 個跨字元',
+  'compare.claudeLegacy': 'Claude 1/2 舊版',
 
   // ---- 進階（PA-19） ----
   'advanced.label': '進階',

@@ -2,7 +2,7 @@
   /**
    * One lab's row of the comparison table (PA-19, 05 §4): a caption line pinned to the left edge — the lab, the row's
    * tokenizer `<select>` (the lab's tokenizers; Anthropic also "Claude 5.5 · API key"), the token count, the
-   * partial-character count, the fidelity badge when it is not "confirmed", the loading progress or the error with its
+   * partial-character count (short, "2 partial"; the long form for assistive tech), the fidelity badge when it is not "confirmed", the loading progress or the error with its
    * action (Retry; Reload; back to the lab's primary tokenizer), and a visually hidden source badge (`span[data-source]`: precomputed · live · pending) — then the chips, an
    * ARIA row of the table's grid (`cmp-row-<lab>`, owned through `aria-owns`; the caption with its select stays outside
    * the grid). In the API mode there are no chips: a note and the "Live check…" button instead (no boundaries, 05 §13).
@@ -117,8 +117,12 @@
     state === 'api' && answers.anthropic !== null && answers.anthropic.text === app.text ? answers.anthropic : null,
   );
 
-  /** The select shows the short name (the display name without its parenthetical); the row's name says it whole. */
+  /**
+   * The select shows the short name (the display name without its parenthetical; "Claude 1/2 legacy" for the longest);
+   * the row's name says it whole.
+   */
   function shortName(candidate: TokenizerEntry): string {
+    if (candidate.id === 'anthropic-claude-legacy') return i18n.t('compare.claudeLegacy');
     return candidate.displayName[i18n.current].replace(/\s*[(（][^()（）]*[)）]\s*$/u, '');
   }
 </script>
@@ -140,19 +144,29 @@
         {/each}
         {#if row.api}<option value={ANTHROPIC_API}>{i18n.t('compare.anthropicApi')}</option>{/if}
       </select>
+      <!-- Each "·" sits in one piece with the item after it (.cmp-item), so a wrapped caption never ends a line on it. -->
       {#if state === 'api'}
-        {#if apiCount !== null}<span aria-hidden="true">·</span><span class="cmp-count"
-            >{i18n.t('compare.apiTotal', { total: apiCount.summary.total, frame: apiCount.summary.frame })}</span
+        {#if apiCount !== null}<span class="cmp-item"
+            ><span aria-hidden="true">·</span><span class="cmp-count cmp-wrap"
+              >{i18n.t('compare.apiTotal', { total: apiCount.summary.total, frame: apiCount.summary.frame })}</span
+            ></span
           >{/if}
       {:else}
-        <span aria-hidden="true">·</span>
         {#if result !== null}
-          <span class="cmp-count">{i18n.t('counts.tokens', { n: result.stats.tokens })}</span>
-          {#if result.stats.partialTokens > 0}<span aria-hidden="true">·</span><span
-              >{i18n.t('counts.partial', { n: result.stats.partialTokens })}</span
+          <span class="cmp-item"
+            ><span aria-hidden="true">·</span><span class="cmp-count"
+              >{i18n.t('counts.tokens', { n: result.stats.tokens })}</span
+            ></span
+          >
+          {#if result.stats.partialTokens > 0}<span class="cmp-item" data-testid="row-partial"
+              ><span aria-hidden="true">·</span><span aria-hidden="true"
+                >{i18n.t('compare.partial', { n: result.stats.partialTokens })}</span
+              ><span class="visually-hidden">{i18n.t('counts.partial', { n: result.stats.partialTokens })}</span></span
             >{/if}
         {:else}
-          <span data-testid="row-status">{status}</span>
+          <span class="cmp-item"
+            ><span aria-hidden="true">·</span><span class="cmp-wrap" data-testid="row-status">{status}</span></span
+          >
           {#if action !== null}
             <button type="button" class="btn btn-quiet" data-testid="row-action" data-action={action} onclick={act}
               >{i18n.t(ACTION_LABEL[action])}</button

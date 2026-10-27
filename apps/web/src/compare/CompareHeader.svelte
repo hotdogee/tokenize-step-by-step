@@ -42,13 +42,15 @@
     <div class="cmp-caption">
       <span class="cmp-cap"
         ><b>{i18n.t('stage.1')}</b><span>{i18n.t('counts.codePoints', { n: source.codePoints })}</span><span
-          aria-hidden="true">·</span
-        ><span>{i18n.t('counts.bytes', { n: source.utf8.length })}</span><span
+          class="cmp-item"
+          ><span aria-hidden="true">·</span><span>{i18n.t('counts.bytes', { n: source.utf8.length })}</span></span
+        ><span
           class="cmp-item cmp-hint"
           class:off={!overflow}
           aria-hidden={overflow ? undefined : 'true'}
           data-testid="compare-hint"><span aria-hidden="true">·</span><span>{i18n.t('compare.scrollHint')}</span></span
-        >{#if isOnDemand(app.longInput)}<span aria-hidden="true">·</span><span>{i18n.t('longInput.banner')}</span
+        >{#if isOnDemand(app.longInput)}<span class="cmp-item"
+            ><span aria-hidden="true">·</span><span class="cmp-wrap">{i18n.t('longInput.banner')}</span></span
           ><button
             type="button"
             class="btn"

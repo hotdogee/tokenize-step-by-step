@@ -132,6 +132,8 @@ export const en = {
   'compare.apiTotal': '{total} tokens via the API, about {frame} of them frame',
   'compare.loading': 'loading {percent}',
   'compare.scrollHint': 'scroll sideways for the rest of the text',
+  'compare.partial': '{n} partial',
+  'compare.claudeLegacy': 'Claude 1/2 legacy',
 
   // ---- Advanced disclosure (PA-19) ----
   'advanced.label': 'Advanced',

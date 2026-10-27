@@ -147,7 +147,9 @@ describe('the default rows (台灣台南)', () => {
     ]);
     const anthropic = section.querySelector('[data-row="anthropic"] .cmp-cap')?.textContent ?? '';
     expect(anthropic).toContain('5 tokens');
-    expect(anthropic).toContain('2 partial-character tokens');
+    const partial = section.querySelector('[data-row="anthropic"] [data-testid="row-partial"]');
+    expect(partial?.querySelector('[aria-hidden="true"]:nth-child(2)')?.textContent).toBe('2 partial');
+    expect(partial?.querySelector('.visually-hidden')?.textContent).toBe('2 partial-character tokens');
     expect(section.querySelectorAll('[data-source="precomputed"]')).toHaveLength(5);
   });
 
