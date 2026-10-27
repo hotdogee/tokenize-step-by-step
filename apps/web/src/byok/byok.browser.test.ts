@@ -233,7 +233,7 @@ describe('live token tier on the board (extra-tier hook)', () => {
           expectWithin(lineRun(line), paddingBox(chip), `${lv.dataset['liveId'] ?? ''} ${line.textContent}`);
       }
       expect(grid.querySelector('.lv-cell[data-live-id="236778"] .bd-id.two')).not.toBeNull();
-      // The row grows by the extra track (token cells + 9 px), and the board's probe measures the same row height.
+      // The row grows by the extra track (token cells + 4 px), and the board's probe measures the same row height.
       const row = grid.querySelector('.bd-row')?.getBoundingClientRect().height ?? 0;
       expect(row).toBeCloseTo(cell * 3.5 + 56 + cell * 0.75 + 9, 0);
       expect(board.target.querySelector('.probe')?.getBoundingClientRect().height).toBeCloseTo(row, 1);
@@ -260,7 +260,7 @@ describe('live token tier on the board (extra-tier hook)', () => {
       for (const chip of live) {
         expect(chip.top - tokenBottom).toBeGreaterThanOrEqual(0);
         expect(chip.top - tokenBottom).toBeLessThanOrEqual(4);
-        // The 12 px gap track follows the live tier, so the next row's characters stay clear of it.
+        // The gap track (≥ 12 px) follows the live tier, so the next row's characters stay clear of it.
         expect(chip.bottom + 12).toBeLessThanOrEqual((row?.bottom ?? 0) + 0.02);
       }
       const next = grid.querySelector('[data-row="1"] .bd-cell-char')?.getBoundingClientRect();

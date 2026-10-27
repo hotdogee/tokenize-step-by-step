@@ -790,7 +790,7 @@
     height: calc(var(--row-h) + 16px);
   }
 
-  /* The extra tier's track (board.css .bd-grid.extra --extra-h: 32 px, from 2560 px the token cells' height + 9 px). */
+  /* The extra tier's track (board.css .bd-grid.extra --extra-h: 32 px, from 2560 px the token cells' height + 4 px). */
   .main.extra .probe {
     height: calc(var(--row-h) + 32px);
   }

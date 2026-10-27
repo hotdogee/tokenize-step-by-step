@@ -1,12 +1,12 @@
 /**
  * Board component tests in chromium (06 §1 "Component"): the 05 §4.1 hard cases rendered from fixture results with DOM
  * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks
- * (≥ 2560 px scaling from --cell; the gap track under the token tier taking the room the row does not use) with every
- * token id inside its chip (PA-17: narrowed, then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits;
- * markers, the dummy prefix's compact two-line id and byte-fallback chips; a live part's hex whole, without continuation
- * icons, its lock hidden on 1 and 2 columns; the stop-5 star clear of the id, on chips of two or more columns only), the
- * APG grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
- * view mounted while scrolling), CSP-safe styling and axe.
+ * (scaling from --cell from 2560 px; the gap track of ≥ 12 px under the token tier) with every token id inside its chip
+ * (PA-17: narrowed, then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits; markers, the dummy
+ * prefix's compact two-line id and byte-fallback chips; a live part's hex whole, without continuation icons, its lock
+ * hidden on 1 and 2 columns; the stop-5 star clear of the id, on chips of two or more columns only), the APG grid's
+ * ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in view
+ * mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import '../motion/motion.css';
@@ -281,8 +281,8 @@ describe('row tracks by breakpoint (05 §3.3)', () => {
       const gaps = gapsAround(board);
       expect(gaps.row.height).toBe(rowHeight);
       expect(gaps.token.bottom + 12).toBeLessThanOrEqual(gaps.row.bottom);
-      // No id track (ids sit inside the chips): the gap track takes the room the row does not use, so the chips sit
-      // farther from the next row's characters than from their own bytes.
+      // No id track (ids sit inside the chips): the gap track ends the row (12 px, from 1024 px `1fr`), so the chips
+      // sit farther from the next row's characters than from their own bytes.
       expect(gaps.bytes).toBeCloseTo(bytes, 0);
       expect(gaps.next).toBeCloseTo(next, 0);
       expect(gaps.next).toBeGreaterThan(gaps.bytes);

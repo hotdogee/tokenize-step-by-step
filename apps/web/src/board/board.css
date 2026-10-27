@@ -45,10 +45,10 @@
 }
 
 /* 480–767: the 132 px --row-h holds U+ labels and chunk brackets (05 §3.3), so the tiers sit flush. Token ids sit inside
-   their chips at every width (PA-17); from 480 px the row ends with a gap track that takes the space the row does not
-   use (12 px at 480–1023; from 1024 the empty dec track's 25 px join it when only one byte row shows), so a row's chips
-   sit farther from the next row's characters than from their own bytes at every width (14 / 18 → 18 / 22 → 16 / 46 px
-   at 600 / 800 / 1440; 16 / 21 with both byte rows). */
+   their chips at every width (PA-17); from 480 px the row ends with a gap track: 12 px at 480–1023 (2 px of slack stay
+   unused at 768–1023); from 1024 the gap is `1fr`: 39 px with one byte row, 14 px with both. So a row's chips sit
+   farther from the next row's characters than from their own bytes at every width (14 / 18 → 18 / 22 → 16 / 46 px at
+   600 / 800 / 1440; 16 / 21 with both byte rows). */
 @media (min-width: 480px) {
   .bd-row {
     grid-template-rows:
@@ -111,8 +111,9 @@
 
 /*
  * The extra tier (extra-tier.svelte.ts; WP10's live token tier): while it applies, every packed row grows by one
- * decorative track right under its token tier, before the gap (`[extra]`: 32 px, from 2560 px the token cells' height
- * + 9 px), a K-column grid like the tiers above it (Board.svelte's probe adds the same height).
+ * decorative track right under its token tier, before the gap (`[extra]`: 32 px, the token cells' 28 + 4; from 2560 px
+ * the token cells' height + 4 px, 0.75 × cell + 9 px), a K-column grid like the tiers above it (Board.svelte's probe
+ * adds the same height).
  */
 .bd-grid.extra {
   --extra-h: 32px;
