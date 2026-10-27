@@ -17,7 +17,6 @@ import { chromium } from 'playwright';
 import type { BrowserCommand } from 'vitest/node';
 import { defineConfig } from 'vitest/config';
 import { compileBoot } from './plugins/boot-script.ts';
-import { BOARD_VARIANTS, type BoardView } from './plugins/first-paint.ts';
 import { gridClasses } from './plugins/grid-classes.ts';
 
 /** True when Playwright's chromium for the pinned version is installed. */
@@ -42,16 +41,16 @@ if (!enabled) {
 }
 
 /**
- * `renderFirstPaint(locale, view)`: the static first paint's markup (src/app/prerender.ts), server-rendered by this
- * project's Vite server with the same Svelte plugin, so `first-paint.browser.test.ts` can hydrate it in chromium.
+ * `renderFirstPaint(locale)`: the static first paint's markup (src/app/prerender.ts), server-rendered by this project's
+ * Vite server with the same Svelte plugin, so `first-paint.browser.test.ts` can hydrate it in chromium.
  */
-const renderFirstPaint: BrowserCommand<[locale: string, view: BoardView], string> = async (context, locale, view) => {
+const renderFirstPaint: BrowserCommand<[locale: string], string> = async (context, locale) => {
   const server = context.project.browser?.vite;
   if (server === undefined) throw new Error('renderFirstPaint: no browser Vite server');
   const prerender = (await server.ssrLoadModule('/src/app/prerender.ts')) as {
-    renderFirstPaint(locale: string, view: BoardView): string;
+    renderFirstPaint(locale: string): string;
   };
-  return prerender.renderFirstPaint(locale, view);
+  return prerender.renderFirstPaint(locale);
 };
 
 /** `emulateContrast(contrast)`: `prefers-contrast` for the test page and its frames (null: the browser's own again). */
@@ -76,7 +75,6 @@ export default defineConfig({
       screenshotFailures: false,
       commands: {
         renderFirstPaint,
-        firstPaintVariants: () => BOARD_VARIANTS,
         emulateContrast,
         // The clone script as the build emits it (first-paint-script.browser.test.ts runs it against a test DOM).
         compileFirstPaintScript: () =>

@@ -64,8 +64,8 @@ export async function runExamples(
 ): Promise<{ output: ExamplesOutput; warning: string | null }> {
   const result = await generateExamples(options);
   await mkdir(options.out, { recursive: true });
-  const { perTokenizer, defaultExample, index } = result.output;
-  for (const file of [...perTokenizer, defaultExample, index])
+  const { perTokenizer, defaultExamples, index } = result.output;
+  for (const file of [...perTokenizer, defaultExamples, index])
     await writeFile(join(options.out, file.name), file.json, 'utf8');
   return result;
 }

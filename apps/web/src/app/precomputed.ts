@@ -1,7 +1,7 @@
 /**
  * Precomputed example results while a tokenizer loads (AD-16, 05 §12): every example chip × tokenizer was computed from
- * the golden fixtures at build time. The default chip on the default tokenizer is inlined in the main bundle
- * (`generated/examples-default.json`); the others are the lazy `examples/<tokenizer>.<sha8>.json` files
+ * the golden fixtures at build time. The default chip on each lab's primary tokenizer is inlined in the main bundle
+ * (`generated/examples-default.json`, PA-19); the others are the lazy `examples/<tokenizer>.<sha8>.json` files
  * (`examples-index.json` › `files`), fetched on the first lookup for that tokenizer and expanded by `fromFixtureCase`
  * on the main thread. Best effort: a text that is no chip, a missing file or an option the wire cannot express (special
  * tokens matched, NFKC) answers `null`, and the board waits for the engine instead.
@@ -31,7 +31,7 @@ export class PrecomputedExamples implements PrecomputedSource {
   readonly #inline = new Map<TokenizerId, ExamplesWire>();
   readonly #lazy = new Map<TokenizerId, Promise<ExamplesWire | null>>();
 
-  /** `inline`: wires already in the bundle (the default example). */
+  /** `inline`: wires already in the bundle (the default rows). */
   constructor(
     files: Readonly<Partial<Record<TokenizerId, string>>>,
     inline: readonly ExamplesWire[] = [],

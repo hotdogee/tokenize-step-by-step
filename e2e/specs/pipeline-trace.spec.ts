@@ -117,7 +117,7 @@ async function animationsAroundCommit(page: Page, key: string): Promise<AroundCo
           let n = 0;
           const tick = (): void => {
             store['__tsbsLater'] = Math.max(store['__tsbsLater'] ?? 0, document.getAnimations().length);
-            const label = document.querySelector('.bd-ulabel');
+            const label = document.querySelector('[data-testid="board-grid"] .bd-ulabel');
             if (n === 4 && label !== null)
               store['__tsbsLabels'] = getComputedStyle(label).visibility === 'hidden' ? 1 : 0;
             if (++n < 6) requestAnimationFrame(tick);
@@ -132,7 +132,7 @@ async function animationsAroundCommit(page: Page, key: string): Promise<AroundCo
   await drained(page);
   return page.evaluate(() => {
     const store = window as unknown as Record<string, number>;
-    const label = document.querySelector('.bd-ulabel');
+    const label = document.querySelector('[data-testid="board-grid"] .bd-ulabel');
     return {
       commitFrame: store['__tsbsCommitFrame'] ?? -1,
       later: store['__tsbsLater'] ?? 0,
@@ -146,13 +146,14 @@ test('the stop 2→3 morph at 600 cells: nothing animates in the commit frame, w
   page,
   browser,
 }) => {
-  await page.setViewportSize({ width: 1440, height: 3200 });
+  // Tall enough for the whole board under the comparison table (PA-19): every one of the 150 boxes is on screen.
+  await page.setViewportSize({ width: 1440, height: 4400 });
   await countBoxFlips(page);
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   const text = '台灣台南日本語東京都渋谷区'.repeat(12).slice(0, 150);
   await page.locator('#text-input').fill(text);
   await expect(page.getByTestId('counts')).toContainText('450 bytes');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await expect(grid(page).locator('.bd-cell-char')).toHaveCount(150);
   await motionReady(page);
   await page.keyboard.press('Digit2');

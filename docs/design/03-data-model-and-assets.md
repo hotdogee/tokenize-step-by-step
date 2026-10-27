@@ -466,19 +466,21 @@ load(tokenizerId)
  7. phase 'build': readTsbv1 (copies PCES; container released) → ByteVocab (offsets + table) → engine factory (lazy import per family) → phase steps 'pieces' | 'merges'
  8. cache.put(url, new Response(bytes, { headers: { 'x-tsbs-layer': layer } })) when it came from the network and quota allows
       (navigator.storage.estimate(): need ≥ 2× asset free); the stored body is exactly what was verified
- 9. index entry (JSON at `index` in the same cache) records { url, bytes, lastUsed }; keep ≤ 3 tokenizers or ≤ 12 MiB (LRU evict)
+ 9. index entry (JSON at `index` in the same cache) records { url, bytes, lastUsed }; keep ≤ 9 tokenizers (every local one, PA-19) or ≤ 12 MiB (LRU evict)
 10. on startup: delete caches named 'tsbs-tok-*' with another version; delete entries whose url is not in the manifest
 11. post 'loaded' { fromCache, ms, bytesTransferred, contentEncoding: resp.headers.get('content-encoding'), layer }   (perf log + About diagnostics)
 ```
 
-Progress weights for the picker bar (from measured times): download 0–75 %, verify 75–78 %, decompress 78–84 %, build 84–100 %. `prefetch(id)` = steps 3–5 + 8 only (download + cache, no build), issued by the client on `requestIdleCallback` for the lab's secondary tokenizer when `navigator.connection` is **undefined** (Firefox, Safari) **or** `effectiveType === '4g'`, and never when `saveData` is true (AD-19). Prefetching the id that is currently loading is a no-op. A 404 (stale client after a deploy) → `error { code: 'fetch', retryable: false }` → UI "A new version is available — reload". The picker's "downloaded ✓" state is derived from a `cache.keys()` probe each time the picker opens, never from the index entry alone: iOS Safari evicts script-writable storage (Cache API included) after 7 days without interaction, and About › Diagnostics says so next to the cache listing so the behaviour is not mistaken for a bug.
+The index is **advisory across Workers** (PA-19): the page runs one Worker per tokenizer on screen, each loader serializes only its own cache operations, so two Workers that commit at the same moment may lose a row of the read-modify-write index (the asset itself stays cached, and startup cleanup still drops what the manifest no longer names). Eviction never triggers below nine tokenizers, which is every local one, so a lost row costs nothing today.
+
+Progress weights for the picker bar (from measured times): download 0–75 %, verify 75–78 %, decompress 78–84 %, build 84–100 %. `prefetch(id)` = steps 3–5 + 8 only (download + cache, no build). The page issues it through a Worker that is already up, for the other default rows, 10 s after the board's tokenizer has loaded and never when `saveData` is true (PA-19's idle prefetch, `ResultHub.prefetchIdle`); the client's `prefetchWhenIdle` keeps AD-19's rule (on `requestIdleCallback` when `navigator.connection` is **undefined** (Firefox, Safari) **or** `effectiveType === '4g'`, never with `saveData`). Prefetching the id that is currently loading is a no-op. A 404 (stale client after a deploy) → `error { code: 'fetch', retryable: false }` → UI "A new version is available — reload". The picker's "downloaded ✓" state is derived from a `cache.keys()` probe each time the picker opens, never from the index entry alone: iOS Safari evicts script-writable storage (Cache API included) after 7 days without interaction, and About › Diagnostics says so next to the cache listing so the behaviour is not mistaken for a bug.
 
 ### C.7 Precomputed example results (`examples` plugin)
 
 `fromFixtureCase(fixture, caseName, tokenizerEntry)` (core/fixture, pure, runs on the **main thread**) converts a fixture case into a `TokenizationResult` (tables + timeline from `merges[].steps` for the tiktoken family; spm cases carry no steps, so `timeline` is null; the rail then shows stops 1–4 and 6 with stop 4 derived from the final tokens — each token is one symbol, kinds from `type` — and stop 5 disabled with the hint "merge replay available once the tokenizer is loaded"). What ships is **not** the expanded result but the compact fixture subset it is built from:
 
 ```ts
-// wire format of generated/examples-default.json and dist/examples/<tokenizerId>.<sha8>.json (plain JSON; typed arrays are rebuilt by fromFixtureCase)
+// wire format of dist/examples/<tokenizerId>.<sha8>.json and of each element of the generated/examples-default.json array (plain JSON; typed arrays are rebuilt by fromFixtureCase)
 interface ExamplesWire { schema: 1; tokenizer: TokenizerId; cases: Record<string /* case name */, ExampleCaseWire>; }
 interface ExampleCaseWire {
   text: string; ids: number[];
@@ -491,7 +493,7 @@ interface ExampleCaseWire {
 }
 ```
 
-Paragraph chips (`zh-tw-paragraph` 814 o200k steps, `ja-paragraph` 660, `en-paragraph`) omit `merges`: their timeline arrives with the live engine (the board shows stops 1–4 and 6 meanwhile, the same as spm precomputed cases). Budgets: `generated/examples-default.json` (default chip × default tokenizer, inlined) ≤ 4 KB gz; `dist/examples/<tokenizerId>.<sha8>.json` (all chips for that tokenizer) **≤ 16 KB gz** each — a ceiling to be measured by WP03 and recorded in 06 §3 (estimate: 16 small chips with merges ≈ 6 KB + 3 paragraphs' ids/ends ≈ 7 KB). Served from `/examples/*` as `application/json`, edge-compressed, immutable. The chips list (`examples.json`) references fixture case names and `registry:check` asserts `chip.text === case.text`, so a chip can never show a result the oracles did not produce.
+Paragraph chips (`zh-tw-paragraph` 814 o200k steps, `ja-paragraph` 660, `en-paragraph`) omit `merges`: their timeline arrives with the live engine (the board shows stops 1–4 and 6 meanwhile, the same as spm precomputed cases). Budgets: `generated/examples-default.json` (an array of five wires: the default chip on each lab's primary tokenizer, the table's first paint, PA-19; inlined; `examples-index.json` names them in `defaults` and keeps `default` for the board's o200k pair) ≤ 4 KB gz together (measured 474 B); `dist/examples/<tokenizerId>.<sha8>.json` (all chips for that tokenizer) **≤ 16 KB gz** each — a ceiling to be measured by WP03 and recorded in 06 §3 (estimate: 16 small chips with merges ≈ 6 KB + 3 paragraphs' ids/ends ≈ 7 KB). Served from `/examples/*` as `application/json`, edge-compressed, immutable. The chips list (`examples.json`) references fixture case names and `registry:check` asserts `chip.text === case.text`, so a chip can never show a result the oracles did not produce.
 
 ### C.8 Guards (`tsbs-vocab guard`, also run by `pnpm check:dist`)
 

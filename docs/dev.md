@@ -68,9 +68,11 @@ Worker heap check fails under `TSBS_PERF=1` instead of skipping, so a green opt-
 
 ## Tokenizer client (`?mock=1`)
 
-The page tokenizes in a Web Worker (`@tsbs/worker`, PA-8): `apps/web/src/app/bootstrap.ts` builds
+The page tokenizes in Web Workers (`@tsbs/worker`, PA-8), one per tokenizer it shows (PA-19: a pool of at most six,
+`apps/web/src/app/tokenizer-pool.ts`): for each, `apps/web/src/app/clients.ts` builds
 `new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }))` from the Vite worker import
-`@tsbs/worker/entry?worker`, behind `DeferredClient`, so the client code, the Worker's host chunks (`assets/entry-*.js`
+`@tsbs/worker/entry?worker`. The result hub imports that code with its Worker side (`result-hub-engine.ts`, the
+`lazy-result-hub-engine-*.js` chunk) on the first load, so the client code, the Worker's host chunks (`assets/entry-*.js`
 and the `assets/entry-core-*.js` it imports) and the first engine chunk (`assets/bytelevel-*.js` or `assets/spm-*.js`,
 plus the shared `assets/engine-core-*.js`) load after first paint, followed by the tokenizer's `/tok/<id>/<sha12>.bin`.
 Typed text is tokenized live. No chunk may import `entry-*.js` itself: WebKit evaluates a module Worker's top-level
@@ -78,31 +80,53 @@ script again when another module imports it (a second host), so `apps/web/vite.c
 imports into `entry-core` and `check:dist` fails on such an import.
 
 Append `?mock=1` to the URL (`http://localhost:5173/?mock=1`, or `/?lang=ja&mock=1`) to use the precomputed-examples
-client instead (`ExamplesClient` over WP01's `MockTokenizerClient`): no Worker and no vocabulary download; the example
-chips answer from the lazy `examples/<id>.<sha8>.json` files (the oracle's results), and any other text shows "waiting
-for the tokenizer". E2E specs that need deterministic precomputed results open `/?mock=1`
-(`e2e/specs/live-worker.spec.ts` covers both modes); the Worker's generated inputs
+client instead (one `ExamplesClient` over WP01's `MockTokenizerClient` per tokenizer): no Worker and no vocabulary download; the example
+chips answer from the lazy `examples/<id>.<sha8>.json` files (the oracle's results), the empty text answers "0 tokens",
+and any other text shows "waiting for the tokenizer". E2E specs that need deterministic precomputed results open
+`/?mock=1` (`e2e/specs/live-worker.spec.ts` covers both modes); the Worker's generated inputs
 (`packages/worker/src/generated/{vocab-manifest,engine-config}.json`) come from `pnpm generate` or any Vite run.
 
 ## How the page is wired (WP13)
 
-One `AppState` (`apps/web/src/app/app-state.svelte.ts`, 05 §1.1) drives the client, the board, the rail, the inspector
-and the drawer:
+One `AppState` (`apps/web/src/app/app-state.svelte.ts`, 05 §1.1) drives the board, the rail, the inspector and the
+drawer, over the result hub (`result-hub.svelte.ts`, PA-19), which holds one result per tokenizer and token options for
+every view and owns the pool of clients:
 
-- **Startup.** The precomputed default example (台灣台南 on o200k, inlined) is on screen at first paint, badge
-  "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
+- **The page (PA-19).** `App.svelte`: the sticky header, the input panel (`TextInput`, `ExamplesMenu`), the comparison
+  table (`compare/CompareTable.svelte`), the Advanced disclosure (`shell/Advanced.svelte`: the picker button, then
+  `board/AdvancedBoard.svelte` — the rail and the board, a lazy chunk imported the first time it opens — then the
+  options, the counts line, the long-input banner and Copy link), the notices strip (the union over the tokenizers on
+  screen) and the footer. `AppState.advancedOpen` is URL-driven (`t`/`s` open it; the writer emits them only while it
+  is open) and the board's global keys open it; `AppState.rows` (`compare/rows.svelte.ts`) keeps the row choices
+  (`tsbs:rows`, `r=`).
+- **The table's rows.** CompareTable holds every visible row's hub entry (`hub.retain`/`release`, `ROW_OPTIONS`) and asks
+  for it on every text change of a live tier after the board's 40 ms debounce (the board's traced request goes first, so
+  the OpenAI row shares it), on a row switch (`hub.ensureRows` loads the new tokenizer) and after the board's on-demand
+  run (`AppState.rowRun`, one row after another); a row's whole-text result that the text has left is forgotten at
+  once (AD-27). The header box describes the text's UTF-8 (`headerText`) and analyses only its column window's slice;
+  every scroller renders the same window of ≤ 128 columns (`compare-window.ts`), placed with the generated `.c<n>`/`.s<n>`
+  classes; `scroll-sync.ts` keeps the three scrollers in step. `App.svelte` starts `hub.prefetchIdle` for the other
+  default rows once `app.start()` has loaded the board's tokenizer (10 s later, skipped under Save-Data).
+- **Startup.** The precomputed default rows (台灣台南 on each lab's primary tokenizer, inlined) seed the hub and are on
+  screen in the table at first paint (one static template per locale, PA-15), badge "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
   the first paint entry (`largest-contentful-paint`, else `paint`) and two animation frames (`load-trigger.ts`, 06 §3);
   `integration-load.spec.ts` asserts the Worker script and the `.bin` start after the last LCP entry. While a tokenizer
   loads, an example chip answers from the precomputed examples (`precomputed.ts`); the engine's first answer replaces a
   precomputed result inside the board's View Transition (`setResultTransition`, skipped above 8 MB, where the previous
   result is released first) and the badge says "live".
+- **Results and Workers** (PA-19). `hub.request(id, text, options, { trace })` answers precomputed while `id` is not
+  loaded and live once it is; a view `retain`s the entries it shows. Other tokenizers load on the first free-text edit,
+  a row switch (`hub.ensureRows`) or the board's need, and `hub.prefetchIdle` caches more vocabularies 10 s after the
+  board's tokenizer has loaded, unless Save-Data. A failed load answers the requests that waited for it (the row shows
+  the error with its action) and the next load runs them. Switching the board's tokenizer selects another Worker:
+  nothing is unloaded, and a tokenizer loaded before answers at once.
 - **Requests.** Every encode carries one sequence number: an older answer is dropped, a superseded encode settles as
   `cancelled` (never an error), keystrokes coalesce in the 40 ms debounce, an encode asked for during a load is sent once
   after `loaded`, a paste (`inputType` `insertFromPaste`) skips the debounce, an IME composition sends nothing until it is
   committed (05 §6; meanwhile the counts line keeps the last result's tokens, marked "stale").
 - **The board's result** is `AppState.board`: `final` (the current result, or its window), `stale` (the last result, kept
   with `data-pending` until its successor arrives — a keystroke on a loaded tokenizer renders once, PA-11; a tokenizer
-  switch keeps the last result, AD-19) or `text` (text-only stops 1–3, only while nothing is loaded for the text, an IME
+  switch keeps the last result until the new tokenizer answers) or `text` (text-only stops 1–3, only while nothing is loaded for the text, an IME
   composition is open or a long input waits). Rows virtualize above 600 cells or 8 packed rows (`board/window.ts`).
 - **Long input** (AD-27, `long-input.ts`): ≤ 2,000 code points live; ≤ 20,000 virtualized with scoped replay; above that
   the "Long input — tokenize on demand" banner runs the WHOLE analysed text once (`trace: { maxSteps: 50_000 }` up to
@@ -114,7 +138,7 @@ and the drawer:
   and is no live region of its own). A run asked for while the tokenizer loads runs on `loaded`, also after a failed
   load is retried, and is dropped when the text goes back under 20,001 code points (the load then encodes the short
   text live).
-- **URL state** (`url-state.ts`): `?t=&q=&s=<stage>.<step>&b=&lang=&tl=` is read once (`bootstrap.ts`), invalid values
+- **URL state** (`url-state.ts`): `?t=&q=&r=&s=<stage>.<step>&b=&lang=&tl=` is read once (`bootstrap.ts`; `t`/`s` open Advanced and are written only while it is open, `r` carries the table rows' choices, PA-19), invalid values
   ignored; every change but the text is written with `history.replaceState` 500 ms later; "Copy link" alone puts the text
   in `q` (≤ 2,000 code points) and confirms it.
 - **Errors** (`errors.ts`, 05 §12 / 04 §5) surface as one `role="alert"` toast with its action: reload (stale deploy),

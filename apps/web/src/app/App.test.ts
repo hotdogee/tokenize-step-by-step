@@ -27,10 +27,13 @@ describe('App shell (server-rendered)', () => {
       i18n.current = locale;
       const body = renderApp();
       expect(body).toContain('<h1 class="wordmark');
-      expect(body).toContain('Tokenize step by step');
+      expect(body).toContain('What is a token?');
       expect(body).toMatch(/<textarea[^>]*id="text-input"/);
-      expect(body).toContain('role="listbox"');
+      expect(body).toContain('aria-haspopup="menu"');
+      expect(body).toContain('role="menu"');
       expect(body).toContain('role="grid"');
+      expect(body).toContain('id="compare"');
+      expect(body).toContain('id="advanced"');
       expect(body).toContain('role="status"');
       expect(body).toMatch(/<footer/);
       expect(body).toContain(i18n.t('input.label'));
@@ -54,27 +57,58 @@ describe('App shell (server-rendered)', () => {
     expect(body).toContain('aria-label="Keyboard shortcuts and help"');
   });
 
-  it('shows the selected tokenizer’s required notices only (05 §15)', () => {
+  it('shows the union of the notices the tokenizers on screen require (05 §15, PA-19)', () => {
     i18n.current = 'ja';
-    const grok2 = renderApp((app) => {
-      app.tokenizer = 'xai-grok2';
+    const byDefault = renderApp();
+    expect(byDefault).toContain('Powered by xAI'); // the xAI row shows Grok-2
+    expect(byDefault).toContain('lang="en"');
+    expect(byDefault).not.toContain('Built with Meta Llama 3');
+    const grok1 = renderApp((app) => {
+      app.rows.select('xai', 'xai-grok1');
     });
-    expect(grok2).toContain('Powered by xAI');
-    expect(grok2).toContain('lang="en"');
-    const o200k = renderApp();
-    expect(o200k).not.toContain('Powered by xAI');
+    expect(grok1).not.toContain('Powered by xAI');
+    const board = renderApp((app) => {
+      app.rows.select('xai', 'xai-grok1');
+      app.tokenizer = 'xai-grok2';
+      app.advancedOpen = true;
+    });
+    expect(board).toContain('Powered by xAI'); // the board's tokenizer while Advanced is open
     const llama3 = renderApp((app) => {
-      app.tokenizer = 'meta-llama3';
+      app.rows.select('meta', 'meta-llama3');
     });
     expect(llama3).toContain('Built with Meta Llama 3');
+    expect(llama3.indexOf('Built with Meta Llama 3')).toBeLessThan(llama3.indexOf('Powered by xAI')); // row order
   });
 
-  it('marks chips that split a character on the selected tokenizer', () => {
+  it('sets an explanatory notice as muted text with its short link after it; legal notices stay links', () => {
     i18n.current = 'en';
-    const cl100k = renderApp((app) => {
-      app.tokenizer = 'openai-cl100k_base';
+    const body = renderApp();
+    expect(body).toMatch(/<span class="explain[^"]*">This is the public Claude 1\/2-era vocabulary/);
+    expect(body).toMatch(
+      /<a href="https:\/\/github\.com\/anthropics\/anthropic-tokenizer-typescript"[^>]*>Archived @anthropic-ai\/tokenizer repository<\/a>/,
+    );
+    expect(body).toMatch(/<a href="\/licenses\/xai-grok2\/LICENSE" lang="en"[^>]*>Powered by xAI<\/a>/);
+  });
+
+  it('lists every example in the Examples menu, grouped, as menu item radios (PA-19)', () => {
+    i18n.current = 'en';
+    const body = renderApp();
+    expect(body.match(/role="menuitemradio"/g)).toHaveLength(19);
+    expect(body.match(/role="group"/g)).toHaveLength(4);
+    expect(body).toMatch(/aria-checked="true"[^>]*data-key="zh-tw-tainan"/);
+  });
+
+  it('renders the five default rows with their tokenizer selects, the Anthropic one with the API option', () => {
+    i18n.current = 'en';
+    const body = renderApp();
+    for (const lab of ['openai', 'anthropic', 'google', 'meta', 'xai']) expect(body).toContain(`data-row="${lab}"`);
+    expect(body).toContain('aria-label="Anthropic tokenizer"');
+    expect(body).toContain('>Claude 5.5 · API key</option>');
+    const api = renderApp((app) => {
+      app.rows.select('anthropic', 'anthropic-api');
     });
-    expect(cl100k).toMatch(/data-key="zh-tw-tainan"[\s\S]*?splits a character on this tokenizer/);
+    expect(api).toContain('Current Claude models count tokens through the API.');
+    expect(api).toContain('Live check…');
   });
 });
 

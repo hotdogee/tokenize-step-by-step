@@ -11,8 +11,9 @@ import { userEvent } from 'vitest/browser';
 import { i18n } from '../i18n/locale.svelte.ts';
 import AppHarness from './AppHarness.test-helper.svelte';
 import { AppState, type UiError } from './app-state.svelte.ts';
-import { defaultResult } from './bootstrap.ts';
-import { FakeClient, flush } from './fake-client.test-helper.ts';
+import { defaultResults } from './bootstrap.ts';
+import { FakeClient, flush, hubOf } from './fake-client.test-helper.ts';
+import { DEFAULT_TOKENIZER } from './registry.ts';
 
 const mounted: Array<() => void> = [];
 afterEach(() => {
@@ -23,7 +24,7 @@ afterEach(() => {
 function setup(): { app: AppState; client: FakeClient; root: HTMLElement } {
   i18n.set('en');
   const client = new FakeClient();
-  const app = new AppState(client, defaultResult());
+  const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
   const root = document.createElement('div');
   document.body.append(root);
   const component = mount(AppHarness, { target: root, props: { app } });

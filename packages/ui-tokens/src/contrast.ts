@@ -7,7 +7,9 @@
  * - chip text `--fg` vs each of the 8 tints ≥ 4.5:1;
  * - `--border` vs each of the 16 tints and the 4 surfaces ≥ 3:1;
  * - the `--fg` hatch stripe vs its own tint ≥ 3:1;
- * - `--accent` vs each of the 16 tints and the 4 surfaces ≥ 3:1, which includes `--bg`, the focus ring's halo.
+ * - `--accent` vs each of the 16 tints and the 4 surfaces ≥ 3:1, which includes `--bg`, the focus ring's halo;
+ * - the comparison table's scrollbar thumb `--fg-muted` vs its track `--surface-2` ≥ 3:1 (PA-19: an author-styled
+ *   control, WCAG 1.4.11).
  * Informational (warnings): adjacent tints ≥ 45° hue and ≥ 0.07 L apart.
  *
  * "16 tints" = the 8 chip tints plus the 8 byte-cell tints, which 05 §4 defines as the owning token's tint at 40 % over the
@@ -113,7 +115,7 @@ export const BYTE_CELL_SURFACE = '--surface-2';
 /** One asserted pair. */
 export interface ContrastCheck {
   readonly theme: Theme;
-  readonly rule: 'chip-text' | 'border' | 'hatch' | 'accent';
+  readonly rule: 'chip-text' | 'border' | 'hatch' | 'accent' | 'scrollbar';
   readonly fg: string;
   readonly bg: string;
   readonly ratio: number;
@@ -131,7 +133,7 @@ export function themeColors(css: string, theme: Theme): ReadonlyMap<string, Oklc
   const light = declarationsOf(css, THEME_SELECTORS.light);
   const own = theme === 'light' ? light : declarationsOf(css, THEME_SELECTORS[theme]);
   const out = new Map<string, Oklch>();
-  for (const name of [...SURFACES, ...TINTS, '--fg', '--border', '--accent']) {
+  for (const name of [...SURFACES, ...TINTS, '--fg', '--fg-muted', '--border', '--accent']) {
     const raw = own.get(name) ?? light.get(name);
     const color = raw === undefined ? null : parseOklch(raw);
     if (color === null) throw new Error(`${theme}: ${name} is not a plain oklch() value (${String(raw)})`);
@@ -167,6 +169,7 @@ export function checkContrast(css: string): ContrastReport {
     for (const [name, bg] of backgrounds) add('border', '--border', name, bg, 3);
     for (const tint of TINTS) add('hatch', '--fg', tint, color(tint), 3);
     for (const [name, bg] of backgrounds) add('accent', '--accent', name, bg, 3);
+    add('scrollbar', '--fg-muted', '--surface-2', color('--surface-2'), 3);
     TINTS.forEach((tint, i) => {
       const next = TINTS[(i + 1) % TINTS.length] ?? tint;
       const a = color(tint);

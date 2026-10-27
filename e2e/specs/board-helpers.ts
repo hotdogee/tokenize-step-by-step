@@ -24,11 +24,16 @@ export async function focusBoard(page: Page): Promise<void> {
   await stop.focus();
 }
 
-/** Applies an example chip by its key (`zh-tw-tainan`, `mixed-hello-taiwan-tokyo`, …) and waits for its result. */
+/**
+ * Applies an example by its key (`zh-tw-tainan`, `mixed-hello-taiwan-tokyo`, …) through the Examples menu (PA-19) and
+ * waits for its result: the table's OpenAI row answers it, and the board, when Advanced is open, is no longer pending.
+ */
 export async function chooseExample(page: Page, key: string): Promise<void> {
-  await page.locator(`[data-key="${key}"]`).click();
-  await expect(page.locator('[data-source]')).toBeVisible();
-  await expect(grid(page)).not.toHaveAttribute('data-pending', '');
+  await page.getByTestId('examples-button').click();
+  await page.locator(`[data-testid="examples-menu"] [data-key="${key}"]`).click();
+  await expect(page.locator('[data-testid="compare"] [data-row="openai"]')).toHaveAttribute('data-state', 'current');
+  if ((await page.locator('details#advanced[open]').count()) > 0)
+    await expect(grid(page)).not.toHaveAttribute('data-pending', '');
 }
 
 export interface Rect {

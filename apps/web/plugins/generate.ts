@@ -25,7 +25,7 @@ const { output, warning } = await generateExamples({
   chips: join(repo, 'packages', 'registry', 'data', 'examples.json'),
 });
 if (warning !== null) console.warn(`generate: ${warning}`);
-await writeIfChanged(join(generated, output.defaultExample.name), output.defaultExample.json);
+await writeIfChanged(join(generated, output.defaultExamples.name), output.defaultExamples.json);
 await writeIfChanged(join(generated, output.index.name), output.index.json);
 
 const licences = await generateLicences(

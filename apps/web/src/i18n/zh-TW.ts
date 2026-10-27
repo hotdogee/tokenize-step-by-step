@@ -8,19 +8,18 @@ import type { Catalog } from './en.ts';
 
 export const zhTW = {
   // ---- App and page meta ----
-  'app.name': 'Tokenize step by step',
-  'meta.main.title': 'Tokenize step by step・逐步分詞',
-  'meta.main.description':
-    '看文字如何變成詞元：碼位、UTF-8 位元組、預分詞切塊與每一次 BPE 合併，全部在你的瀏覽器裡完成。',
-  'meta.about.title': '關於・Tokenize step by step',
-  'meta.about.description': '這個分詞視覺化工具呈現了什麼、各分詞器的可信度，以及所附詞彙表的授權。',
-  'meta.notFound.title': '找不到頁面・Tokenize step by step',
+  'app.name': 'What is a token?',
+  'meta.main.title': 'What is a token?・什麼是詞元？',
+  'meta.main.description': '看看各家實驗室最新的分詞器如何逐位元組切分你的文字，並逐步檢視單一分詞器的每一次合併。',
+  'meta.about.title': '關於・What is a token?',
+  'meta.about.description': '這個網站呈現了什麼、各分詞器的可信度，以及所附詞彙表的授權。',
+  'meta.notFound.title': '找不到頁面・What is a token?',
   'notFound.heading': '找不到這個頁面',
   'notFound.body': '這個網址沒有任何內容。',
   'notFound.back': '回到分詞器',
 
   // ---- Navigation ----
-  'nav.skip': '跳到對照圖',
+  'nav.skip': '跳到詞元',
   'nav.skipMain': '跳到主要內容',
   'nav.home': '回到分詞器',
   'nav.about': '關於',
@@ -88,7 +87,10 @@ export const zhTW = {
   'textLang.ja': '日文',
   'textLang.en': '英文',
   'examples.label': '範例',
-  'a11y.chipSplits': '在這個分詞器上會切開一個字元',
+  'examples.group.zhHant': '繁體中文',
+  'examples.group.ja': '日本語',
+  'examples.group.en': 'English',
+  'examples.group.mixed': '混合文字與表情符號',
   'options.label': '選項',
   'option.specialTokens': '比對特殊詞元',
   'option.addBos': '加上 BOS',
@@ -98,6 +100,8 @@ export const zhTW = {
   'byteView.dec': 'DEC',
   'byteView.both': '兩者',
   'graphemes.toggle': '字位簇括號',
+  'options.chipText': '顯示詞元文字',
+  'options.chipHatch': '標示跨字元的詞元',
   'counts.label': '統計',
   'counts.codePoints': { other: '{n} 碼位' },
   'counts.graphemes': { other: '{n} 字位簇' },
@@ -112,6 +116,26 @@ export const zhTW = {
   'counts.stale': '已過時',
   'badge.precomputed': '預先計算',
   'badge.live': '即時',
+
+  // ---- 對照表（PA-19） ----
+  'compare.label': '各家實驗室的詞元',
+  'compare.caption': '{lab}・{tokenizer}',
+  'compare.selectLabel': '{lab} 的分詞器',
+  'compare.anthropicApi': 'Claude 5.5・API 金鑰',
+  'compare.apiNote': '目前的 Claude 模型只能透過 API 計算詞元。在你加入金鑰之前，不會傳送任何資料。',
+  'compare.liveCheck': '即時檢查…',
+  'compare.apiTotal': '透過 API 計算的 {total} 個詞元（約 {frame} 個為框架）',
+  'compare.loading': '載入中 {percent}',
+  'compare.scrollHint': '左右捲動可看到其餘的文字',
+  'compare.partial': '{n} 個跨字元',
+  'compare.claudeLegacy': 'Claude 1/2 舊版',
+  'compare.oomRow': '這台裝置的記憶體不足以載入 {name}',
+
+  // ---- 進階（PA-19） ----
+  'advanced.label': '進階',
+  'advanced.summary': '單一分詞器的逐步分詞・選項・計數・複製連結',
+  'advanced.stepByStep': '逐步分詞',
+  'advanced.options': '選項',
 
   // ---- Pipeline stages ----
   'stage.1': '文字',
@@ -190,7 +214,7 @@ export const zhTW = {
 
   // ---- Notices strip and footer ----
   'notices.label': '{name} 的聲明',
-  'footer.fidelity': '可信度：',
+  'notices.labelMany': '{count} 個分詞器的聲明',
   'footer.privacy': '完全在你的瀏覽器中執行。沒有分析追蹤，也沒有 Cookie。',
   'footer.build': '版本 {sha}・{date}',
 

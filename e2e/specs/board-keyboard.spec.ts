@@ -16,7 +16,7 @@ import { chooseExample, focusBoard, focusedCell, grid } from './board-helpers.ts
 import { openShell, pickTokenizer } from './shell-helpers.ts';
 
 test('the board is one tab stop between the controls and the inspector', async ({ page }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await page.locator('#text-input').focus();
   let reached = '';
   for (let i = 0; i < 60 && !reached.startsWith('char:'); i++) {
@@ -44,7 +44,7 @@ test.describe('desktop layout', () => {
 
   test('keyboard tour: arrows, edges, rows, pin, inspector and Esc (o200k 台灣台南)', async ({ page }, testInfo) => {
     const guards = await watchPage(page);
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     await focusBoard(page);
     const press = async (key: string, expected: string): Promise<void> => {
       await page.keyboard.press(key);
@@ -87,7 +87,7 @@ test.describe('desktop layout', () => {
 
 test('a span wrapped over rows is one logical cell (360 px, token " 東京")', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'mixed-hello-taiwan-tokyo');
   const fragments = grid(page).locator('[data-tier="token"][data-index="4"]');
   await expect(fragments).toHaveCount(2);
@@ -109,7 +109,7 @@ test('a span wrapped over rows is one logical cell (360 px, token " 東京")', a
 });
 
 test('focus keeps its byte anchor when a stage change remounts the tiers', async ({ page }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'zh-tw-tainan');
   await focusBoard(page);
   await page.keyboard.press('ArrowDown');
@@ -128,7 +128,7 @@ test('focus keeps its byte anchor when a stage change remounts the tiers', async
 test('focus keeps its byte anchor across re-tokenization (o200k → cl100k) and a virtual remount (new K)', async ({
   page,
 }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'zh-tw-tainan');
   await focusBoard(page);
   for (const key of ['ArrowDown', 'ArrowDown', 'ArrowRight', 'ArrowRight']) await page.keyboard.press(key);
@@ -162,7 +162,7 @@ test('the inspector catalog and the keyboard hint load on the first interaction,
   page.on('request', (request) => {
     if (/\/lazy-catalogs-[\w-]+\.js$/.test(new URL(request.url()).pathname)) fetched.push(request.url());
   });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   // A resting pointer is no interaction: browsers send pointermove at its unchanged position as the page appears
   // (headless chromium on Linux: at (0, 0) during startup).
   await page.mouse.move(0, 0);
@@ -181,7 +181,7 @@ test('the inspector catalog and the keyboard hint load on the first interaction,
 });
 
 test('"Single-key shortcuts: off" leaves the board keys (arrows, Enter, i, c, Esc) working', async ({ page }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await page.keyboard.press('Shift+Slash');
   const dialog = page.getByRole('dialog');
   await dialog.getByRole('switch', { name: 'Single-key shortcuts' }).uncheck();

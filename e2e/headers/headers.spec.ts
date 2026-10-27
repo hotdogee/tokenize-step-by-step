@@ -34,12 +34,15 @@ for (const { path } of PAGES) {
 
 // The Worker under the production headers (PA-8): worker-src 'self' admits assets/entry-*.js, script-src 'self' its lazy
 // engine import(), connect-src 'self' the /tok/*.bin fetch — a live result proves all three on workerd / the preview.
+// Since PA-19 the live result is the comparison table's OpenAI row (its source badge is visually hidden, so the check
+// reads the attribute); the counts line sits inside the closed Advanced disclosure and is not on the page.
 test('/ tokenizes typed text live in the Worker with zero CSP violations', async ({ page }) => {
   const guards = await watchPage(page);
   await page.goto('/?lang=en');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  const openai = page.locator('[data-testid="compare"] [data-row="openai"]');
+  await expect(openai.locator('[data-source]')).toHaveAttribute('data-source', 'live', { timeout: 15_000 });
   await page.locator('#text-input').fill('こんにちは台灣 123 abc');
-  await expect(page.getByTestId('counts')).toContainText('6 tokens'); // o200k: 95839 3735 133072 220 7633 75094
+  await expect(openai.locator('.cmp-cap')).toContainText('6 tokens'); // o200k: 95839 3735 133072 220 7633 75094
   expect(await guards.cspViolations()).toEqual([]);
   expect(guards.pageErrors()).toEqual([]);
 });

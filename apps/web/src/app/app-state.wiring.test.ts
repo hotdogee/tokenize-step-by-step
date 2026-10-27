@@ -1,19 +1,22 @@
 /**
  * The AppState controller's integration rules (WP13; 05 §1.1, §6, §12; AD-21, AD-27): sequence dropping, debounce
  * coalescing, the pending encode across a load, `cancelled` naming, focus persistence by byte offset, the precomputed →
- * live crossfade, the board's final / stale / text states, the long-input tiers and the URL state.
+ * live crossfade, the board's final / stale / text states, the long-input tiers and the URL state — over the result
+ * hub (PA-19). Most tests share one `FakeClient` among the pool's entries (one tokenizer at a time, so it behaves as the
+ * board's Worker); the switching tests spawn one per tokenizer (`FakeClients`).
  */
 import type { TokenizationResult } from '@tsbs/core';
 import { CancelledError } from '@tsbs/core/model/cancelled';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppState, ENCODE_DEBOUNCE_MS } from './app-state.svelte.ts';
-import { defaultResult } from './bootstrap.ts';
+import { defaultResults } from './bootstrap.ts';
 import { errorView } from './errors.ts';
-import { FakeClient, flush, syntheticResult } from './fake-client.test-helper.ts';
+import { FakeClient, FakeClients, flush, hubOf, syntheticResult } from './fake-client.test-helper.ts';
 import { ANALYSED_MAX, ON_DEMAND_MAX_STEPS, RELEASE_ABOVE_BYTES, resultBytes } from './long-input.ts';
 import { NoPrecomputedResultError } from './no-precomputed.ts';
 import type { PrecomputedSource } from './precomputed.ts';
 import { DEFAULT_TOKENIZER, EXAMPLES, tokenizerEntry } from './registry.ts';
+import { ROW_OPTIONS } from './result-hub.svelte.ts';
 import { STORAGE_KEYS } from './storage.ts';
 
 /**
@@ -35,10 +38,15 @@ function forcedGc(): () => Promise<void> {
 }
 
 /** An app whose o200k engine is loaded (resident) and whose first live encode is answered. */
-async function loadedApp(client = new FakeClient(), source: PrecomputedSource | null = null): Promise<AppState> {
-  const app = new AppState(client, defaultResult(), source);
+async function loadedApp(
+  clients: FakeClient | FakeClients = new FakeClient(),
+  source: PrecomputedSource | null = null,
+): Promise<AppState> {
+  const spawn = clients instanceof FakeClients ? clients.spawn : clients;
+  const app = new AppState(hubOf(spawn, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!], precomputed: source }));
   const start = app.start();
   await flush();
+  const client = clients instanceof FakeClients ? clients.of('openai-o200k_base') : clients;
   client.loads.at(-1)?.finish();
   await start;
   await flush();
@@ -112,7 +120,7 @@ describe('requests: seq, debounce, load, cancelled', () => {
   it('keeps an encode asked for during a load pending and sends exactly one, for the latest text, after `loaded`', async () => {
     vi.useRealTimers();
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult());
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     const start = app.start();
     await flush();
     expect(client.loads).toHaveLength(1);
@@ -202,7 +210,7 @@ describe('the board: final, stale, text (PA-11, AD-19, 05 §12)', () => {
 
   it('shows the text-only board while no tokenizer is loaded for the text, and while an IME composition is open', async () => {
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult());
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('typed before load');
     expect(app.board.kind).toBe('text');
     expect(app.board.result.tokens.count).toBe(0);
@@ -232,22 +240,35 @@ describe('the board: final, stale, text (PA-11, AD-19, 05 §12)', () => {
     expect(app.resultStale).toBe(false);
   });
 
-  it('keeps the last result through a tokenizer switch until the new engine answers (strict one-resident)', async () => {
-    const client = new FakeClient();
-    const app = await loadedApp(client);
+  it('keeps the last result through a tokenizer switch until the new engine answers (its own Worker, PA-19)', async () => {
+    const clients = new FakeClients();
+    const app = await loadedApp(clients);
+    const o200k = clients.of('openai-o200k_base');
     const before = app.board.result;
     const switching = app.selectTokenizer('openai-cl100k_base');
     await flush();
-    expect(client.unloads).toBe(1);
+    // No page-level unload: o200k stays resident in its Worker while cl100k loads in another (AD-19 per Worker).
+    expect(o200k.unloads).toBe(0);
+    expect(o200k.resident).toBe('openai-o200k_base');
     expect(app.board).toMatchObject({ kind: 'stale' });
     expect(app.board.result).toBe(before);
-    client.loads.at(-1)?.finish();
+    const cl100k = clients.of('openai-cl100k_base');
+    cl100k.loads.at(-1)?.finish();
     await switching;
     await flush();
-    client.encodes.at(-1)?.answer();
+    cl100k.encodes.at(-1)?.answer();
     await flush();
     expect(app.board.kind).toBe('final');
     expect(app.board.result.tokenizer).toBe('openai-cl100k_base');
+    // Back to o200k: still resident, so it encodes at once without a load.
+    void app.selectTokenizer('openai-o200k_base');
+    expect(app.loading).toBeNull();
+    expect(o200k.loads).toHaveLength(1);
+    expect(o200k.encodes.at(-1)?.text).toBe(app.text);
+    o200k.encodes.at(-1)?.answer();
+    await flush();
+    expect(app.board.result.tokenizer).toBe('openai-o200k_base');
+    expect(clients.all).toHaveLength(2);
   });
 });
 
@@ -285,7 +306,7 @@ describe('precomputed → live (AD-16, 05 §12)', () => {
       find: (ref, text) => Promise.resolve(text === chip.text ? syntheticResult(text, ref.id) : null),
     };
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult(), source);
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!], precomputed: source }));
     const swaps: number[] = [];
     app.setResultTransition((update) => {
       swaps.push(1);
@@ -442,26 +463,25 @@ describe('long input tiers (AD-27)', () => {
   });
 
   it('keeps the tokens stale through a tokenizer switch and back while the text differs from the run’s', async () => {
-    const client = new FakeClient();
-    const app = await loadedApp(client);
+    const clients = new FakeClients();
+    const app = await loadedApp(clients);
+    const o200k = clients.of('openai-o200k_base');
     const text = 'k'.repeat(27_000);
     app.setText(text, true);
     const run = app.runOnDemand();
-    client.encodes.at(-1)?.answer();
+    o200k.encodes.at(-1)?.answer();
     await run;
     expect(app.resultStale).toBe(false);
     app.setText(`${text}l`);
     expect(app.resultStale).toBe(true);
     const away = app.selectTokenizer('openai-cl100k_base');
     await flush();
-    client.loads.at(-1)?.finish();
+    clients.of('openai-cl100k_base').loads.at(-1)?.finish();
     await away;
     expect(app.tokenCounts).toBeNull(); // no run on cl100k
     expect(app.awaitingRun).toBe(true);
-    const back = app.selectTokenizer('openai-o200k_base');
-    await flush();
-    client.loads.at(-1)?.finish();
-    await back;
+    await app.selectTokenizer('openai-o200k_base'); // still resident in its Worker: no load (PA-19)
+    expect(o200k.loads).toHaveLength(1);
     expect(app.tokenCounts?.tokens).toBe(27_000); // the o200k run's tokens are back…
     expect(app.resultStale).toBe(true); // …and still not the text's
     app.setText(text); // the run's text again
@@ -501,7 +521,7 @@ describe('long input tiers (AD-27)', () => {
 
   it('runs the on-demand request after the load when the tokenizer is not resident yet', async () => {
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult());
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('e'.repeat(30_000));
     void app.runOnDemand();
     await flush();
@@ -514,7 +534,7 @@ describe('long input tiers (AD-27)', () => {
 
   it('drops a run asked for during a load once the text is short again: the load encodes the short text', async () => {
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult());
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('e'.repeat(30_000));
     const run = app.runOnDemand();
     await flush();
@@ -590,21 +610,29 @@ describe('error recovery (05 §12)', () => {
     await retry;
     expect(app.tokenCounts?.tokens).toBe(30_000);
 
+    // The same run again is answered by the hub from the result it holds (PA-19), without the Worker.
+    const sent = client.encodes.length;
+    await app.runOnDemand();
+    expect(client.encodes).toHaveLength(sent);
+    expect(app.tokenCounts?.tokens).toBe(30_000);
+
     // The engine went away (a Worker respawn): Retry reloads it, then runs again.
+    const edited = `${long}h`;
+    app.setText(edited);
     const again = app.runOnDemand();
     client.setResident(null);
     client.encodes.at(-1)?.reject(failure('not-loaded'));
     await again;
     expect(app.error).toMatchObject({ code: 'not-loaded', phase: 'run' });
-    const sent = client.encodes.length;
+    const posted = client.encodes.length;
     const reload = app.recover();
     await flush();
     expect(client.loads).toHaveLength(2);
-    expect(client.encodes).toHaveLength(sent);
+    expect(client.encodes).toHaveLength(posted);
     client.loads[1]?.finish();
     await reload;
-    expect(client.encodes).toHaveLength(sent + 1);
-    expect(client.encodes.at(-1)?.text).toBe(long);
+    expect(client.encodes).toHaveLength(posted + 1);
+    expect(client.encodes.at(-1)?.text).toBe(edited);
     expect(app.running).toBe(true);
   });
 
@@ -625,9 +653,61 @@ describe('error recovery (05 §12)', () => {
     expect(app.tokenizer).toBe(DEFAULT_TOKENIZER);
   });
 
+  it('reports a failed load as a load error (with its back action) while a free-text request waits for it', async () => {
+    const clients = new FakeClients();
+    const app = await loadedApp(clients);
+    app.setText('free text', true);
+    await flush();
+    const select = app.selectTokenizer('meta-llama3'); // free text: the board's request waits for the load
+    await flush();
+    clients.of('meta-llama3').loads[0]?.reject(failure('oom'));
+    await select;
+    await flush();
+    const error = app.error;
+    expect(error).toMatchObject({ code: 'oom', tokenizer: 'meta-llama3', previous: 'openai-o200k_base' });
+    if (error === null) throw new Error('no error');
+    expect(errorView(error, name, DEFAULT_TOKENIZER)).toMatchObject({ key: 'error.oom', action: 'back' });
+  });
+
+  it('a row’s Retry runs the on-demand run’s text while it is on screen, and nothing once the text has moved on', async () => {
+    const clients = new FakeClients();
+    const app = await loadedApp(clients);
+    const long = 'l'.repeat(25_000);
+    app.setText(long, true);
+    const run = app.runOnDemand();
+    clients.of('openai-o200k_base').encodes.at(-1)?.answer();
+    await run;
+    expect(app.rowRun?.text).toBe(long);
+    // The table's part of the run (CompareTable): two rows ask for the text, and both loads fail.
+    const rows = (['google-gemma4', 'xai-grok2'] as const).map((id) => {
+      app.hub.retain(id);
+      return app.hub.request(id, long, ROW_OPTIONS, { trace: false });
+    });
+    await flush();
+    for (const id of ['google-gemma4', 'xai-grok2'] as const)
+      clients.of(id).loads[0]?.reject(Object.assign(new Error('offline'), { code: 'fetch', retryable: true }));
+    for (const row of rows) await expect(row).resolves.toMatchObject({ kind: 'error' });
+    // The Google row's Retry while the run's text is still the text: the load runs it.
+    app.retryRow('google');
+    await flush();
+    clients.of('google-gemma4').loads[1]?.finish();
+    await flush();
+    expect(clients.of('google-gemma4').encodes.map((call) => call.text.length)).toEqual([25_000]);
+    // The text moves on inside the on-demand tier (the table asks for nothing until the next run): the xAI row's Retry
+    // loads Grok-2 and encodes nothing — never the whole text the page has left (AD-27).
+    app.setText(`${long}m`);
+    app.retryRow('xai');
+    await flush();
+    clients.of('xai-grok2').loads[1]?.finish();
+    await flush();
+    expect(clients.of('xai-grok2').encodes).toHaveLength(0);
+    expect(app.hub.entry('xai-grok2')).toMatchObject({ result: null, pending: false, error: null });
+    expect(app.hub.loaded('xai-grok2')).toBe(true);
+  });
+
   it('runs a run asked for before a failed load once Retry loads the tokenizer', async () => {
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult());
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('j'.repeat(30_000));
     const run = app.runOnDemand();
     await flush();
@@ -644,7 +724,7 @@ describe('error recovery (05 §12)', () => {
 
   it('loads again when "Tokenize now" is pressed after a failed load was dismissed', async () => {
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult());
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     const start = app.start();
     await flush();
     client.loads[0]?.reject(failure('internal'));
@@ -678,7 +758,7 @@ describe('error recovery (05 §12)', () => {
 describe('URL state (05 §1.1)', () => {
   it('applies a deep link and re-applies its merge step when the live result arrives', async () => {
     const client = new FakeClient();
-    const app = new AppState(client, defaultResult(), null, {
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }), {
       tokenizer: 'openai-cl100k_base',
       text: '熱鬧',
       stage: 5,
@@ -718,9 +798,15 @@ describe('URL state (05 §1.1)', () => {
     expect(app.step).toBe(3);
   });
 
-  it('takes a chip’s text language for a chip text and auto for free text', () => {
+  it('keeps the text language auto for any text, an example’s too, unless tl sets it (PA-19)', () => {
     const chip = EXAMPLES.find((c) => c.key === 'ja-shibuya-ramen');
-    expect(new AppState(new FakeClient(), null, null, { text: chip?.text ?? '' }).textLang).toBe('ja');
-    expect(new AppState(new FakeClient(), null, null, { text: 'free text' }).textLang).toBe('auto');
+    expect(new AppState(hubOf(new FakeClient()), { text: chip?.text ?? '' }).textLang).toBe('auto');
+    expect(new AppState(hubOf(new FakeClient()), { text: 'free text' }).textLang).toBe('auto');
+    expect(new AppState(hubOf(new FakeClient()), { text: chip?.text ?? '', textLang: 'ja' }).textLang).toBe('ja');
+  });
+
+  it('opens Advanced when the link carries t or s, and never otherwise (PA-19)', () => {
+    expect(new AppState(hubOf(new FakeClient()), {}).advancedOpen).toBe(false);
+    expect(new AppState(hubOf(new FakeClient()), { advanced: true, stage: 3 }).advancedOpen).toBe(true);
   });
 });

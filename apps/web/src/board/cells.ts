@@ -14,6 +14,7 @@
  *   dummy prefix's too, over a bar).
  */
 import type { PartsAt, ResolvedTextLang, RowModel, TokenizationResult } from '@tsbs/core';
+import type { TokenizerEntry } from '@tsbs/registry';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
 import { standInFor } from '@tsbs/core/text/stand-ins';
 import { codePointLabel, hexByte } from '@tsbs/core/text/utf8';
@@ -233,6 +234,16 @@ function tokenStarts(ctx: BoardContext): Uint8Array {
   if (!ctx.pending && stage >= 4) for (let i = 0; i < tokens.count; i++) marks[tokens.byteStart[i] ?? 0] = 1;
   tokenStartMarks.set(ctx, marks);
   return marks;
+}
+
+/**
+ * The first SentencePiece piece carries the dummy prefix (`▁Hello`, 03 §B.3): the engine adds one and no bare `▁` token
+ * exists. Shared by the board and the comparison table.
+ */
+export function fusesDummy(result: TokenizationResult, entry: TokenizerEntry): boolean {
+  if (entry.engine.kind !== 'spm-bpe' || !entry.engine.addDummyPrefix || result.tokens.count === 0) return false;
+  for (let t = 0; t < result.tokens.count; t++) if (result.tokens.kind[t] === TokenKind.DummyPrefix) return false;
+  return result.utf8.length > 0;
 }
 
 /** The digit count of a chip's id (0: none). */

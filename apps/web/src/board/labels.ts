@@ -4,7 +4,7 @@
  * from the catalogs through `t`, so every template renders in zh-TW, ja and en; ids, hex/dec values and offsets stay raw
  * ASCII digits (05 §10). Pure functions over a `TokenizationResult`.
  */
-import type { TokenizationResult } from '@tsbs/core';
+import type { CharTable, TokenizationResult } from '@tsbs/core';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
 import { isCombiningMark, standInFor, standInGlyph, type StandInKey } from '@tsbs/core/text/stand-ins';
 import { codePointLabel, decodeUtf8, hexByte } from '@tsbs/core/text/utf8';
@@ -13,6 +13,16 @@ import type { Params } from '../i18n/types.ts';
 
 /** The translator the board uses (`i18n.t`, or `translate` bound to a locale in tests). */
 export type Translate = (key: MessageKey, params?: Params) => string;
+
+/**
+ * What the glyph and byte-role helpers read: the text, its per-code-point columns and the byte → code point map — a
+ * `TokenizationResult`, or a bare `analyzeText` analysis (the comparison table's header, PA-19).
+ */
+export interface TextColumnsLike {
+  readonly text: string;
+  readonly chars: Pick<CharTable, 'cp' | 'utf16Start' | 'byteStart' | 'grapheme'>;
+  readonly byteToChar: ArrayLike<number>;
+}
 
 const STAND_IN_NAMES: Readonly<Record<StandInKey, MessageKey>> = {
   space: 'a11y.standin.space',
@@ -39,13 +49,13 @@ export function isVariationSelector(cp: number): boolean {
 }
 
 /** The source text of code point `i`. */
-export function charText(result: TokenizationResult, i: number): string {
+export function charText(result: TextColumnsLike, i: number): string {
   const { chars, text } = result;
   return text.slice(chars.utf16Start[i] ?? 0, chars.utf16Start[i + 1] ?? text.length);
 }
 
 /** What the char tier draws for code point `i`: the stand-in, the mark on a dotted circle, or the glyph itself. */
-export function visualGlyph(result: TokenizationResult, i: number): string {
+export function visualGlyph(result: TextColumnsLike, i: number): string {
   const cp = result.chars.cp[i] ?? 0;
   const standIn = standInFor(cp);
   if (standIn !== null) return standInGlyph(standIn, cp);
@@ -54,14 +64,14 @@ export function visualGlyph(result: TokenizationResult, i: number): string {
 }
 
 /** The base a combining mark attaches to: the previous code point of the same grapheme cluster, else the dotted circle. */
-function baseOf(result: TokenizationResult, i: number): string {
+function baseOf(result: TextColumnsLike, i: number): string {
   const { chars } = result;
   if (i > 0 && chars.grapheme[i - 1] === chars.grapheme[i]) return charText(result, i - 1);
   return DOTTED_CIRCLE;
 }
 
 /** What a screen reader hears for code point `i`: the stand-in's name, the combining-mark sentence, or the glyph. */
-export function spokenGlyph(result: TokenizationResult, i: number, t: Translate): string {
+export function spokenGlyph(result: TextColumnsLike, i: number, t: Translate): string {
   const cp = result.chars.cp[i] ?? 0;
   const standIn = standInFor(cp);
   if (standIn !== null) {
@@ -170,7 +180,7 @@ export function cutsChar(result: TokenizationResult, start: number, end: number)
 }
 
 /** The byte's role in its code point ("first byte of 灣"). */
-export function byteRole(result: TokenizationResult, byte: number, t: Translate, glyph: (i: number) => string): string {
+export function byteRole(result: TextColumnsLike, byte: number, t: Translate, glyph: (i: number) => string): string {
   const { chars, byteToChar } = result;
   const i = byteToChar[byte] ?? 0;
   const cs = chars.byteStart[i] ?? 0;

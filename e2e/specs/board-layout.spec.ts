@@ -18,7 +18,7 @@ for (const width of [320, 360, 768, 1440, 2560]) {
   test(`no horizontal overflow at ${String(width)} px (board and inspector included)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     const guards = await watchPage(page);
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     await chooseExample(page, 'zh-tw-paragraph');
     await focusBoard(page);
     await page.keyboard.press('ArrowRight');
@@ -37,7 +37,7 @@ test('at 360 px the focused cell is never under the sheet or the header (WCAG 2.
   test.slow(); // 120 key presses with a layout read after each: 15–25 s on WebKit, near the default 30 s timeout
   await page.setViewportSize({ width: 360, height: 780 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'zh-tw-paragraph');
   await focusBoard(page);
   for (const expanded of [false, true]) {
@@ -63,7 +63,7 @@ test('Ctrl+End and Ctrl+Home leave the focused cell in the viewport, clear of th
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' }); // instant scrolls: the checks read the settled position
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'zh-tw-paragraph'); // a long paragraph: its last row has never rendered
   await focusBoard(page);
   const focused = page.locator('[data-testid="board-grid"] :focus');
@@ -94,7 +94,7 @@ for (const [width, height] of [
     test.slow(); // 16 keys with a polled layout read after each: 12–15 s on WebKit alone, past 30 s under a full matrix
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     await chooseExample(page, 'zh-tw-paragraph');
     await focusBoard(page);
     await page.keyboard.press('ArrowDown');
@@ -138,7 +138,7 @@ test.describe('touch: expanding the sheet over a pinned cell', () => {
   test.skip(({ hasTouch }) => !hasTouch, 'touch projects only (pixel-5, iphone-12)');
 
   test('brings the pinned cell back into view above the expanded sheet', async ({ page }) => {
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     await expect(grid(page)).not.toHaveAttribute('data-pending', '');
     // Token 2 of the default example in the lower half of the viewport, just above the collapsed sheet, so the tap does
     // not scroll and the expanded sheet (40vh) would cover it.
@@ -181,7 +181,7 @@ test.describe('touch (Pixel 5)', () => {
   test.skip(({ browserName }) => browserName === 'firefox', 'Firefox has no mobile emulation (isMobile)');
 
   test('tap pins and tapping elsewhere unpins; targets are ≥ 24 × 24 with 36 px cells', async ({ page }) => {
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     await chooseExample(page, 'zh-tw-tainan');
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
     const chip = grid(page).locator('[data-tier="token"][data-index="1"]');
@@ -225,7 +225,7 @@ test.describe('touch at 600 px (Pixel 5 emulation)', () => {
   test('at stop 4 every board pointer target is ≥ 24 × 24; the 14 px chunk brackets are keyboard-only', async ({
     page,
   }) => {
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     await chooseExample(page, 'mixed-hello-taiwan-tokyo');
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
     await focusBoard(page);
@@ -298,7 +298,7 @@ test.describe('touch at 600 px (Pixel 5 emulation)', () => {
       }
     });
     await page.setViewportSize({ width: 320, height: 800 });
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     await chooseExample(page, 'zh-tw-paragraph');
     await expect(grid(page)).toHaveAttribute('aria-colcount', '8');
     const sizes = await page.evaluate(() => ({
@@ -324,7 +324,7 @@ test('forced colours draw borders in CanvasText and the hatched cut and the focu
   page,
 }) => {
   await page.emulateMedia({ forcedColors: 'active' });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await page.getByTestId('picker-button').click();
   await page
     .getByRole('dialog')

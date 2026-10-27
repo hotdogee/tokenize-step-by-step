@@ -1,47 +1,48 @@
 /**
- * The static first paint's server entry (PA-15, prerender.ts): what the build writes into index.html for each locale and
- * board view (the hydration itself is first-paint.browser.test.ts; the assembly plugins/first-paint.test.ts).
+ * The static first paint's server entry (PA-15, prerender.ts): what the build writes into index.html for each locale
+ * (the hydration itself is first-paint.browser.test.ts; the assembly plugins/first-paint.test.ts). PA-19: the page with
+ * the comparison table's five precomputed default rows and the Advanced disclosure closed, one render per locale.
  */
 import { describe, expect, it } from 'vitest';
 import { i18n } from '../i18n/locale.svelte.ts';
 import { LOCALES } from '../i18n/types.ts';
-import type { FirstPaintView } from './first-paint.ts';
 import { firstPaintKeep, renderFirstPaint } from './prerender.ts';
-
-const PHONE: FirstPaintView = { k: 9, wide: false, medium: false, small: false };
-const DESKTOP: FirstPaintView = { k: 12, wide: true, medium: true, small: true };
-
-/** The markup without its board section (Board.svelte's root, followed by its component anchor). */
-const withoutBoard = (markup: string): string =>
-  markup.replace(/<section class="board-region[\s\S]*?<\/section>(?=<!---->)/, '<board>');
 
 describe('renderFirstPaint', () => {
   for (const locale of LOCALES)
-    it(`renders ${locale} with no inline style or script, one board laid out for the view, and nothing else view-dependent`, () => {
-      const phone = renderFirstPaint(locale, PHONE);
-      const desktop = renderFirstPaint(locale, DESKTOP);
-      for (const markup of [phone, desktop]) {
-        expect(markup).not.toMatch(/<script|<style|\sstyle=/);
-        expect(markup.match(/<section class="board-region/g)).toHaveLength(1);
-        expect(markup.startsWith('<!--[-->')).toBe(true);
-      }
-      expect(phone).toContain('data-k="9"');
-      expect(phone).toContain('class="host svelte-');
-      expect(phone).toMatch(/data-surface="sheet"/);
-      expect(phone).not.toContain('bd-ulabel');
-      expect(desktop).toContain('data-k="12"');
-      expect(desktop).toMatch(/data-surface="rail"/);
-      expect(desktop).toContain('bd-ulabel');
-      expect(withoutBoard(phone)).toBe(withoutBoard(desktop));
-      expect(phone).toContain(`>${translateIn(locale)}</label>`);
+    it(`renders ${locale} with no inline style or script, one comparison table and no board`, () => {
+      const markup = renderFirstPaint(locale);
+      expect(markup).not.toMatch(/<script|<style|\sstyle=/);
+      expect(markup.match(/<section id="compare"/g)).toHaveLength(1);
+      expect(markup).not.toContain('board-region');
+      expect(markup).not.toContain('data-testid="board-grid"');
+      expect(markup).toMatch(/<details class="advanced[^"]*" id="advanced"/);
+      expect(markup).not.toMatch(/<details[^>]*id="advanced"[^>]*\sopen/);
+      expect(markup.startsWith('<!--[-->')).toBe(true);
+      expect(markup).toContain(`>${translateIn(locale)}</label>`);
       expect(i18n.current).toBe('en'); // restored
     });
 
-  it('renders the precomputed default example at stop 6 with the precomputed badge', () => {
-    const markup = renderFirstPaint('en', DESKTOP);
+  it('renders the five precomputed default rows of 台灣台南 with their counts and the precomputed badge', () => {
+    const markup = renderFirstPaint('en');
     expect(markup).toContain('>台灣台南</textarea>');
-    expect(markup).toContain('data-source="precomputed"');
-    expect(markup).toContain('value="6" checked=""');
+    expect(markup).toMatch(/<textarea[^>]*lang="zh-Hant-TW"/);
+    for (const [lab, tokenizer, tokens] of [
+      ['openai', 'openai-o200k_base', 4],
+      ['anthropic', 'anthropic-claude-legacy', 5],
+      ['google', 'google-gemma4', 3],
+      ['meta', 'meta-llama4-muse', 3],
+      ['xai', 'xai-grok2', 5],
+    ] as const) {
+      const row = new RegExp(`data-row="${lab}" data-tokenizer="${tokenizer}"[\\s\\S]*?${String(tokens)} tokens`);
+      expect(markup, lab).toMatch(row);
+    }
+    const table = markup.slice(markup.indexOf('<section id="compare"'), markup.indexOf('id="advanced"'));
+    expect(table.match(/data-source="precomputed"/g)).toHaveLength(5);
+    expect(table.match(/role="gridcell"/g)).toHaveLength(4 + 5 + 3 + 3 + 5);
+    expect(table.match(/role="columnheader"/g)).toHaveLength(4 + 12);
+    expect(table.match(/tabindex="0"/g)).toHaveLength(1);
+    expect(markup).toContain('class="cmp k12');
   });
 });
 
@@ -49,15 +50,17 @@ describe('firstPaintKeep', () => {
   it('names the URL parameters and stored preferences that keep the first render, at their default values', () => {
     const keep = new URLSearchParams(firstPaintKeep());
     expect(Object.fromEntries(keep)).toEqual({
-      t: 'openai-o200k_base',
+      t: '',
       q: '台灣台南',
-      s: '6',
+      r: '',
+      s: '',
       b: 'hex',
-      tl: 'zh-Hant',
+      tl: 'auto',
       'tsbs:byteView': 'hex',
-      'tsbs:graphemes': 'true',
       'tsbs:cellSize': 'M',
-      'tsbs:boardKeysUsed': 'false',
+      'tsbs:rows': '',
+      'tsbs:chipText': 'false',
+      'tsbs:chipHatch': 'false',
     });
   });
 });

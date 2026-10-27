@@ -1,9 +1,10 @@
 <script lang="ts">
   /**
-   * Page header (05 §1 region 1, §3.5): skip link, wordmark, the tokenizer picker chip (on `/`), the UI-language menu
-   * (文/A), the theme menu and the `?` help button. Icon-only buttons carry `aria-label`s from the catalog.
+   * Page header (05 §1 region 1, §3.5): skip link, wordmark, the UI-language menu (文/A), the theme menu and the `?` help
+   * button, on one line at every width. Icon-only buttons carry `aria-label`s from the catalog. It is sticky (PA-19): it
+   * stays at the top while the page scrolls, and the comparison table's header box pins right under it
+   * (`top: var(--header-h)`), so the bar keeps exactly `--header-h`. The tokenizer picker moved into Advanced.
    */
-  import type { Snippet } from 'svelte';
   import { i18n, toLocale } from '../i18n/locale.svelte.ts';
   import { LOCALES } from '../i18n/types.ts';
   import { theme, THEME_CHOICES, toThemeChoice } from '../theme/theme.svelte.ts';
@@ -15,10 +16,9 @@
     home: boolean;
     skipTarget: string;
     skipLabel: string;
-    picker?: Snippet;
     onhelp?: () => void;
   }
-  let { home, skipTarget, skipLabel, picker, onhelp }: Props = $props();
+  let { home, skipTarget, skipLabel, onhelp }: Props = $props();
 
   const LOCALE_LABEL = { en: 'locale.en', 'zh-TW': 'locale.zh-TW', ja: 'locale.ja' } as const;
   const THEME_LABEL = { auto: 'theme.auto', light: 'theme.light', dark: 'theme.dark' } as const;
@@ -36,9 +36,6 @@
       <h1 class="wordmark" lang="en">{i18n.t('app.name')}</h1>
     {:else}
       <a class="wordmark" href="/" lang="en">{i18n.t('app.name')}</a>
-    {/if}
-    {#if picker}
-      <div class="picker-slot">{@render picker()}</div>
     {/if}
     <div class="actions">
       <ChoiceMenu
@@ -78,29 +75,33 @@
 
 <style>
   .header {
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 20;
     border-block-end: var(--border-width) solid var(--border);
     background: var(--surface);
   }
 
+  /* One line of exactly --header-h (the table's header box pins at that offset): the wordmark gives way, never the bar. */
   .bar {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem 0.75rem;
-    padding-block: 0.25rem;
-    min-height: var(--header-h);
+    gap: 0.75rem;
+    height: calc(var(--header-h) - var(--border-width));
   }
 
   .wordmark {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-width: 0;
     margin: 0;
+    overflow: hidden;
     color: var(--fg);
     font-size: 1.0625rem;
     font-weight: 700;
     letter-spacing: 0.01em;
+    line-height: 1.2;
     text-decoration: none;
+    white-space: nowrap;
   }
 
   a.wordmark:hover {
@@ -112,26 +113,6 @@
     align-items: center;
     gap: 0.125rem;
     margin-inline-start: auto;
-  }
-
-  /* Below 768 px the picker chip takes its own full-width line under the bar (05 §3.4 sketch). */
-  .picker-slot {
-    order: 3;
-    flex: 1 0 100%;
-    min-width: 0;
-    padding-block-end: 0.25rem;
-  }
-
-  @media (min-width: 768px) {
-    .picker-slot {
-      order: 0;
-      flex: 0 1 auto;
-      padding-block-end: 0;
-    }
-
-    .wordmark {
-      flex: 0 1 auto;
-    }
   }
 
   .skip-link {

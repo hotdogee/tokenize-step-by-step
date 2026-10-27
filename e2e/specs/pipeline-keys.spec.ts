@@ -14,7 +14,7 @@ import { openShell, pickTokenizer } from './shell-helpers.ts';
 const status = (page: Page) => page.getByTestId('status');
 
 test('[ and ] move between stops; 1–6 jump; each stop is announced', async ({ page }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   expect(await checkedStop(page)).toBe(6);
   await page.keyboard.press('BracketLeft');
   await expect(page.getByRole('radio', { name: '5 of 6: Merges' })).toBeChecked();
@@ -61,7 +61,7 @@ test('stops 4–6 announce their own count in each UI language: chunks or symbol
     ['ja', 'チャンク：1 チャンク', 'マージ：8 ステップ', 'トークン：4 トークン'],
     ['en', 'Chunks: 1 chunk', 'Merges: 8 steps', 'Tokens: 4 tokens'],
   ] as const) {
-    await openShell(page, locale);
+    await openShell(page, locale, { advanced: true });
     for (const [key, text] of [
       ['Digit4', chunks],
       ['Digit5', steps],
@@ -73,7 +73,7 @@ test('stops 4–6 announce their own count in each UI language: chunks or symbol
   }
   // SentencePiece's stop 4 counts the symbols before any merge (Gemma 4: one per code point of 台灣台南).
   await pickTokenizer(page, 'Gemma 4');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await expect(scrubber(page)).toBeEnabled();
   await page.keyboard.press('Digit4');
   await expect(status(page)).toHaveText('Symbols: 4 symbols');
@@ -81,9 +81,9 @@ test('stops 4–6 announce their own count in each UI language: chunks or symbol
 });
 
 test(', and . step one merge, Shift steps ten, and the merge sentence is announced', async ({ page }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'ja-shibuya-ramen'); // 30 merges on o200k
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await page.keyboard.press('Digit3');
   await page.keyboard.press('Period'); // from stop 3: stop 5, step 0
   await expect(grid(page)).toHaveAttribute('data-stage', '5');
@@ -123,7 +123,7 @@ test(', and . step one merge, Shift steps ten, and the merge sentence is announc
 });
 
 test('Space plays and pauses on the scrubber only; Home/End are the first and last step', async ({ page }) => {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   const play = page.getByTestId('play');
   await scrubber(page).focus();
   await page.keyboard.press('Home');
@@ -158,7 +158,7 @@ test('"Single-key shortcuts: off" makes [ ] , . 1–6 inert while the rail keys 
       // storage blocked: the test would fail on the first key below
     }
   });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await page.locator('body').click({ position: { x: 2, y: 2 } });
   for (const key of ['BracketLeft', 'BracketRight', 'Comma', 'Period', 'Shift+Period', 'Digit3', 'Digit1']) {
     await page.keyboard.press(key);

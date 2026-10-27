@@ -19,7 +19,7 @@ export const EXPECTED_PAGE_HEADERS: Readonly<Record<string, string>> = {
 
 /** The two HTML entries every suite visits, with a title pattern robust to WP06's localized titles. */
 export const PAGES = [
-  { path: '/', title: /Tokenize step by step/ },
+  { path: '/', title: /What is a token\?/ },
   { path: '/about/', title: /About/ },
 ] as const;
 

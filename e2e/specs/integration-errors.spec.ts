@@ -1,8 +1,9 @@
 /**
  * WP13 integration — error toasts (05 §12, 04 §5) through `page.route`: a failed download says so and retries; a 404
  * (a stale deploy) offers the reload; a corrupted `.bin` is refetched once automatically, then "Download was corrupted —
- * retry"; an out-of-memory build (a mocked engine chunk that throws `RangeError`) offers "back", which reloads the
- * previous tokenizer from the Cache API. Every toast is a `role="alert"`.
+ * retry"; an out-of-memory build (a mocked engine chunk that throws `RangeError`) offers "back", which returns to the
+ * previous tokenizer — still resident in its own Worker (PA-19), so nothing is downloaded again. Every toast is a
+ * `role="alert"`.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
@@ -18,7 +19,9 @@ test('a failed download shows the retry toast; retrying loads the tokenizer', as
   );
   await page.unroute('**/tok/**');
   await toast(page).getByTestId('error-action').click();
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('[data-row="openai"] [data-source="live"]')).toBeVisible({
+    timeout: LIVE_READY_TIMEOUT_MS,
+  });
   await expect(toast(page)).toHaveCount(0);
 });
 
@@ -51,7 +54,9 @@ test('a corrupted download is refetched once automatically, then the integrity t
   await expect(toast(page).getByTestId('error-action')).toHaveText('Retry');
 });
 
-test('an out-of-memory build offers "back", which reloads the previous tokenizer from the cache', async ({ page }) => {
+test('an out-of-memory build offers "back", which returns to the previous tokenizer still resident in its Worker', async ({
+  page,
+}) => {
   await openShell(page, 'en');
   await page.route('**/assets/spm-*.js', (route) =>
     route.fulfill({
@@ -64,13 +69,17 @@ test('an out-of-memory build offers "back", which reloads the previous tokenizer
     'Not enough memory to load Grok-1 (historical) on this device — try o200k_base (GPT-4o → GPT-5.x)',
     { timeout: LIVE_READY_TIMEOUT_MS },
   );
+  const downloads: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.startsWith('/tok/')) downloads.push(request.url());
+  });
   await toast(page).getByTestId('error-action').click();
   await expect(page.getByTestId('picker-button')).toContainText('o200k_base');
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await expect(toast(page)).toHaveCount(0);
-  await expect
-    .poll(
-      async () => JSON.parse((await page.evaluate(() => sessionStorage.getItem('tsbs:lastLoaded'))) ?? '{}') as unknown,
-    )
-    .toMatchObject({ tokenizer: 'openai-o200k_base', fromCache: true });
+  // PA-19: o200k never left its own Worker (AD-19 holds per Worker), so "back" loads nothing.
+  expect(downloads).toEqual([]);
+  expect(JSON.parse((await page.evaluate(() => sessionStorage.getItem('tsbs:lastLoaded'))) ?? '{}')).toMatchObject({
+    tokenizer: 'openai-o200k_base',
+  });
 });

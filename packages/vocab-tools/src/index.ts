@@ -35,6 +35,7 @@ export type { ReadTsbv1, ReaderLoader, ReaderLookup } from './core-reader.ts';
 export {
   DEFAULT_CHIP_CASES,
   DEFAULT_EXAMPLE,
+  DEFAULT_EXAMPLES,
   DEFAULT_EXAMPLE_BUDGET_GZ,
   EXAMPLES_BUDGET_GZ,
   buildExamples,

@@ -395,11 +395,11 @@ jobs:
           browsers: chromium
           cjk-fonts: 'true'
       - run: pnpm e2e --project=visual --update-snapshots=all
-      - name: The 24 baselines exist
+      - name: The 36 baselines exist
         run: |
           count=$(ls e2e/visual/__screenshots__/*-linux.png | wc -l)
           echo "rendered ${count} baselines"
-          test "$count" -eq 24
+          test "$count" -eq 36
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-baselines

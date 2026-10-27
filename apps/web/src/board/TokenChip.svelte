@@ -8,8 +8,12 @@
    * narrows, then shrinks, to the room left by the paddings and the marks beside it. Chips of ≤ 2 columns and live parts
    * are `stacked`: the id has the first line to itself and the marks (and a part's hex) share one clipped line under it
    * (`.bd-chip-line`, left out when empty: a bare 1-column chip holds its id alone, on two lines from 5 digits).
+   * PA-19: a final token's text and its partial-character mark render only with the "Show token text" and "Mark
+   * partial-character tokens" preferences (both off by default; the hatched cut edges always stay); a live part's hex
+   * always shows.
    */
   import { i18n } from '../i18n/locale.svelte.ts';
+  import { preferences } from '../shell/preferences.svelte.ts';
   import BoardIcon from './BoardIcon.svelte';
   import type { TokenCellModel } from './cells.ts';
   import ChipId from './ChipId.svelte';
@@ -21,12 +25,13 @@
   }
   let { cell, state }: Props = $props();
 
-  const hatchMark = $derived(cell.partial && cell.first && cell.variant === 'token' && cell.bytePiece === null);
+  const hatchMark = $derived(
+    preferences.chipHatch && cell.partial && cell.first && cell.variant === 'token' && cell.bytePiece === null,
+  );
+  const text = $derived(cell.variant === 'part' || preferences.chipText ? cell.text : null);
   const stacked = $derived(cell.bytePiece === null && (cell.span <= 2 || cell.variant === 'part'));
   /** Something shares the chip with the id (a stacked chip draws it on the line under the id). */
-  const marked = $derived(
-    !cell.first || !cell.last || cell.userDefined || cell.text !== null || hatchMark || cell.special,
-  );
+  const marked = $derived(!cell.first || !cell.last || cell.userDefined || text !== null || hatchMark || cell.special);
 </script>
 
 <!-- The chip's marks in reading order: these before its id, … -->
@@ -37,8 +42,7 @@
 
 <!-- … these after it (a stacked chip draws both on the line under its id). -->
 {#snippet trail()}
-  {#if cell.text !== null}<span class={cell.variant === 'part' ? 'bd-part-text mono' : 'bd-chip-text'}>{cell.text}</span
-    >{/if}
+  {#if text !== null}<span class={cell.variant === 'part' ? 'bd-part-text mono' : 'bd-chip-text'}>{text}</span>{/if}
   {#if hatchMark}<BoardIcon name="hatch" size={10} />{/if}
   {#if cell.special}<span class="bd-badge">{i18n.t('board.special')}</span>{/if}
   {#if !cell.last}<BoardIcon name="continues" size={10} />{/if}

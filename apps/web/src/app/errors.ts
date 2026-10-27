@@ -8,7 +8,7 @@
  * | fetch, retryable        | "Could not download <name> — retry" (network, 5xx)        | retry  |
  * | integrity, decompress   | "Download was corrupted — retry" (after the loader's one automatic refetch) | retry |
  * | format                  | "A new version is available — reload" (asset rebuild needed) | reload |
- * | oom, of a load          | "Not enough memory to load <name> … — try <fallback>"    | back: reload the previous tokenizer from cache |
+ * | oom, of a load          | "Not enough memory to load <name> … — try <fallback>"    | back: the previous tokenizer (its Worker, PA-19) |
  * | oom, of a tokenization  | "Not enough memory to tokenize this text … — try a shorter text" | none |
  * | quota                   | informational: the tokenizer works without the cache (shown when the Worker has no Cache API) | none |
  * | pretokenize, alignment  | "This text could not be tokenized" (an engine error; retrying gives the same) | none |
@@ -29,7 +29,7 @@ export interface UiError {
   readonly message: string;
   readonly retryable: boolean;
   readonly tokenizer: TokenizerId;
-  /** For `oom`: the tokenizer the back action reloads (AD-19). */
+  /** For `oom`: the tokenizer the back action returns to (still resident in its Worker, or loaded again; PA-19). */
   readonly previous: TokenizerId | null;
   /** What failed (absent: a load, or a page-level failure such as a missing chunk). */
   readonly phase?: ErrorPhase;

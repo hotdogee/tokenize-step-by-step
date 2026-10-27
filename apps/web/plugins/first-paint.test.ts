@@ -3,44 +3,19 @@ import {
   APP_ELEMENT,
   assertCspSafe,
   attr,
-  BOARD_VARIANTS,
-  cutBoard,
   DIGITS_FONT,
   injectFirstPaint,
   pageTemplate,
   unstyledScopes,
-  type BoardVariant,
 } from './first-paint.ts';
 
-const board = (k: number): string =>
-  `<section class="board-region svelte-a" id="board"><div data-k="${String(k)}"><section class="x"></section></div></section>`;
-const page = (k: number): string =>
-  `<!--[--><header>h</header> <main>${board(k)}<!----></main> <footer>f</footer><!--]-->`;
-const variant = (media: string, k: number): BoardVariant => ({
-  media,
-  view: { k, wide: false, medium: false, small: false },
-});
-
-describe('cutBoard', () => {
-  it('cuts the markup around its board section, nested sections included', () => {
-    const cut = cutBoard(page(9));
-    expect(cut.board).toBe(board(9));
-    expect(cut.prefix).toBe('<!--[--><header>h</header> <main>');
-    expect(cut.suffix).toBe('<!----></main> <footer>f</footer><!--]-->');
-    expect(cut.prefix + cut.board + cut.suffix).toBe(page(9));
-  });
-
-  it('refuses markup without exactly one closed board section', () => {
-    expect(() => cutBoard('<main></main>')).toThrow(/exactly one board section/);
-    expect(() => cutBoard(page(9) + page(9))).toThrow(/exactly one board section/);
-    expect(() => cutBoard('<section class="board-region"><section>')).toThrow(/not closed/);
-  });
-});
+const page =
+  '<!--[--><header>h</header> <main><section id="compare"><div class="x"></div></section></main> <footer>f</footer><!--]-->';
 
 describe('assertCspSafe (AD-15)', () => {
   it('passes markup without inline code and rejects style attributes, <style> and <script>', () => {
     expect(() => {
-      assertCspSafe(page(9), 'page');
+      assertCspSafe(page, 'page');
     }).not.toThrow();
     expect(() => {
       assertCspSafe('<div style="--k: 8;"></div>', 'page');
@@ -55,27 +30,11 @@ describe('assertCspSafe (AD-15)', () => {
 });
 
 describe('pageTemplate', () => {
-  it('keeps the markup outside the board once and each board in a nested template with its query and view', () => {
-    const html = pageTemplate('zh-TW', [
-      { variant: variant('(min-width: 1024px)', 12), markup: page(12) },
-      { variant: variant('(max-width: 355.98px)', 8), markup: page(8) },
-    ]);
-    expect(html.startsWith('<template id="fp-zh-TW"><!--[--><header>h</header> <main><template data-mq=')).toBe(true);
-    expect(html.match(/<header>/g)).toHaveLength(1);
-    expect(html).toContain(
-      `<template data-mq="(min-width: 1024px)" data-fp="{&quot;k&quot;:12,&quot;wide&quot;:false,&quot;medium&quot;:false,&quot;small&quot;:false}">${board(12)}</template>`,
-    );
-    expect(html).toContain(`<template data-mq="(max-width: 355.98px)" data-fp="`);
-    expect(html.endsWith('</template><!----></main> <footer>f</footer><!--]--></template>')).toBe(true);
-  });
-
-  it('refuses variants that differ outside the board (they would hydrate different pages)', () => {
-    expect(() =>
-      pageTemplate('en', [
-        { variant: variant('a', 12), markup: page(12) },
-        { variant: variant('b', 8), markup: page(8).replace('<footer>f', '<footer>g') },
-      ]),
-    ).toThrow(/differ outside the board \(b\)/);
+  it('wraps the whole page of one locale in its inert template (PA-19: no viewport variants)', () => {
+    const html = pageTemplate('zh-TW', page);
+    expect(html).toBe(`<template id="fp-zh-TW">${page}</template>`);
+    expect(html).not.toContain('data-mq');
+    expect(pageTemplate('a"b', '')).toBe('<template id="fp-a&quot;b"></template>');
   });
 });
 
@@ -143,61 +102,5 @@ describe('unstyledScopes', () => {
 
   it('escapes attribute values', () => {
     expect(attr('a&b"c<d>')).toBe('a&amp;b&quot;c&lt;d&gt;');
-  });
-});
-
-/**
- * The board geometry each variant stands for (tokens.css, base.css `.frame`, 05 §3.3): K = clamp(8, ⌊(content) / cell⌋,
- * 64) with content = viewport − 2 × 16 px frame gutter − the 320 px side rail from 1024 px, and the cell at size M —
- * 36 px below 768 px (also the coarse-pointer floor), 32 px to 1023, 30 px from 1024 (32 from 1440).
- */
-function measuredK(width: number): number {
-  const cell = width < 768 ? 36 : width < 1024 ? 32 : width < 1440 ? 30 : 32;
-  const content = width - 32 - (width >= 1024 ? 320 : 0);
-  return Math.min(64, Math.max(8, Math.floor(content / cell)));
-}
-
-/** The default example's rows at K: four 3-byte characters, a code point never split across rows (pack-rows.ts). */
-function rowsAt(k: number): number[] {
-  const perRow = Math.floor(k / 3);
-  const rows: number[] = [];
-  for (let left = 4; left > 0; left -= perRow) rows.push(Math.min(perRow, left));
-  return rows;
-}
-
-/** The variant a width falls in (the clone script takes the first media query that matches). */
-function variantAt(width: number): BoardVariant | undefined {
-  return BOARD_VARIANTS.find(({ media }) => {
-    const min = /min-width: ([\d.]+)px/.exec(media)?.[1];
-    const max = /max-width: ([\d.]+)px/.exec(media)?.[1];
-    return (min === undefined || width >= Number(min)) && (max === undefined || width <= Number(max));
-  });
-}
-
-describe('BOARD_VARIANTS', () => {
-  it("pack the default example as the board does at every width of their range, so hydration's measurement moves nothing", () => {
-    for (let width = 320; width <= 2560; width++) {
-      const found = variantAt(width);
-      if (found === undefined) {
-        expect([width, rowsAt(measuredK(width))]).toEqual([width, [4]]); // 464–479: no variant, mounts as before
-        continue;
-      }
-      expect([width, rowsAt(found.view.k)]).toEqual([width, rowsAt(measuredK(width))]);
-      expect(found.view.k).toBeLessThanOrEqual(measuredK(width)); // the board only widens after hydration
-    }
-  });
-
-  it('render the viewport facts of their range (≥ 1024 rail, ≥ 768 no sheet, ≥ 480 labels on the board)', () => {
-    for (const width of [320, 355, 356, 400, 463, 480, 600, 767, 768, 900, 1023, 1024, 1440, 2560]) {
-      const found = variantAt(width);
-      expect(found, String(width)).toBeDefined();
-      expect([width, found?.view.wide, found?.view.medium, found?.view.small]).toEqual([
-        width,
-        width >= 1024,
-        width >= 768,
-        width >= 480,
-      ]);
-    }
-    expect(variantAt(470)).toBeUndefined();
   });
 });

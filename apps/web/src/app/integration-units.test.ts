@@ -21,6 +21,7 @@ import {
 import { PrecomputedExamples } from './precomputed.ts';
 import { EXAMPLES, tokenizerEntry, TOKENIZERS } from './registry.ts';
 import { MAX_LINK_TEXT, parseUrlState, shareLink, stageParam, urlFor, type UrlSnapshot } from './url-state.ts';
+import { ROW_CHOICES } from '../compare/rows.svelte.ts';
 
 const IDS: readonly TokenizerId[] = TOKENIZERS.map((entry) => entry.id);
 const SNAPSHOT: UrlSnapshot = {
@@ -30,20 +31,24 @@ const SNAPSHOT: UrlSnapshot = {
   byteView: 'both',
   locale: 'ja',
   textLang: 'ja',
+  advanced: true,
+  rows: ['openai-cl100k_base', 'xai-grok1'],
 };
 
 describe('URL state (05 §1.1)', () => {
-  it('round-trips every field through urlFor → parseUrlState', () => {
+  it('round-trips every field through urlFor → parseUrlState, in the order t, q, r, s, b, lang, tl', () => {
     const url = new URL(urlFor('https://tsbs.example/', SNAPSHOT, '台灣台南'));
-    expect([...url.searchParams.keys()]).toEqual(['t', 'q', 's', 'b', 'lang', 'tl']);
-    expect(parseUrlState(url.search, IDS)).toEqual({
+    expect([...url.searchParams.keys()]).toEqual(['t', 'q', 'r', 's', 'b', 'lang', 'tl']);
+    expect(parseUrlState(url.search, IDS, ROW_CHOICES)).toEqual({
       tokenizer: 'xai-grok2',
       text: '台灣台南',
+      rows: ['openai-cl100k_base', 'xai-grok1'],
       stage: 5,
       step: 7,
       byteView: 'both',
       locale: 'ja',
       textLang: 'ja',
+      advanced: true,
     });
     for (const stage of [1, 2, 3, 4, 6] as const) {
       const parsed = parseUrlState(new URL(urlFor('https://x.test/', { ...SNAPSHOT, stage })).search, IDS);
@@ -61,12 +66,23 @@ describe('URL state (05 §1.1)', () => {
     expect(url.searchParams.get('t')).toBe('xai-grok2');
   });
 
+  it('writes t and s only while Advanced is open, and r only for non-default rows (PA-19)', () => {
+    const closed = new URL(urlFor('https://x.test/?t=old&s=3', { ...SNAPSHOT, advanced: false, rows: [] }));
+    expect([...closed.searchParams.keys()]).toEqual(['b', 'lang', 'tl']);
+    expect(parseUrlState(closed.search, IDS, ROW_CHOICES).advanced).toBe(false);
+    expect(parseUrlState('?s=6', IDS).advanced).toBe(true);
+    expect(parseUrlState('?t=meta-llama3', IDS).advanced).toBe(true);
+  });
+
   it('ignores invalid values (defaults stay)', () => {
-    expect(parseUrlState('?t=gpt-9&s=7.2&b=octal&lang=fr&tl=ko', IDS)).toEqual({});
-    expect(parseUrlState('?s=5', IDS)).toEqual({ stage: 5 });
-    expect(parseUrlState('?s=4.9', IDS)).toEqual({ stage: 4 });
-    expect(parseUrlState('?s=5.x&q=', IDS)).toEqual({});
-    expect(parseUrlState('?t=openai-cl100k_base', ['openai-o200k_base'])).toEqual({});
+    expect(parseUrlState('?t=gpt-9&s=7.2&b=octal&lang=fr&tl=ko&r=nope', IDS, ROW_CHOICES)).toEqual({
+      advanced: false,
+    });
+    expect(parseUrlState('?s=5', IDS)).toEqual({ stage: 5, advanced: true });
+    expect(parseUrlState('?s=4.9', IDS)).toEqual({ stage: 4, advanced: true });
+    expect(parseUrlState('?s=5.x&q=', IDS)).toEqual({ advanced: false });
+    expect(parseUrlState('?t=openai-cl100k_base', ['openai-o200k_base'])).toEqual({ advanced: false });
+    expect(parseUrlState('?r=openai-o200k_base,xai-grok1,xai-grok1', IDS, ROW_CHOICES).rows).toEqual(['xai-grok1']);
   });
 
   it('puts the text into the shared link only up to 2,000 code points', () => {

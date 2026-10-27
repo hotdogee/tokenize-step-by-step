@@ -18,6 +18,12 @@ export const STORAGE_KEYS = {
   workerFeatures: 'tsbs:workerFeatures',
   /** sessionStorage: the informational "no offline cache" toast was shown this session (05 §12 `quota`). */
   cacheNotice: 'tsbs:cacheNotice',
+  /** The table rows switched away from their lab's primary tokenizer, comma-separated (PA-19; absent: all defaults). */
+  rows: 'tsbs:rows',
+  /** Token text inside the chips (PA-19; default off). */
+  chipText: 'tsbs:chipText',
+  /** The partial-character mark inside the chips (PA-19; default off). */
+  chipHatch: 'tsbs:chipHatch',
 } as const;
 
 type Area = 'local' | 'session';
@@ -36,6 +42,15 @@ export function readStored(key: string, kind: Area = 'local'): string | null {
     return area(kind)?.getItem(key) ?? null;
   } catch {
     return null;
+  }
+}
+
+/** Removes a stored key; failures are ignored. */
+export function removeStored(key: string, kind: Area = 'local'): void {
+  try {
+    area(kind)?.removeItem(key);
+  } catch {
+    // Storage unavailable: nothing was stored.
   }
 }
 

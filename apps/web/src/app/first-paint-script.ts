@@ -3,12 +3,12 @@
  * `assets/first-paint-<hash>.js`, ≤ 0.5 KB) and puts it in `index.html` as a classic `<script src>` right after `#app`, so
  * it runs while the parser stands at the end of the body: after boot.js has set `<html lang>` and before anything is
  * painted. Above it, `index.html` holds a `<template id="fp-<locale>">` per UI locale — the server-rendered first state of
- * the page, its board in viewport variants (nested `<template data-mq data-fp>`) — and `#app[data-keep]` names that
- * state as `key=value` pairs that must be unset or equal in both the query and localStorage.
+ * the whole page (PA-19: the comparison table's precomputed default rows, the Advanced disclosure closed; no viewport
+ * variants) — and `#app[data-keep]` names that state as `key=value` pairs that must be unset (an empty value: unset or
+ * empty) or equal in both the query and localStorage.
  *
- * When the page starts in that state, the locale's template is cloned into `#app` with the first board variant whose
- * media query matches, and the variant's view goes to `#app[data-fp]`, which main.ts hydrates. Otherwise `#app` stays
- * empty and main.ts mounts as before. Running here rather than from boot.js keeps the first layout in the parser's task,
+ * When the page starts in that state, the locale's template is cloned into `#app`, which main.ts then hydrates.
+ * Otherwise `#app` stays empty and main.ts mounts as before. Running here rather than from boot.js keeps the first layout in the parser's task,
  * where the browser (and Lighthouse's simulation) count it as part of the first paint, not as a task after it.
  *
  * No imports: this file is transformed on its own, not bundled. Storage access is guarded (private mode, blocked storage).
@@ -36,17 +36,7 @@ function paint(): void {
   if (app === null || page === null || app.hasChildNodes() || !keeps(app)) return;
   // Cloned inside the template's inert document and adopted on insertion: WebKit reports a `style-src-attr` violation
   // for every `<select>` created in a document with the strict CSP (importNode, innerHTML), not for one adopted into it.
-  const content = page.content.cloneNode(true) as DocumentFragment;
-  let view: string | undefined;
-  for (const board of content.querySelectorAll('template')) {
-    if (view === undefined && matchMedia(board.dataset['mq'] ?? 'not all').matches) {
-      view = board.dataset['fp'];
-      board.replaceWith(board.content);
-    } else board.remove();
-  }
-  if (view === undefined) return;
-  app.dataset['fp'] = view;
-  app.append(content);
+  app.append(page.content.cloneNode(true));
 }
 
 paint();

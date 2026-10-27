@@ -1,14 +1,17 @@
 import type { Progress, TokenizerId } from '@tsbs/core';
 import { toExamplesWire } from '@tsbs/core/fixture/examples-wire';
+import { checkInvariants } from '@tsbs/core/model/invariants';
 import { DEFAULT_OPTIONS } from '@tsbs/core/model/result';
 import { describe, expect, it } from 'vitest';
 import { cachedTokenizers } from '../shell/cache-probe.ts';
 import { progressPercent } from '../shell/progress.ts';
 import { AppState, optionsFor } from './app-state.svelte.ts';
-import { createExamplesClient, defaultResult } from './bootstrap.ts';
+import { defaultResults } from './bootstrap.ts';
+import { createExamplesClient } from './clients.ts';
+import { hubOf } from './fake-client.test-helper.ts';
 import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
 import { isNoPrecomputedResult } from './no-precomputed.ts';
-import { EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
+import { DEFAULT_TOKENIZER, EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
 import { STORAGE_KEYS } from './storage.ts';
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
@@ -67,6 +70,16 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
     await expect(client.encode('not an example ✓', DEFAULT_OPTIONS)).rejects.toSatisfy(isNoPrecomputedResult);
   });
 
+  it('answers the empty text with an empty result on every tokenizer (the rows say "0 tokens" under ?mock=1)', async () => {
+    const client = createExamplesClient(fixtureFetch());
+    await client.load('google-gemma4');
+    const empty = await client.encode('', DEFAULT_OPTIONS);
+    expect(checkInvariants(empty)).toEqual([]);
+    expect(empty).toMatchObject({ tokenizer: 'google-gemma4', text: '', timeline: null });
+    expect(empty.stats).toMatchObject({ bytes: 0, tokens: 0, partialTokens: 0 });
+    await expect(client.encode(' ', DEFAULT_OPTIONS)).rejects.toSatisfy(isNoPrecomputedResult);
+  });
+
   it('lets a newer load supersede one that is still fetching (one resident)', async () => {
     const client = createExamplesClient(fixtureFetch());
     const first = client.load('xai-grok2');
@@ -84,7 +97,9 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
 });
 
 describe('AppState (05 §1.1)', () => {
-  const make = (): AppState => new AppState(createExamplesClient(fixtureFetch()), defaultResult());
+  /** One examples client per tokenizer, as `?mock=1` spawns them (PA-19). */
+  const make = (): AppState =>
+    new AppState(hubOf(() => createExamplesClient(fixtureFetch()), { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
 
   it('starts with the precomputed default example on o200k', () => {
     const app = make();
@@ -105,7 +120,7 @@ describe('AppState (05 §1.1)', () => {
     expect(app.status).toContain('o200k_base');
   });
 
-  it('lets the last tokenizer switch win (strict one-resident, AD-19)', async () => {
+  it('lets the last tokenizer switch win; the other one loads in its own Worker (PA-19, AD-19 per Worker)', async () => {
     const app = make();
     const first = app.selectTokenizer('xai-grok2');
     const second = app.selectTokenizer('google-gemma4');
@@ -113,6 +128,7 @@ describe('AppState (05 §1.1)', () => {
     await flush();
     expect(app.tokenizer).toBe('google-gemma4');
     expect(app.resident).toBe('google-gemma4');
+    expect(app.hub.loaded('xai-grok2')).toBe(true);
     expect(app.loading).toBeNull();
     expect(app.error).toBeNull();
   });
@@ -123,7 +139,7 @@ describe('AppState (05 §1.1)', () => {
     if (chip === undefined) throw new Error('chip');
     app.chooseExample(chip);
     expect(app.text).toBe('日本語のテキスト');
-    expect(app.textLang).toBe('ja');
+    expect(app.textLang).toBe('auto'); // PA-19: an example no longer sets the text language
     expect(app.currentResult).toBeNull(); // nothing loaded yet
     await app.selectTokenizer('openai-cl100k_base');
     await flush();

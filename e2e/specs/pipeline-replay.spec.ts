@@ -23,10 +23,10 @@ import { openShell, switchTokenizer } from './shell-helpers.ts';
 
 /** Opens `/`, selects the tokenizer (unless it is the default) and the chip, and waits for the live result. */
 async function show(page: Page, tokenizer: string | null, chip: string): Promise<void> {
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   if (tokenizer !== null) await switchTokenizer(page, tokenizer);
   await chooseExample(page, chip);
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await expect(grid(page)).not.toHaveAttribute('data-pending', '');
 }
 
@@ -168,7 +168,7 @@ test('Grok-1 shatters 灣 at stop 5; Gemma 4 shows 𰻝 already shattered at sto
 
   await switchTokenizer(page, 'Gemma 4');
   await chooseExample(page, 'cjk-ext-g-biang');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await page.keyboard.press('Digit4');
   await expect(grid(page)).toHaveAttribute('data-stage', '4');
   await expect(grid(page).locator('[data-tier="token"] .bd-piece')).toHaveText([

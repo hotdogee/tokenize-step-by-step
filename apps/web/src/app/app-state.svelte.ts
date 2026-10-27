@@ -1,19 +1,22 @@
 /**
- * Application state (05 §1.1, Svelte 5 runes) and the controller around a `TokenizerClientLike` that drives the client,
- * the board, the rail, the inspector and the drawer from one place (WP13 integration).
+ * Application state (05 §1.1, Svelte 5 runes) and the controller that drives the board, the rail, the inspector and the
+ * drawer from one place (WP13 integration), over the result hub (`result-hub.svelte.ts`, PA-19: one Worker per tokenizer).
  * (The design calls this file `app.svelte.ts`; on case-insensitive file systems TypeScript resolves `./App.svelte` to
  * `App.svelte.ts` first, which collides with that name, hence `app-state.svelte.ts`.)
  *
  * The field set is the design's `AppState`; `theme` and `locale` live in their own stores and are mirrored as getters.
  *
  * - **Results.** `result` is the latest accepted result; `resultSource` says whether it came from the precomputed
- *   examples (AD-16; also while a tokenizer loads, for every example chip) or from the engine. Requests carry one
- *   sequence number (`seq`, AD-21): an answer older than the latest request is dropped, a superseded encode settles as
- *   `cancelled` and is never an error, an encode issued while the tokenizer loads is re-issued on `loaded` (pending
- *   encode across a load), and keystrokes are coalesced by the 40 ms debounce (05 §6; PA-12 measures after it).
+ *   examples (AD-16; also while a tokenizer loads, for every example chip) or from the engine. Every result is an answer
+ *   of the hub's entry for the board's tokenizer and options (`hub.request`; the table's row of the same tokenizer shares
+ *   it when the options agree). Requests carry one sequence number (`seq`, AD-21): an answer older than the latest
+ *   request is dropped, a superseded encode settles as `cancelled` and is never an error, an encode issued while the
+ *   tokenizer loads is re-issued on `loaded` (pending encode across a load), and keystrokes are coalesced by the 40 ms
+ *   debounce (05 §6; PA-12 measures after it). Each tokenizer keeps its own Worker, so a switch loads the new one
+ *   alongside (no `unload` at the page level) and a switch back to a loaded one answers at once.
  * - **The board's result** (`board`): the current result when there is one; else the last result kept on screen ("stale":
  *   a keystroke on a loaded tokenizer renders once, when its result arrives — PA-11 — and a tokenizer switch keeps the
- *   last result until the new engine answers — AD-19); else, only while no tokenizer is loaded for the text, an IME
+ *   last result until the new engine answers); else, only while no tokenizer is loaded for the text, an IME
  *   composition is open or an on-demand tier waits, the text-only board (stops 1–3 live from `analyzeText`, 05 §12).
  *   Long inputs (AD-27, `long-input.ts`) show a 2,000-byte window of the whole-text result around the caret.
  * - **Crossfade.** When the engine's first answer replaces a precomputed result, or a new tokenizer's answer replaces
@@ -25,7 +28,10 @@
  *   (the board converts at its boundary with `BoardState.offset`); they survive re-tokenization, tokenizer switches and
  *   window moves and are clamped to a shorter text. The board restores DOM focus from them.
  * - **URL state** (`url-state.ts`) is read once by `bootstrap.ts`; a deep link's merge step is re-applied when the live
- *   result arrives (the precomputed one may have no timeline).
+ *   result arrives (the precomputed one may have no timeline). A link with `t` or `s` opens the Advanced disclosure.
+ * - **The table's rows** (PA-19): AppState keeps the rows' choices (`rows`, persisted and in the URL); the comparison
+ *   table holds and requests their hub entries itself. After the board's on-demand run (an on-demand tier) `rowRun` asks
+ *   the table to run the rows on the same text, one after another.
  */
 import type {
   AssetSummary,
@@ -34,13 +40,13 @@ import type {
   Progress,
   TextLangChoice,
   TokenizationResult,
-  TokenizerClientLike,
   TokenizerId,
 } from '@tsbs/core';
-import type { ExampleChip, TokenizerEntry } from '@tsbs/registry';
+import type { ExampleChip, Lab, TokenizerEntry } from '@tsbs/registry';
 import type { CellSize } from '@tsbs/ui-tokens';
 import { DEFAULT_OPTIONS } from '@tsbs/core/model/result';
 import { textOnlyResult } from '../board/text-only.ts';
+import { CompareRows } from '../compare/rows.svelte.ts';
 import { viewOf } from '../board/view-cache.ts';
 import { i18n } from '../i18n/locale.svelte.ts';
 import { resolveTextLang } from '../i18n/text-lang.ts';
@@ -65,12 +71,12 @@ import {
   type LongInputMode,
 } from './long-input.ts';
 import { isNoPrecomputedResult } from './no-precomputed.ts';
-import type { PrecomputedSource } from './precomputed.ts';
-import { DEFAULT_TOKENIZER, EXAMPLES, tokenizerEntry } from './registry.ts';
+import { DEFAULT_TOKENIZER, tokenizerEntry } from './registry.ts';
+import { ROW_OPTIONS, type HubAnswer, type ResultHub, type TokenOptions } from './result-hub.svelte.ts';
 import { readStored, STORAGE_KEYS, writeStored } from './storage.ts';
 import { textStats } from './text-stats.ts';
-import type { UrlState } from './url-state.ts';
-import { VocabLookup } from './vocab-lookup.ts';
+import type { UrlSnapshot, UrlState } from './url-state.ts';
+import type { ViewResolvers, VocabLookup } from './vocab-lookup.ts';
 import type { ViewResolverSource } from '../board/view-cache.ts';
 import type * as WindowSliceModule from './window-slice.ts';
 import type { ByteWindow } from './window-slice.ts';
@@ -106,9 +112,6 @@ export interface TokenCounts {
   readonly tokens: number;
   readonly partialTokens: number;
 }
-
-/** The options that change tokens (`trace` only changes the timeline). */
-type TokenOptions = Pick<EncodeOptions, 'specialTokens' | 'addBos' | 'normalize'>;
 
 /**
  * What the counts line keeps of the last on-demand run (AD-27): its counts and what they answer — never the result
@@ -198,7 +201,7 @@ function textWindowRange(text: string, caret: number): readonly [start: number, 
 export class AppState {
   // ---- 05 §1.1 ----
   text: string = $state(DEFAULT_EXAMPLE);
-  textLang: TextLangChoice = $state('zh-Hant');
+  textLang: TextLangChoice = $state('auto');
   tokenizer: TokenizerId = $state(DEFAULT_TOKENIZER);
   options: EncodeOptions = $state.raw(DEFAULT_OPTIONS);
   stage: Stage = $state(6);
@@ -220,19 +223,25 @@ export class AppState {
   // ---- Shell-only UI state ----
   /** Text of the polite status region (05 §3.5). */
   status = $state('');
-  /** Name of the tokenizer whose engine answers (null until the first `loaded`). */
-  resident: TokenizerId | null = $state(null);
   /** True while an IME composition is active in the textarea (05 §6). */
   composing = $state(false);
-  /** Wire sizes for the picker (the Worker's `ready.assets`, AD-11); null until the client reports them. */
-  assets: AssetSummary | null = $state.raw(null);
   /** The textarea caret (UTF-16 offset): the centre of a long input's board window. */
   caret = $state(0);
   /** An on-demand run is in flight (the banner's button shows "tokenizing"). */
   running = $state(false);
+  /**
+   * The Advanced disclosure (the board, its controls and the options) is open (PA-19): URL-driven, never persisted — a
+   * link with `t` or `s` opens it, and the URL writer emits those keys only while it is open.
+   */
+  advancedOpen = $state(false);
+  /**
+   * A byte whose token cell the board focuses once it shows a current result (the table's Enter, PA-19); the board clears
+   * it when it has moved focus there.
+   */
+  boardFocus: number | null = $state(null);
+  /** The last on-demand run of the board's tokenizer finished on `text`: the table runs its rows on it (AD-27, PA-19). */
+  rowRun: { readonly text: string; readonly seq: number } | null = $state.raw(null);
 
-  /** The views' vocabulary resolvers over the Worker's `lookup` (registered with the view cache by App.svelte). */
-  readonly lookup: VocabLookup;
   /** Bumps when lookup answers arrive (views built after it carry them). */
   lookupVersion = $state(0);
   /** What App.svelte registers with the view cache (`setViewResolvers`). */
@@ -241,8 +250,12 @@ export class AppState {
   /** What the board renders (see `BoardState`). */
   readonly board: BoardState = $derived.by(() => this.#boardState());
 
-  readonly #client: TokenizerClientLike;
-  readonly #precomputed: PrecomputedSource | null;
+  /** The results of every tokenizer on the page and their Workers (PA-19); the shell's table reads its rows here. */
+  readonly hub: ResultHub;
+  /** The comparison table's row choices (PA-19). */
+  readonly rows: CompareRows;
+  /** The hub entry the board holds (its tokenizer and token options), so the hub keeps its result (AD-27). */
+  #held: { readonly id: TokenizerId; readonly options: TokenOptions } | null = null;
   #seq = 0;
   #loadSeq = 0;
   #shownSeq = 0;
@@ -260,6 +273,12 @@ export class AppState {
   #onDemand: OnDemandRun | null = $state.raw(null);
   /** Code points of `text` (kept with it; `setText` updates both). */
   #codePoints = countCodePoints(DEFAULT_EXAMPLE);
+  /**
+   * The views' vocabulary resolvers over the board tokenizer's Worker (`vocab-lookup.ts`), imported once that tokenizer is
+   * resident: the Worker answers for it alone, so until then every view gets none (not startup code).
+   */
+  #vocab: VocabLookup | null = null;
+  #vocabImport: Promise<void> | null = null;
   /** The window slicer (`window-slice.ts`), imported when a text first reaches an on-demand tier (not startup code). */
   #slicer: typeof WindowSliceModule | null = $state.raw(null);
   #slicerImport: Promise<void> | null = null;
@@ -270,43 +289,95 @@ export class AppState {
   /** The capped text's analysed prefix, kept for the text it was cut from (emptied once the text is not capped, AD-27). */
   #analysed = { text: '', value: '' };
 
-  constructor(
-    client: TokenizerClientLike,
-    precomputed: TokenizationResult | null = null,
-    source: PrecomputedSource | null = null,
-    url: UrlState = {},
-  ) {
-    this.#client = client;
-    this.#precomputed = source;
-    this.lookup = new VocabLookup(client, () => {
-      this.lookupVersion++;
-    });
+  /** `hub` holds the page's results (seeded with the inlined default rows, bootstrap.ts); `url` is the page URL's state. */
+  constructor(hub: ResultHub, url: UrlState = {}) {
+    this.hub = hub;
     const lookupVersion = (): number => this.lookupVersion;
-    const lookup = this.lookup;
     this.viewResolvers = {
       get version() {
         return lookupVersion();
       },
-      resolversFor: (result) => lookup.resolversFor(result),
+      resolversFor: (result) => this.#resolversFor(result),
     };
+    this.rows = new CompareRows(url.rows);
     this.#applyUrl(url);
     this.options = optionsFor(tokenizerEntry(this.tokenizer));
-    // The inlined default example only answers the default text on the default tokenizer.
-    const matches = precomputed?.tokenizer === this.tokenizer && precomputed.input.text === this.text;
-    this.result = matches ? precomputed : null;
-    if (!matches) this.#lookupPrecomputed();
+    this.#hold();
+    // The seeded entries (the inlined default rows) answer only the default text.
+    const seeded = hub.entry(this.tokenizer, this.options);
+    if (seeded.result?.input.text === this.text) {
+      this.result = seeded.result;
+      this.resultSource = seeded.source ?? 'precomputed';
+    } else this.#lookupPrecomputed();
     if (typeof document !== 'undefined') document.documentElement.dataset['cellSize'] = this.cellSize;
-    client.onResident((id) => {
-      this.resident = id;
+  }
+
+  /** The resolvers of a view of `result` (see `#vocab`). */
+  #resolversFor(result: TokenizationResult): ViewResolvers {
+    if (this.#vocab !== null) return this.#vocab.resolversFor(result);
+    if (this.#vocabImport === null && this.resident === result.tokenizer)
+      this.#vocabImport = import('./vocab-lookup.ts').then(
+        ({ VocabLookup }) => {
+          const hub = this.hub;
+          const board = (): TokenizerId => this.tokenizer;
+          this.#vocab = new VocabLookup(
+            {
+              get resident() {
+                return hub.loaded(board()) ? board() : null;
+              },
+              lookup: (q) => hub.lookup(board(), q),
+            },
+            () => {
+              this.lookupVersion++;
+            },
+          );
+          this.lookupVersion++;
+        },
+        () => {
+          this.#vocabImport = null;
+        },
+      );
+    return {};
+  }
+
+  /** The board's tokenizer while it is resident in its Worker, else null. */
+  get resident(): TokenizerId | null {
+    return this.hub.loaded(this.tokenizer) ? this.tokenizer : null;
+  }
+
+  /** Wire sizes for the picker (the Worker's `ready.assets`, AD-11); null until a client reports them. */
+  get assets(): AssetSummary | null {
+    return this.hub.assets;
+  }
+
+  /**
+   * Holds the hub entry of the board's tokenizer and token options and lets go of the previous one (AD-27: the hub keeps
+   * only results someone shows; the board keeps its own reference to the result on screen). Called before every request,
+   * so a direct write to `tokenizer` or `options` is followed too.
+   */
+  #hold(): void {
+    const held = this.#held;
+    if (held?.id === this.tokenizer && sameTokenOptions(held.options, this.options)) return;
+    const { specialTokens, addBos, normalize } = this.options;
+    this.#held = { id: this.tokenizer, options: { specialTokens, addBos, normalize } };
+    this.hub.retain(this.#held.id, this.#held.options);
+    if (held !== null) this.hub.release(held.id, held.options);
+  }
+
+  /**
+   * Asks the hub for the board's result of `text` (its precomputed answer while the tokenizer loads, else the engine's)
+   * and shows the answer when it is still the latest request's. An error answer that is the tokenizer's failed load (the
+   * hub's entry holds it as a `load` error) is left to `#load`, which reports it with the tokenizer to go back to.
+   */
+  #request(text: string, trace: EncodeOptions['trace'], phase: ErrorPhase, onDemand = false): Promise<void> {
+    this.#hold();
+    const seq = ++this.#seq;
+    return this.hub.request(this.tokenizer, text, this.options, { trace }).then((answer: HubAnswer) => {
+      if (seq !== this.#seq) return;
+      if (answer.kind === 'result') this.#accept(answer.result, answer.source, seq, onDemand);
+      else if (answer.kind === 'error' && this.hub.entry(this.tokenizer, this.options).error?.phase !== 'load')
+        this.#encodeFailed(answer.error, seq, phase);
     });
-    client.assets.then(
-      (assets) => {
-        this.assets = assets;
-      },
-      () => {
-        this.assets = null;
-      },
-    );
   }
 
   /** Imports the window slicer once (on-demand tiers only; a failed import leaves the text-only window). */
@@ -327,16 +398,18 @@ export class AppState {
     return this.#slicerImport ?? Promise.resolve();
   }
 
-  /** Applies what a deep link asks for (invalid values were dropped by `parseUrlState`). */
+  /**
+   * Applies what a deep link asks for (invalid values were dropped by `parseUrlState`). The text language stays `auto`
+   * unless `tl` says otherwise (PA-19: an example's text no longer sets it).
+   */
   #applyUrl(url: UrlState): void {
+    if (url.advanced === true) this.advancedOpen = true;
     if (url.tokenizer !== undefined) this.tokenizer = url.tokenizer;
     if (url.text !== undefined) {
       this.text = url.text;
       this.#codePoints = countCodePoints(url.text);
       this.longInput = longInputMode(this.#codePoints);
       if (isOnDemand(this.longInput)) this.#loadSlicer();
-      const chip = EXAMPLES.find((candidate) => candidate.text === url.text);
-      this.textLang = chip?.lang ?? 'auto';
     }
     if (url.textLang !== undefined) this.textLang = url.textLang;
     if (url.byteView !== undefined) this.byteView = url.byteView; // this visit only; the stored preference stays
@@ -347,6 +420,20 @@ export class AppState {
         this.#urlStep = this.step;
       }
     }
+  }
+
+  /** What the URL writer and "Copy link" serialize (url-state.ts; `t` and `s` only while Advanced is open). */
+  urlSnapshot(): UrlSnapshot {
+    return {
+      tokenizer: this.tokenizer,
+      stage: this.stage,
+      step: this.step,
+      byteView: this.byteView,
+      locale: i18n.current,
+      textLang: this.textLang,
+      advanced: this.advancedOpen,
+      rows: this.rows.nonDefault(),
+    };
   }
 
   get theme(): ThemeChoice {
@@ -494,25 +581,40 @@ export class AppState {
     this.#transition = transition;
   }
 
-  /** Loads the default tokenizer after first paint (06 §3), then encodes the current text live. */
+  /**
+   * Loads the board's tokenizer after first paint (06 §3), then encodes the current text live; from then on the hub may
+   * load the tokenizers its other views need (PA-19 load policy).
+   */
   async start(): Promise<void> {
     await afterFirstPaint();
+    this.hub.start();
     if (this.#started) return;
     this.#started = true;
     if (this.resident === this.tokenizer || this.loading?.tokenizer === this.tokenizer) return;
     await this.#load(this.tokenizer, null);
   }
 
-  /** Switches tokenizer: strict one-resident `unload` → `load` (AD-19); the last result stays until the new one answers. */
+  /**
+   * Switches the board to `id`: the hub entry the board reads changes, and `id` loads in its own Worker unless it is
+   * resident there already (PA-19; AD-19 holds per Worker, so the previous tokenizer stays loaded and nothing is
+   * unloaded here). The last result stays on the board until the new one answers.
+   */
   async selectTokenizer(id: TokenizerId): Promise<void> {
     if (id === this.tokenizer && (this.resident === id || this.loading?.tokenizer === id)) return;
-    const previous = this.resident ?? this.tokenizer;
+    const previous = this.tokenizer;
     this.tokenizer = id;
     this.options = optionsFor(tokenizerEntry(id), this.options);
     this.error = null;
     this.#started = true;
+    this.#hold();
+    if (this.resident === id) {
+      // Resident in its Worker already: no load (a load of another tokenizer still on its way is dropped).
+      this.#loadSeq++;
+      this.loading = null;
+      this.#ready();
+      return;
+    }
     this.#lookupPrecomputed();
-    await this.#client.unload();
     await this.#load(id, previous);
   }
 
@@ -522,24 +624,29 @@ export class AppState {
     this.loading = { tokenizer: id, phase: 'cache', loaded: 0, total: null };
     this.announce(i18n.t('status.loading', { name }));
     try {
-      const loaded = await this.#client.load(id, (progress) => {
+      const loaded = await this.hub.load(id, (progress) => {
         if (seq === this.#loadSeq) this.loading = progress;
       });
       if (seq !== this.#loadSeq) return;
       this.loading = null;
       this.#rememberLoaded(loaded);
       this.announce(i18n.t('status.ready', { name: tokenizerEntry(id).displayName[i18n.current] }));
-      if (this.#pendingRun && isOnDemand(this.longInput)) void this.runOnDemand();
-      else {
-        this.#pendingRun = false;
-        this.running = false;
-        this.encodeNow();
-      }
+      this.#ready();
     } catch (error) {
       if (seq !== this.#loadSeq || isCancelledError(error)) return;
       this.loading = null;
       this.running = false; // a pending run stays asked for: Retry loads again and runs it
       this.error = toUiError(error, id, previous);
+    }
+  }
+
+  /** The board's tokenizer is resident: run the on-demand run asked for meanwhile, else encode the text live. */
+  #ready(): void {
+    if (this.#pendingRun && isOnDemand(this.longInput)) void this.runOnDemand();
+    else {
+      this.#pendingRun = false;
+      this.running = false;
+      this.encodeNow();
     }
   }
 
@@ -556,7 +663,7 @@ export class AppState {
       }),
       'session',
     );
-    void this.#client.features.then(
+    void this.hub.features(loaded.info.id)?.then(
       (features) => {
         writeStored(STORAGE_KEYS.workerFeatures, JSON.stringify(features), 'session');
         if (!features.cacheApi) this.#cacheNotice(loaded.info.id);
@@ -645,16 +752,28 @@ export class AppState {
       this.#lookupPrecomputed();
       return;
     }
-    const seq = ++this.#seq;
-    const options: EncodeOptions = { ...this.options, trace: traceFor(this.#codePoints) };
-    this.#client.encode(this.text, options).then(
-      (result) => {
-        if (seq === this.#seq) this.#accept(result, 'live', seq);
-      },
-      (error: unknown) => {
-        this.#encodeFailed(error, seq, 'encode');
-      },
-    );
+    void this.#request(this.text, traceFor(this.#codePoints), 'encode');
+  }
+
+  /**
+   * A row's error action (PA-19): load its tokenizer again — which runs the request the failed load answered, unless the
+   * text of an on-demand tier has moved on since the run asked for it (the table asks for nothing then, AD-27: the load
+   * must not encode a whole text the page has left) — or ask again for its result once it is loaded.
+   */
+  retryRow(lab: Lab): void {
+    const id = this.rows.entryFor(lab)?.id;
+    if (id === undefined) return;
+    if (this.hub.loaded(id)) {
+      void this.hub.request(id, this.analysed, ROW_OPTIONS, { trace: false });
+      return;
+    }
+    if (isOnDemand(this.longInput) && this.rowRun?.text !== this.analysed) this.hub.forget(id, ROW_OPTIONS);
+    this.hub.load(id).catch(() => undefined); // the entry's `error` says what failed
+  }
+
+  /** Opens the Advanced disclosure (the summary, the table's Enter and the board's global keys, PA-19). */
+  openAdvanced(): void {
+    this.advancedOpen = true;
   }
 
   /** The on-demand run (AD-27): the WHOLE analysed text, with the trace policy of its length. */
@@ -670,20 +789,15 @@ export class AppState {
     }
     this.#pendingRun = false;
     const text = this.analysed;
-    const codePoints = countCodePoints(text);
-    const trace = traceFor(codePoints);
-    const seq = ++this.#seq;
+    const trace = traceFor(countCodePoints(text));
     this.running = true;
     // AD-27: never hold two big results at once — release the previous one before the new one exists.
     if (estimatedResultBytes(utf8ByteLength(text), trace) > RELEASE_ABOVE_BYTES) this.#release();
-    try {
-      const result = await this.#client.encode(text, { ...this.options, trace });
-      if (seq === this.#seq) this.#accept(result, 'live', seq, true);
-    } catch (error) {
-      this.#encodeFailed(error, seq, 'run');
-    } finally {
-      if (seq === this.#seq) this.running = false;
-    }
+    const run = this.#request(text, trace, 'run', true);
+    const seq = this.#seq;
+    await run;
+    if (seq === this.#seq) this.running = false;
+    this.rowRun = { text, seq };
   }
 
   #encodeFailed(error: unknown, seq: number, phase: ErrorPhase): void {
@@ -696,28 +810,25 @@ export class AppState {
     this.error = toUiError(error, this.tokenizer, null, phase);
   }
 
-  /** While the engine loads: the precomputed result of the text, if it is an example chip (AD-16). */
+  /**
+   * While the engine loads: the precomputed result of the text, if it is an example chip (AD-16). The hub keeps the
+   * request, so the encode follows on `loaded` (and free text asks the hub for the load once the page has painted).
+   */
   #lookupPrecomputed(): void {
-    const source = this.#precomputed;
-    if (source === null || isOnDemand(this.longInput) || this.#isCurrent(this.result)) return;
-    const seq = ++this.#seq;
-    const { tokenizer, text, options } = this;
-    source.find(tokenizerEntry(tokenizer), text, options).then(
-      (result) => {
-        if (result !== null && seq === this.#seq && this.resident !== tokenizer)
-          this.#accept(result, 'precomputed', seq);
-      },
-      () => undefined,
-    );
+    if (isOnDemand(this.longInput) || this.#isCurrent(this.result)) return;
+    void this.#request(this.text, traceFor(this.#codePoints), 'encode');
   }
 
   /**
-   * Drops every reference to the whole-text result — `result` and its window slice (`#slice.of`) — so it is collectable
-   * before a result above 8 MB arrives (AD-27). The last run's counts (`#onDemand`) hold no result and stay.
+   * Drops every reference to the whole-text result — `result`, its window slice (`#slice.of`) and the hub entry's copy
+   * — so it is collectable before a result above 8 MB arrives (AD-27). The last run's counts (`#onDemand`) hold no result
+   * and stay.
    */
   #release(): void {
     this.result = null;
     this.#slice = null;
+    const held = this.#held;
+    if (held !== null) this.hub.forget(held.id, held.options);
   }
 
   /**
@@ -740,7 +851,9 @@ export class AppState {
       }
     };
     if (resultBytes(result) > RELEASE_ABOVE_BYTES) {
-      this.#release(); // release the previous result first; no crossfade above 8 MB
+      // Release the previous result first (the hub replaced its own copy already); no crossfade above 8 MB.
+      this.result = null;
+      this.#slice = null;
       update();
       return;
     }
@@ -759,9 +872,8 @@ export class AppState {
     if (this.pinned !== null && this.pinned.byte > last) this.pinned = { byte: last, tier: this.pinned.tier };
   }
 
-  /** Applies an example chip: verbatim text and its text-language choice; tokenizes immediately. */
-  chooseExample(chip: Pick<ExampleChip, 'text' | 'lang'>): void {
-    this.textLang = chip.lang;
+  /** Applies an example: its verbatim text, tokenized immediately (PA-19: the text language is left as it is). */
+  chooseExample(chip: Pick<ExampleChip, 'text'>): void {
     this.setText(chip.text, true);
   }
 
@@ -868,7 +980,7 @@ export class AppState {
   }
 
   /**
-   * The error's action (errors.ts): reload the page (`fetch`, `format`), back to the previous tokenizer from the cache
+   * The error's action (errors.ts): reload the page (`fetch`, `format`), back to the previous tokenizer (its Worker)
    * (an `oom` of a load; one of a tokenization offers no action), else tokenize again — the on-demand run in an on-demand
    * tier — after reloading the tokenizer when it is not resident.
    */

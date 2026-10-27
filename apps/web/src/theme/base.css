@@ -16,6 +16,11 @@ html {
   line-height: 1.5;
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
+  /* The sticky header (PA-19) and the board's bottom sheet (`--sheet-height`) never cover what a focus move scrolls to
+     ("nearest"), plus an 8 px gap so its ring stays whole (WCAG 2.4.11); the comparison table's controls add its pinned
+     header box and scrollbar as their own `scroll-margin-block` (compare.css). */
+  scroll-padding-block-start: calc(var(--header-h) + 8px);
+  scroll-padding-block-end: calc(var(--sheet-height, 0px) + 8px);
 }
 
 /*
@@ -116,23 +121,12 @@ a {
   padding: 1.5rem var(--gutter);
 }
 
-/* The app frame: full width with gutters; capped at board max + rail where 05 §3.3 caps the board. */
+/* The app frame: full width with gutters and no max-width (PA-19: the page runs edge to edge; the board keeps its own
+   --board-max, About its .page). */
 .frame {
   width: 100%;
   margin-inline: auto;
   padding-inline: var(--gutter);
-}
-
-@media (min-width: 1440px) {
-  .frame {
-    max-width: calc(1600px + 320px);
-  }
-}
-
-@media (min-width: 2560px) {
-  .frame {
-    max-width: calc(2400px + 420px);
-  }
 }
 
 /* Shared control look (buttons, selects, chips). */
@@ -213,6 +207,15 @@ dialog::backdrop {
     animation-duration: 0s !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Reduced motion chosen in the app (`<html data-motion="reduced">`, motion/motion-prefs.svelte.ts, set when `/` boots)
+   behaves like the system setting: no CSS transitions, no smooth scrolling — before the lazy board chunk ever loads. */
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
 }
 
 /*

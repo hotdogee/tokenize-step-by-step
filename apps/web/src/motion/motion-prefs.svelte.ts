@@ -2,8 +2,9 @@
  * Motion preferences (05 §7 rules, §1.1 persistence): `prefers-reduced-motion` observed live through `matchMedia`, with an
  * in-app override persisted in localStorage (`tsbs:motion`: `reduce` | `full`; absent = follow the system). Under reduced
  * motion no transform animates, only opacity swaps ≤ 150 ms remain, every programmatic scroll uses `behavior: 'auto'`, and
- * `<html data-motion="reduced">` switches CSS transitions off (the picker's loading bar: `transition: none`, motion.css).
- * Server rendering (tests) sees full motion and touches no DOM.
+ * `<html data-motion="reduced">` switches CSS transitions off (theme/base.css; the picker's loading bar: `transition:
+ * none`, motion.css). `/`'s entry (main.ts) imports this module, so the attribute is set when the page boots. Server
+ * rendering (tests) sees full motion and touches no DOM.
  */
 import { readStored, writeStored } from '../app/storage.ts';
 

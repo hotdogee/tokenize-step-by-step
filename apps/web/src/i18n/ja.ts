@@ -9,20 +9,19 @@ import type { Catalog } from './en.ts';
 
 export const ja = {
   // ---- App and page meta ----
-  'app.name': 'Tokenize step by step',
-  'meta.main.title': 'Tokenize step by step・トークン化を一歩ずつ',
+  'app.name': 'What is a token?',
+  'meta.main.title': 'What is a token?・トークンとは？',
   'meta.main.description':
-    'テキストがトークンになる過程を表示します。コードポイント、UTF-8 バイト、事前トークン化のチャンク、そして BPE のマージを一つずつ。すべてブラウザー内で動作します。',
-  'meta.about.title': 'このサイトについて・Tokenize step by step',
-  'meta.about.description':
-    'このトークン化ビジュアライザーが示すもの、各トークナイザーの確度、同梱する語彙ファイルのライセンス。',
-  'meta.notFound.title': 'ページが見つかりません・Tokenize step by step',
+    '各ラボの最新トークナイザーがテキストをどう分割するかをバイト単位で比べ、一つのトークナイザーのマージを一歩ずつたどれます。',
+  'meta.about.title': 'このサイトについて・What is a token?',
+  'meta.about.description': 'このサイトが示すもの、各トークナイザーの確度、同梱する語彙ファイルのライセンス。',
+  'meta.notFound.title': 'ページが見つかりません・What is a token?',
   'notFound.heading': 'ページが見つかりません',
   'notFound.body': 'このアドレスには何もありません。',
   'notFound.back': 'トークナイザーに戻る',
 
   // ---- Navigation ----
-  'nav.skip': '対応表へ移動',
+  'nav.skip': 'トークンへ移動',
   'nav.skipMain': 'メインコンテンツへ移動',
   'nav.home': 'トークナイザーに戻る',
   'nav.about': 'このサイトについて',
@@ -92,7 +91,10 @@ export const ja = {
   'textLang.ja': '日本語',
   'textLang.en': '英語',
   'examples.label': '例',
-  'a11y.chipSplits': 'このトークナイザーでは文字が分割されます',
+  'examples.group.zhHant': '繁體中文',
+  'examples.group.ja': '日本語',
+  'examples.group.en': 'English',
+  'examples.group.mixed': '混在と絵文字',
   'options.label': 'オプション',
   'option.specialTokens': '特殊トークンを照合',
   'option.addBos': 'BOS を追加',
@@ -102,6 +104,8 @@ export const ja = {
   'byteView.dec': 'DEC',
   'byteView.both': '両方',
   'graphemes.toggle': '書記素クラスタの括弧',
+  'options.chipText': 'トークンの文字を表示',
+  'options.chipHatch': '文字をまたぐトークンに印',
   'counts.label': 'カウント',
   'counts.codePoints': { other: '{n} コードポイント' },
   'counts.graphemes': { other: '{n} 書記素クラスタ' },
@@ -116,6 +120,27 @@ export const ja = {
   'counts.stale': '古い結果',
   'badge.precomputed': '事前計算',
   'badge.live': 'ライブ',
+
+  // ---- 比較表（PA-19） ----
+  'compare.label': 'ラボ別のトークン',
+  'compare.caption': '{lab}・{tokenizer}',
+  'compare.selectLabel': '{lab} のトークナイザー',
+  'compare.anthropicApi': 'Claude 5.5・API キー',
+  'compare.apiNote':
+    '現行の Claude モデルのトークン数は API でしか数えられません。キーを追加するまで何も送信されません。',
+  'compare.liveCheck': 'ライブチェック…',
+  'compare.apiTotal': 'API 経由で {total} トークン（うち約 {frame} はフレーム）',
+  'compare.loading': '読み込み中 {percent}',
+  'compare.scrollHint': '横にスクロールすると続きが見られます',
+  'compare.partial': '文字をまたぐ {n}',
+  'compare.claudeLegacy': 'Claude 1/2 レガシー',
+  'compare.oomRow': 'このデバイスでは {name} を読み込むメモリが足りません',
+
+  // ---- 詳細設定（PA-19） ----
+  'advanced.label': '詳細設定',
+  'advanced.summary': '一つのトークナイザーを一歩ずつ・オプション・カウント・リンクのコピー',
+  'advanced.stepByStep': '一歩ずつ',
+  'advanced.options': 'オプション',
 
   // ---- Pipeline stages ----
   'stage.1': 'テキスト',
@@ -194,7 +219,7 @@ export const ja = {
 
   // ---- Notices strip and footer ----
   'notices.label': '{name} に関する表示',
-  'footer.fidelity': '確度：',
+  'notices.labelMany': '{count} 個のトークナイザーに関する表示',
   'footer.privacy': 'すべてブラウザー内で動作します。アクセス解析も Cookie もありません。',
   'footer.build': 'ビルド {sha}・{date}',
 

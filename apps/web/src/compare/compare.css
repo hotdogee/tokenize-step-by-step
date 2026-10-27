@@ -1,0 +1,329 @@
+/*
+ * The comparison table (PA-19, 05 §4): global `.cmp-*` classes shared by CompareTable and its parts; the cells reuse the
+ * board's `.bd-box` / `.bd-face` / `.bd-chip` / `.bd-id` look (board.css) and placement classes (grid-classes.css).
+ *
+ * Three horizontal scrollers stay in step (CompareTable's controller): the header box `.cmp-thead`, pinned under the
+ * sticky app header; the rows `.cmp-tbody`; and `.cmp-sbar`, whose native scrollbar pins to the bottom of the viewport
+ * while the table is on screen. Each holds a `.cmp-track` as wide as every column (`--cmp-cols` columns of `--cell`),
+ * and the rows inside are CSS grids of the column window (`--cmp-win` columns, translated to `--cmp-start`). All three
+ * variables keep their defaults (a `.k<n>` class gives `--k`, no window) unless a `style:` directive sets them on the
+ * client, so the static first paint carries no `style` attribute (PA-15).
+ */
+
+.cmp {
+  --cmp-cols: var(--k, 0);
+  --cmp-chip-h: 44px;
+  --cmp-char-h: 60px;
+  --cmp-byte-h: 28px;
+  position: relative;
+  min-width: 0;
+  /* Edge to edge: the table breaks out of main's gutters. */
+  margin-inline: calc(-1 * var(--gutter));
+}
+
+@media (max-width: 767.98px) {
+  .cmp {
+    --cmp-char-h: 56px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .cmp {
+    --cmp-chip-h: calc(var(--cell) * 1.4);
+    --cmp-char-h: calc(var(--cell) + 26px);
+    --cmp-byte-h: calc(var(--cell) / 2 + 10px);
+  }
+}
+
+.cmp-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--cell);
+  height: 1px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ---- The three scrollers ---- */
+
+/* Both scrollers are inline-size containers: a caption (and the API note) is never wider than its scroller (`100cqw`),
+   which a classic page scrollbar makes narrower than the viewport — in the static first paint too, so hydration moves
+   nothing (PA-15). */
+.cmp-thead,
+.cmp-tbody {
+  container-type: inline-size;
+}
+
+.cmp-tbody {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+.cmp-tbody::-webkit-scrollbar {
+  display: none;
+}
+
+/* The header box clips instead of scrolling (script moves it with the others; a sideways wheel or touch drag on it is
+   forwarded, CompareTable): a scroll container with nothing focusable in it would need a tab stop of its own. */
+.cmp-thead {
+  overflow: hidden;
+  touch-action: pan-y pinch-zoom;
+  position: sticky;
+  top: var(--header-h);
+  z-index: 5;
+  padding-block-start: 0.25rem;
+  border-block-end: var(--border-width) solid color-mix(in oklch, var(--border) 45%, transparent);
+  background: var(--bg);
+}
+
+/* Pinned: a full-strength bottom line, the edge that also shows on the dark background (the shadow alone does not). */
+.cmp-thead.pinned {
+  border-block-end-color: var(--border);
+  box-shadow: 0 8px 12px -8px rgb(0 0 0 / 0.3);
+}
+
+/* Above the board's bottom sheet when Advanced shows it on a phone (`--sheet-height`, Board.svelte; 0 otherwise). */
+.cmp-sbar {
+  position: sticky;
+  bottom: var(--sheet-height, 0px);
+  z-index: 5;
+  height: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--bg);
+  scrollbar-width: thin;
+  /* An author-styled control: the thumb keeps ≥ 3:1 on its track (WCAG 1.4.11; check-contrast's `scrollbar` pair). */
+  scrollbar-color: var(--fg-muted) var(--surface-2);
+}
+
+.cmp-sbar > .cmp-track {
+  height: 1px;
+}
+
+/* As wide as every column (+ the 1 px start inset and room at the end), and never narrower than the scroller. */
+.cmp-track {
+  position: relative;
+  width: max(100%, calc(var(--cmp-cols) * var(--cell) + 18px));
+}
+
+/* ---- Captions: small text above each row, its content pinned to the left edge ---- */
+
+/* `clip`, not `hidden`: a clipping box that is no scroll container, so the sticky content stays sticky to the scroller. */
+.cmp-caption {
+  display: flex;
+  align-items: flex-end;
+  min-height: 22px;
+  overflow-x: clip;
+}
+
+.cmp-cap {
+  position: sticky;
+  left: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.375rem;
+  max-width: calc(100cqw - 8px);
+  padding-inline: 6px 8px;
+  background: var(--bg);
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.cmp.scrolled .cmp-cap {
+  box-shadow: 8px 0 10px -8px rgb(0 0 0 / 0.3);
+}
+
+.cmp-cap b {
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.cmp-cap .cmp-count {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.cmp-cap select {
+  max-width: 100%;
+  min-height: 1.5rem;
+  padding: 0 0.125rem;
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cmp-cap .btn {
+  min-height: 1.5rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* A "·" separator and the item after it: one unbreakable piece, so a wrapped caption never ends a line on the "·" (a
+   sentence-long item, `.cmp-wrap`, still wraps inside the piece when it alone is wider than the line). */
+.cmp-item {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  white-space: nowrap;
+}
+
+.cmp-item > .cmp-wrap {
+  white-space: normal;
+}
+
+/* The scroll hint keeps its room while the table fits (the static first paint cannot measure, so it always holds it). */
+.cmp-hint.off {
+  visibility: hidden;
+}
+
+/* ---- Rows: CSS grids of the column window ---- */
+
+.cmp-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cmp-win, var(--cmp-cols)), var(--cell));
+  grid-auto-columns: var(--cell);
+  align-items: center;
+  width: max-content;
+  min-width: var(--cell);
+  margin-inline-start: 1px;
+  translate: calc(var(--cmp-start, 0) * var(--cell)) 0;
+}
+
+.cmp-row > .cmp-cell {
+  grid-row: 1;
+}
+
+.cmp-chips {
+  padding-block: 7px;
+}
+
+/* A loaded tokenizer's last result while it encodes the next text, or a row the on-demand run has not reached yet: muted
+   only once the answer has taken 300 ms (one that arrives inside the board's 40 ms debounce never dims the row, so typing
+   does not flicker); back at once, no transition. The delay holds under reduced motion, which zeroes durations only. */
+.cmp-row[data-pending] {
+  opacity: 0.55;
+  transition: opacity 120ms linear 300ms;
+}
+
+.cmp-bytes {
+  padding-block-start: 2px;
+}
+
+.cmp-bytes:last-child {
+  padding-block-end: 6px;
+}
+
+/* ---- Cells ---- */
+
+.cmp-cell {
+  position: relative;
+  min-width: 0;
+  outline: none;
+}
+
+.cmp-cell:focus-visible {
+  z-index: 2;
+  outline: none;
+  box-shadow: none;
+}
+
+.cmp-cell:focus-visible > .bd-vis {
+  box-shadow: var(--focus);
+}
+
+.cmp-char {
+  height: var(--cmp-char-h);
+}
+
+/* U+ labels from 480 px and on characters of ≥ 2 columns (the board's rule, 05 §3.3); CSS, so the first paint holds them. */
+.cmp-char .bd-ulabel {
+  display: none;
+}
+
+@media (min-width: 480px) {
+  .cmp-char .bd-ulabel {
+    display: block;
+  }
+}
+
+.cmp-char .bd-glyph {
+  margin-bottom: 0;
+  font-size: 1.375rem;
+}
+
+@media (min-width: 480px) {
+  .cmp-char .bd-glyph {
+    margin-bottom: 12px;
+  }
+}
+
+.cmp-byte {
+  height: var(--cmp-byte-h);
+}
+
+.cmp-byte .bd-face {
+  font-size: 0.8125rem;
+}
+
+.cmp-chip {
+  height: var(--cmp-chip-h);
+  cursor: pointer;
+}
+
+/* A focused chip, caption select or button scrolls clear of the pinned header box and scrollbar (CompareTable measures
+   both on the section; `html`'s scroll padding adds the app header and the bottom sheet; WCAG 2.4.11). */
+.cmp-tbody :is(.cmp-chip, select, .btn) {
+  scroll-margin-block: calc(var(--cmp-head-h, 0px) + 8px) calc(var(--cmp-foot-h, 0px) + 8px);
+}
+
+.cmp-tbody:focus-within .cmp-chip[data-active] > .bd-vis {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cmp-empty {
+  grid-column: 1 / -1;
+  height: var(--cmp-chip-h);
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+}
+
+/* The Anthropic API row: a note and the Live check button, pinned left (no chips: no boundaries, 05 §13). */
+.cmp-api {
+  min-height: calc(var(--cmp-chip-h) + 14px);
+  padding-block: 7px;
+  overflow-x: clip;
+}
+
+.cmp-api-in {
+  position: sticky;
+  left: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  max-width: calc(100cqw - 8px);
+  padding-inline: 6px 8px;
+  color: var(--fg-muted);
+  font-size: 0.875rem;
+}
+
+@media (forced-colors: active) {
+  .cmp-thead,
+  .cmp-sbar {
+    border-color: CanvasText;
+  }
+
+  .cmp-cell:focus-visible > .bd-vis {
+    outline: 2px solid Highlight;
+  }
+}

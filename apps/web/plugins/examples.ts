@@ -1,8 +1,9 @@
 /**
  * `examples()` (WP03; AD-16, 03 §C.7) — precomputed example results from the golden fixtures:
  *
- * - `buildStart`: writes `src/generated/examples-default.json` (default chip × default tokenizer, inlined in the main
- *   bundle, ≤ 4 KB gzip) and `src/generated/examples-index.json` (lazy file per tokenizer, chips that split a character).
+ * - `buildStart`: writes `src/generated/examples-default.json` (an array of one wire per default row: the default chip
+ *   on each lab's primary tokenizer, PA-19; inlined in the main bundle, ≤ 4 KB gzip together) and
+ *   `src/generated/examples-index.json` (lazy file per tokenizer, the default pairs, chips that split a character).
  * - `generateBundle`: emits `dist/examples/<tokenizerId>.<sha8>.json` (`ExamplesWire`, ≤ 16 KB gzip each; paragraph
  *   chips without `merges`).
  * - `vite dev`: serves the same files under `/examples/`.
@@ -40,7 +41,7 @@ export function examples(options: ExamplesPluginOptions = {}): Plugin {
     async buildStart() {
       const { output, warning } = await generateExamples({ fixtures, chips }, EXAMPLES_PREFIX);
       if (warning !== null) this.warn(warning);
-      await writeIfChanged(join(generatedDir, output.defaultExample.name), output.defaultExample.json);
+      await writeIfChanged(join(generatedDir, output.defaultExamples.name), output.defaultExamples.json);
       await writeIfChanged(join(generatedDir, output.index.name), output.index.json);
       lazy = output.perTokenizer;
     },

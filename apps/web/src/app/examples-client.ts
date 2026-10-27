@@ -3,7 +3,8 @@
  * precomputed examples (AD-16, 03 §C.7). On the first `load` of a tokenizer it fetches that tokenizer's lazy
  * `examples/<id>.<sha8>.json` (`ExamplesWire`, reporting `download` progress) and hands it to the mock, so every example
  * chip × tokenizer pair has its real, oracle-derived result. Text outside the chips has no result yet and rejects with
- * `NoPrecomputedResultError`, which the shell shows as "waiting for the tokenizer" — never a made-up tokenization.
+ * `NoPrecomputedResultError`, which the shell shows as "waiting for the tokenizer" — never a made-up tokenization. The
+ * empty text has one answer on every tokenizer, no tokens, so it gets that result (the table's rows say "0 tokens").
  */
 import type {
   AssetSummary,
@@ -19,7 +20,9 @@ import type {
 import type { ExamplesWire } from '@tsbs/core/fixture/examples-wire';
 import type { FixtureTokenizerRef } from '@tsbs/core/fixture/from-fixture-case';
 import { MockClientError, MockTokenizerClient } from '@tsbs/core/fixture/mock-client';
+import { buildResult } from '@tsbs/core/model/build-result';
 import { CancelledError, isCancelled } from '@tsbs/core/model/cancelled';
+import { analyzeText } from '@tsbs/core/text/analyze';
 import { NoPrecomputedResultError } from './no-precomputed.ts';
 
 type Fetch = (url: string) => Promise<Response>;
@@ -55,6 +58,19 @@ async function readJson(response: Response, report: (loaded: number, total: numb
     offset += part.length;
   }
   return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+/** The empty text's result on `ref`: no chunks, no tokens (no BOS either: the mock models none for text it synthesises). */
+function emptyResult(ref: FixtureTokenizerRef, options: EncodeOptions): TokenizationResult {
+  return buildResult({
+    tokenizer: ref.id,
+    family: ref.family,
+    options: { ...options, trace: false, addBos: false },
+    analysis: analyzeText(''),
+    chunks: { byteStart: [0], kind: [] },
+    tokens: { id: [], byteStart: [0], kind: [] },
+    timeline: null,
+  });
 }
 
 export class ExamplesClient implements TokenizerClientLike {
@@ -135,7 +151,10 @@ export class ExamplesClient implements TokenizerClientLike {
     const pending = this.#mock.encode(text, options, onProgress, signal);
     if (known || id === null) return pending;
     return pending.catch((error: unknown) => {
-      throw isCancelled(error) ? error : new NoPrecomputedResultError(`no precomputed result for this text on ${id}`);
+      if (isCancelled(error)) throw error;
+      const ref = this.#refs.get(id);
+      if (text === '' && ref !== undefined) return emptyResult(ref, options);
+      throw new NoPrecomputedResultError(`no precomputed result for this text on ${id}`);
     });
   }
 

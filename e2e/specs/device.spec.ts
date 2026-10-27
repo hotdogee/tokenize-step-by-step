@@ -2,7 +2,8 @@
  * 06 §1 matrix assertions on each project's own device and viewport (no `test.use` overrides, so the full matrix gives
  * every check its intended context):
  * - touch targets (WCAG 2.5.8): on the touch projects (Pixel 5, iPhone 12) every visible pointer target — controls,
- *   board cells, dialog options — is ≥ 24 × 24 CSS px on the default view, at stop 4 and in the picker and help dialogs.
+ *   table chips, board cells, dialog options — is ≥ 24 × 24 CSS px on the default view (the comparison table), with
+ *   Advanced open, at stop 4 and in the picker and help dialogs.
  *   A native checkbox or radio inside its `<label>` is measured by the label, which is what a tap hits; elements with
  *   `pointer-events: none` (the keyboard-only chunk brackets, 05 §3.3) are not pointer targets; a link inside running
  *   text (the picker's "evidence · checked on …") takes the 2.5.8 inline exception;
@@ -10,11 +11,12 @@
  *   `lang`) and the panel stays open and usable — WebKit's compatibility mousedown after a tap used to blur the focused
  *   radio and close the panel before the click landed (the mouse-only `.click()`/`.check()` steps elsewhere miss it);
  * - reflow (WCAG 1.4.10): on every project the page chrome never scrolls horizontally, at 320 px in particular
- *   (`chromium-320`); the board is the declared exempt region (`[data-reflow-exempt]`) and scrolls inside itself.
+ *   (`chromium-320`); the comparison table — and the board while Advanced is open — are the declared exempt regions
+ *   (`[data-reflow-exempt]`, PA-19) and scroll inside themselves.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { focusBoard, grid } from './board-helpers.ts';
-import { LOCALES, openAbout, openShell } from './shell-helpers.ts';
+import { LOCALES, openAbout, openAdvanced, openShell } from './shell-helpers.ts';
 
 /** A pointer target smaller than 24 × 24, described for the failure message. */
 interface SmallTarget {
@@ -80,11 +82,13 @@ const overflow = (page: Page): Promise<number> =>
 test.describe('touch targets ≥ 24 × 24 (WCAG 2.5.8)', () => {
   test.skip(({ hasTouch }) => !hasTouch, 'touch projects only (pixel-5, iphone-12)');
 
-  test('on the default view, at stop 4 and in the picker and help dialogs', async ({ page }) => {
+  test('on the default view, with Advanced open, at stop 4 and in the picker and help dialogs', async ({ page }) => {
     await openShell(page, 'en');
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
-    await expectTargets(page, 'default view (stop 6)');
+    await expectTargets(page, 'default view (the table)');
 
+    await openAdvanced(page);
+    await expectTargets(page, 'Advanced (stop 6)');
     await focusBoard(page);
     await page.keyboard.press('Digit4');
     await expect(grid(page)).toHaveAttribute('data-stage', '4');
@@ -139,10 +143,15 @@ test.describe('theme and language menus by touch', () => {
 
 test.describe('reflow (WCAG 1.4.10)', () => {
   for (const locale of LOCALES) {
-    test(`the page chrome fits the viewport in ${locale}; the board is the exempt region`, async ({ page }) => {
+    test(`the page chrome fits the viewport in ${locale}; the table and the board are the exempt regions`, async ({
+      page,
+    }) => {
       await openShell(page, locale);
       await expect(page.locator('[data-reflow-exempt]')).toHaveCount(1);
       expect(await overflow(page), '/').toBe(0);
+      await openAdvanced(page);
+      await expect(page.locator('[data-reflow-exempt]')).toHaveCount(2);
+      expect(await overflow(page), 'Advanced open').toBe(0);
       await page.getByTestId('picker-button').click();
       await expect(page.getByRole('dialog')).toBeVisible();
       expect(await overflow(page), 'picker open').toBe(0);

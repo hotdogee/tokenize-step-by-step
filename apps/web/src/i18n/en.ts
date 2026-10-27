@@ -9,20 +9,20 @@ import type { Message } from './types.ts';
 
 export const en = {
   // ---- App and page meta ----
-  'app.name': 'Tokenize step by step',
-  'meta.main.title': 'Tokenize step by step',
+  'app.name': 'What is a token?',
+  'meta.main.title': 'What is a token?',
   'meta.main.description':
-    'Watch text become tokens: code points, UTF-8 bytes, pre-tokenizer chunks and every BPE merge, entirely in your browser.',
-  'meta.about.title': 'About · Tokenize step by step',
+    'See how the newest tokenizer of each lab splits your text, byte by byte, and step through one tokenizer’s merges.',
+  'meta.about.title': 'About · What is a token?',
   'meta.about.description':
-    'What the tokenize-step-by-step visualizer shows, how faithful each tokenizer is, and the licences of every vocabulary it ships.',
-  'meta.notFound.title': 'Not found · Tokenize step by step',
+    'What this site shows, how faithful each tokenizer is, and the licences of every vocabulary it ships.',
+  'meta.notFound.title': 'Not found · What is a token?',
   'notFound.heading': 'Page not found',
   'notFound.body': 'There is nothing at this address.',
   'notFound.back': 'Back to the tokenizer',
 
   // ---- Navigation ----
-  'nav.skip': 'Skip to the board',
+  'nav.skip': 'Skip to the tokens',
   'nav.skipMain': 'Skip to the main content',
   'nav.home': 'Back to the tokenizer',
   'nav.about': 'About',
@@ -92,7 +92,10 @@ export const en = {
   'textLang.ja': 'Japanese',
   'textLang.en': 'English',
   'examples.label': 'Examples',
-  'a11y.chipSplits': 'splits a character on this tokenizer',
+  'examples.group.zhHant': '繁體中文',
+  'examples.group.ja': '日本語',
+  'examples.group.en': 'English',
+  'examples.group.mixed': 'Mixed and emoji',
   'options.label': 'Options',
   'option.specialTokens': 'Match special tokens',
   'option.addBos': 'Add BOS',
@@ -102,6 +105,8 @@ export const en = {
   'byteView.dec': 'Dec',
   'byteView.both': 'Both',
   'graphemes.toggle': 'Grapheme brackets',
+  'options.chipText': 'Show token text',
+  'options.chipHatch': 'Mark partial-character tokens',
   'counts.label': 'Counts',
   'counts.codePoints': { one: '{n} code point', other: '{n} code points' },
   'counts.graphemes': { one: '{n} grapheme cluster', other: '{n} grapheme clusters' },
@@ -116,6 +121,26 @@ export const en = {
   'counts.stale': 'stale',
   'badge.precomputed': 'precomputed',
   'badge.live': 'live',
+
+  // ---- Comparison table (PA-19) ----
+  'compare.label': 'Tokens by lab',
+  'compare.caption': '{lab} · {tokenizer}',
+  'compare.selectLabel': '{lab} tokenizer',
+  'compare.anthropicApi': 'Claude 5.5 · API key',
+  'compare.apiNote': 'Current Claude models count tokens through the API. Nothing is sent until you add a key.',
+  'compare.liveCheck': 'Live check…',
+  'compare.apiTotal': '{total} tokens via the API, about {frame} of them frame',
+  'compare.loading': 'loading {percent}',
+  'compare.scrollHint': 'scroll sideways for the rest of the text',
+  'compare.partial': '{n} partial',
+  'compare.claudeLegacy': 'Claude 1/2 legacy',
+  'compare.oomRow': 'Not enough memory to load {name} on this device',
+
+  // ---- Advanced disclosure (PA-19) ----
+  'advanced.label': 'Advanced',
+  'advanced.summary': 'step by step for one tokenizer · options · counts · copy link',
+  'advanced.stepByStep': 'Step by step',
+  'advanced.options': 'Options',
 
   // ---- Pipeline stages (rail, help, status) ----
   'stage.1': 'Text',
@@ -194,7 +219,7 @@ export const en = {
 
   // ---- Notices strip and footer ----
   'notices.label': 'Notices for {name}',
-  'footer.fidelity': 'Fidelity:',
+  'notices.labelMany': 'Notices for {count} tokenizers',
   'footer.privacy': 'Runs entirely in your browser. No analytics, no cookies.',
   'footer.build': 'build {sha} · {date}',
 

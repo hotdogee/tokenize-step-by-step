@@ -6,6 +6,8 @@
  * - fast scrubbing cancels the running FLIP and only crossfades, so `document.getAnimations()` drains;
  * - with `prefers-reduced-motion: reduce` no animation touches `transform`, opacity swaps stay ≤ 150 ms, every
  *   programmatic scroll uses `behavior: 'auto'` and the picker's loading bar has no transition;
+ * - the in-app "Reduce motion" choice (`tsbs:motion`) holds on `/` from boot, before Advanced loads the board: no
+ *   chevron rotation, and a stale row's dim snaps (every engine);
  * - a byte-view switch is a View Transition where the engine has `document.startViewTransition`, and an opacity fade of
  *   the board under a Firefox 143 user agent without it (Firefox < 144 has no View Transitions).
  */
@@ -77,9 +79,9 @@ test('fast scrubbing cancels the running FLIP and only crossfades; the animation
   browserName,
 }) => {
   test.skip(browserName !== 'chromium', CHROMIUM_ONLY);
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'ja-text'); // 18 merges over at most 3 rows, so the merged chips are on screen
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await motionReady(page);
   // Rail and board on screen together (only rows in the viewport take part in a FLIP).
   await scrubber(page).evaluate((el) => {
@@ -121,9 +123,9 @@ test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls
   test.skip(browserName !== 'chromium', CHROMIUM_ONLY);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await instrument(page);
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   await chooseExample(page, 'ja-shibuya-ramen');
-  await expect(page.locator('[data-source="live"]')).toBeVisible();
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await motionReady(page);
   await expect(page.getByTestId('reduce-motion')).toBeChecked();
   // Only rows in the viewport take part in a stage change, and at 320 px (or with wide fonts) the board starts below
@@ -157,6 +159,35 @@ test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls
   expect(await bar.evaluate((el) => getComputedStyle(el).transitionDuration)).toBe('0s');
 });
 
+test('the in-app "Reduce motion" choice holds on / from boot, before Advanced first opens', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('tsbs:motion', 'reduce');
+    } catch {
+      // storage blocked: nothing to restore
+    }
+  });
+  await openShell(page, 'en');
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduced');
+  expect(await page.locator('details#advanced').getAttribute('open')).toBeNull(); // the board's chunk is not in
+  const motion = await page.evaluate(() => {
+    const summary = document.querySelector('[data-testid="advanced-summary"]');
+    const row = document.querySelector('#compare [data-row="google"] .cmp-row');
+    if (summary === null || row === null) return null;
+    row.setAttribute('data-pending', ''); // a stale row
+    const dim = `${getComputedStyle(row).transitionDuration} after ${getComputedStyle(row).transitionDelay}`;
+    row.removeAttribute('data-pending');
+    const chevron = [summary, ...summary.querySelectorAll('*')]
+      .flatMap((element) => [null, '::before', '::after'].map((pseudo) => getComputedStyle(element, pseudo)))
+      .map((style) => style.transitionDuration)
+      .filter((duration) => duration.split(',').some((part) => part.trim() !== '0s'));
+    return { chevron, dim };
+  });
+  expect(motion?.chevron).toEqual([]); // the Advanced chevron does not rotate
+  expect(motion?.dim).toBe('0s after 0.3s'); // a stale row's dim snaps at 300 ms instead of fading
+});
+
 test('a byte-view switch is a View Transition when the engine has one', async ({ page, browserName }) => {
   test.skip(browserName !== 'chromium', CHROMIUM_ONLY);
   await page.addInitScript(() => {
@@ -169,7 +200,7 @@ test('a byte-view switch is a View Transition when the engine has one', async ({
       return start.apply(this, args);
     };
   });
-  await openShell(page, 'en');
+  await openShell(page, 'en', { advanced: true });
   // The precomputed → live swap at startup is a crossfade of its own (WP13, 05 §12): count from here.
   await page.evaluate(() => {
     (window as unknown as Record<string, number>)['__tsbsTransitions'] = 0;
@@ -191,7 +222,7 @@ test.describe('Firefox 143 (no View Transitions)', () => {
     await instrument(page);
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
-    await openShell(page, 'en');
+    await openShell(page, 'en', { advanced: true });
     expect(await page.evaluate(() => navigator.userAgent)).toContain('Firefox/143.0');
     expect(await page.evaluate(() => 'startViewTransition' in document)).toBe(false);
     // The precomputed → live swap at startup fades the board too (WP13, 05 §12): count the switch's own fade only.
@@ -224,7 +255,7 @@ test('a step opened by URL rings every just-merged cell, and a wide chip also dr
   const merged = grid(page).locator('[data-tier="token"][data-just-merged]');
   // Grok-1's first step splits 灣 into its three byte-fallback pieces <0xE7> <0x81> <0xA3>, one column each.
   await page.goto(`/?${new URLSearchParams({ t: 'xai-grok1', q: '台灣台南', s: '5.1', lang: 'en' }).toString()}`);
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await expect(merged).toHaveCount(3);
   await expect(merged.locator('.bd-piece')).toHaveText(['<0xE7>', '<0x81>', '<0xA3>']);
   expect(await rings(merged)).toEqual(Array.from({ length: 3 }, () => ({ span: 1, ring: '1 1px 0px', star: false })));
@@ -232,7 +263,7 @@ test('a step opened by URL rings every just-merged cell, and a wide chip also dr
   await page.goto(
     `/?${new URLSearchParams({ t: 'openai-o200k_base', q: '台灣台南', s: '5.1', lang: 'en' }).toString()}`,
   );
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('#advanced [data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
   await expect(merged).not.toHaveCount(0);
   const wide = await rings(merged);
   expect(wide.some((cell) => cell.span >= 2)).toBe(true);

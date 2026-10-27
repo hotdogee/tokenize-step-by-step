@@ -51,7 +51,9 @@ for (const path of ['/', '/about/', '/404.html']) {
     await expect(page.locator('h1')).toBeVisible();
     // Let the app settle: the default tokenizer loads after first paint (06 §3).
     if (path === '/')
-      await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+      await expect(page.locator('[data-row="openai"] [data-source="live"]')).toBeVisible({
+        timeout: LIVE_READY_TIMEOUT_MS,
+      });
     const { csp, atBody } = await read(page);
     expect(atBody).toEqual({ lang: 'ja', theme: 'dark' });
     expect(csp).toEqual([]);
@@ -70,7 +72,9 @@ test('the boot script is the first element of <head> and there is no inline scri
 test('switching theme and language at runtime causes no CSP violation', async ({ page }) => {
   const { consoleViolations } = await instrument(page);
   await page.goto('/?lang=en');
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(page.locator('[data-row="openai"] [data-source="live"]')).toBeVisible({
+    timeout: LIVE_READY_TIMEOUT_MS,
+  });
   await page.getByRole('button', { name: 'Colour theme' }).click();
   await page.getByRole('radio', { name: 'Dark' }).check();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
@@ -78,7 +82,7 @@ test('switching theme and language at runtime causes no CSP violation', async ({
   await page.getByRole('button', { name: 'Interface language' }).click();
   await page.getByRole('radio', { name: '日本語' }).check();
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
-  await expect(page).toHaveTitle(/トークン化を一歩ずつ/);
+  await expect(page).toHaveTitle(/トークンとは/);
   const { csp } = await read(page);
   expect(csp).toEqual([]);
   expect(consoleViolations).toEqual([]);

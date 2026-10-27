@@ -1,13 +1,16 @@
 <script lang="ts">
   /**
-   * The input panel's controls (05 §1 region 2, §6): text-language chip (a native select), the option toggles the selected
-   * tokenizer declares (special tokens · BOS · NFKC), the byte-view control (hex / dec, plus both at ≥ 1024 px) and the
-   * grapheme-brackets switch. Byte view and graphemes are global and persisted.
+   * The options (05 §6; in the Advanced disclosure since PA-19): text-language chip (a native select), the option toggles
+   * the board's tokenizer declares (special tokens · BOS · NFKC; the table's rows keep fixed options), the byte-view
+   * control (hex / dec, plus both at ≥ 1024 px), the grapheme-brackets switch and the two chip toggles of the table and the
+   * board ("Show token text", "Mark partial-character tokens"; both off by default). Byte view, graphemes and the chip
+   * toggles are global and persisted.
    */
   import type { TextLangChoice } from '@tsbs/core';
   import { appState } from '../app/context.ts';
   import type { ByteView } from '../app/app-state.svelte.ts';
   import { i18n } from '../i18n/locale.svelte.ts';
+  import { preferences } from './preferences.svelte.ts';
 
   const app = appState();
 
@@ -109,6 +112,30 @@
       }}
     />
     <span class="control-label">{i18n.t('graphemes.toggle')}</span>
+  </label>
+
+  <label class="check">
+    <input
+      type="checkbox"
+      checked={preferences.chipText}
+      onchange={(event) => {
+        preferences.setChipText(event.currentTarget.checked);
+      }}
+      data-testid="chip-text-toggle"
+    />
+    <span class="control-label">{i18n.t('options.chipText')}</span>
+  </label>
+
+  <label class="check">
+    <input
+      type="checkbox"
+      checked={preferences.chipHatch}
+      onchange={(event) => {
+        preferences.setChipHatch(event.currentTarget.checked);
+      }}
+      data-testid="chip-hatch-toggle"
+    />
+    <span class="control-label">{i18n.t('options.chipHatch')}</span>
   </label>
 </div>
 

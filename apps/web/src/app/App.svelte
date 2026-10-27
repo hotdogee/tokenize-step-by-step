@@ -1,44 +1,41 @@
 <script lang="ts">
   /**
-   * The `/` page frame (05 §1): regions in DOM order = tab order — header (wordmark, picker, language, theme, help) →
-   * input panel → pipeline rail → board → notices strip + footer → live-check drawer. The rail is WP09's (it must stay
-   * before the board: its motion director's `$effect.pre` snapshots FLIP geometry before the board commits), the board
-   * WP08's and the drawer WP10's. Also owns the global single-key shortcuts (AD-22) and the two dialogs,
-   * which load on first open: neither is needed for first paint, and the picker brings the model rows and licence tags
-   * with it (registry-details.ts), so both stay out of the initial Main JS of `/` (06 §3).
+   * The `/` page frame (05 §1, PA-19): regions in DOM order = tab order — the sticky header (wordmark, language, theme,
+   * help) → the input panel (text box, Examples menu, the text-language note, the example's sentence) → the comparison
+   * table of the newest tokenizer of each lab (edge to edge) → the Advanced disclosure (closed by default: the tokenizer
+   * picker, the pipeline rail and the board — a lazy chunk —, the options, the counts line, the long-input banner and
+   * Copy link) → the notices strip (the union over the tokenizers on screen) + footer → the live-check drawer. Also owns
+   * the global single-key shortcuts (AD-22; those that act on the board open Advanced first) and the two dialogs, which
+   * load on first open: neither is needed for first paint, and the picker brings the model rows and licence tags with it
+   * (registry-details.ts), so both stay out of the initial Main JS of `/` (06 §3).
    *
-   * WP13 wiring: the long-input banners and "Copy link" in the input panel, the URL writer (`history.replaceState`,
-   * debounced 500 ms, everything but the text, and a `q` that no longer equals the text removed — url-state.ts) and the crossfade a result swap runs in (precomputed →
-   * live, one tokenizer's answer → another's: the board's View Transition of motion/view-transition.ts).
+   * WP13 wiring: the URL writer (`history.replaceState`, debounced 500 ms, everything but the text — `t` and `s` only
+   * while Advanced is open, `r` for the table's row choices — and a `q` that no longer equals the text removed —
+   * url-state.ts). PA-19: once the board's tokenizer is on its way, the other default rows' vocabularies are prefetched
+   * 10 s later (`hub.prefetchIdle`, skipped under Save-Data).
    */
   import { onMount } from 'svelte';
-  import { motionPrefs } from '../motion/motion-prefs.svelte.ts';
-  import { crossfade } from '../motion/view-transition.ts';
-  import Board from '../board/Board.svelte';
+  import type { TokenizerId } from '@tsbs/core';
   import { openLiveCheck } from '../byok/drawer.svelte.ts';
   import LiveCheckDrawer from '../byok/LiveCheckDrawer.svelte';
   import { i18n } from '../i18n/locale.svelte.ts';
-  import CountsLine from '../shell/CountsLine.svelte';
-  import ExampleChips from '../shell/ExampleChips.svelte';
+  import CompareTable from '../compare/CompareTable.svelte';
+  import Advanced from '../shell/Advanced.svelte';
+  import ExamplesMenu from '../shell/ExamplesMenu.svelte';
   import Footer from '../shell/Footer.svelte';
   import Header from '../shell/Header.svelte';
   import type HelpDialogComponent from '../shell/HelpDialog.svelte';
   import LiveRegions from '../shell/LiveRegions.svelte';
   import NoticesStrip from '../shell/NoticesStrip.svelte';
-  import OptionsRow from '../shell/OptionsRow.svelte';
-  import PickerButton from '../shell/PickerButton.svelte';
   import type PickerDialogComponent from '../shell/PickerDialog.svelte';
   import { isEditableTarget, matchShortcut } from '../shell/shortcuts.ts';
-  import PipelineRail from '../pipeline/PipelineRail.svelte';
   import { setViewResolvers } from '../board/view-cache.ts';
   import TextInput from '../shell/TextInput.svelte';
   import type { AppState } from './app-state.svelte.ts';
   import { createAppState } from './bootstrap.ts';
   import { provideAppState } from './context.ts';
-  import CopyLink from './CopyLink.svelte';
-  import type LongInputBannerComponent from './LongInputBanner.svelte';
-  import { isOnDemand } from './long-input.ts';
-  import { stageParam, URL_WRITE_DELAY_MS, urlFor, type UrlSnapshot } from './url-state.ts';
+  import { EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
+  import { stageParam, URL_WRITE_DELAY_MS, urlFor } from './url-state.ts';
 
   interface Props {
     /** Tests pass their own; the page builds one (bootstrap.ts). */
@@ -53,19 +50,11 @@
   let PickerDialog: typeof PickerDialogComponent | null = $state.raw(null);
   let HelpDialog: typeof HelpDialogComponent | null = $state.raw(null);
   let textarea: HTMLTextAreaElement | undefined = $state();
-  /** The long-input banner (AD-27) loads the first time a text reaches an on-demand tier. */
-  let LongInputBanner: typeof LongInputBannerComponent | null = $state.raw(null);
-  $effect(() => {
-    if (!isOnDemand(app.longInput) || LongInputBanner !== null) return;
-    import('./LongInputBanner.svelte').then(
-      (module) => {
-        LongInputBanner = module.default;
-      },
-      (error: unknown) => {
-        staleChunk(error);
-      },
-    );
-  });
+
+  /** The tokenizers on screen, whose notices the strip shows: every row's, and the board's while Advanced is open. */
+  const shown = $derived(
+    [...app.rows.visibleTokenizers(), ...(app.advancedOpen ? [app.tokenizer] : [])].map((id) => tokenizerEntry(id)),
+  );
 
   /** A dialog chunk that fails to load means a page older than the deploy: the `fetch` alert offers the reload (AD-11). */
   function staleChunk(error: unknown): void {
@@ -78,18 +67,12 @@
   let urlKey: string | null = null;
   let urlTimer: ReturnType<typeof setTimeout> | undefined;
   $effect(() => {
-    const snapshot: UrlSnapshot = {
-      tokenizer: app.tokenizer,
-      stage: app.stage,
-      step: app.step,
-      byteView: app.byteView,
-      locale: i18n.current,
-      textLang: app.textLang,
-    };
+    const snapshot = app.urlSnapshot();
     const text = app.text;
     const key = [
-      snapshot.tokenizer,
-      stageParam(snapshot.stage, snapshot.step),
+      snapshot.advanced ? snapshot.tokenizer : '',
+      snapshot.advanced ? stageParam(snapshot.stage, snapshot.step) : '',
+      snapshot.rows.join(','),
       snapshot.byteView,
       snapshot.locale,
       snapshot.textLang,
@@ -147,6 +130,9 @@
     });
     if (action === null) return;
     event.preventDefault();
+    // The keys that act on the board (stops, steps, the picker) open Advanced first (PA-19).
+    if (action.kind === 'stage' || action.kind === 'jump' || action.kind === 'step' || action.kind === 'picker')
+      app.openAdvanced();
     switch (action.kind) {
       case 'stage':
         app.moveStage(action.delta);
@@ -180,11 +166,15 @@
 
   onMount(() => {
     i18n.setPage('main');
-    app.setResultTransition((update) => crossfade(document.getElementById('board'), update, motionPrefs.reduced));
     setViewResolvers(app.viewResolvers);
-    void app.start();
+    void app.start().then(() => {
+      // The other default rows' vocabularies, into the Cache API only, 10 s after the load trigger (PA-19 §2.3).
+      const others: TokenizerId[] = EXAMPLES_INDEX.defaults
+        .map((entry) => entry.tokenizer)
+        .filter((id) => id !== app.tokenizer);
+      void app.hub.prefetchIdle(others);
+    });
     return () => {
-      app.setResultTransition(null);
       setViewResolvers(null);
       clearTimeout(urlTimer);
     };
@@ -193,24 +183,18 @@
 
 <svelte:window onkeydown={onKeydown} />
 
-<Header home skipTarget="#board" skipLabel={i18n.t('nav.skip')} onhelp={openHelp}>
-  {#snippet picker()}
-    <PickerButton onopen={openPicker} />
-  {/snippet}
-</Header>
+<Header home skipTarget="#compare" skipLabel={i18n.t('nav.skip')} onhelp={openHelp} />
 
 <main class="main frame" id="main">
   <LiveRegions />
   <section class="input-panel" aria-label={i18n.t('input.label')}>
     <TextInput bind:element={textarea} />
-    <ExampleChips />
-    <OptionsRow />
-    <CountsLine />
-    {#if LongInputBanner !== null}<LongInputBanner />{/if}
-    <CopyLink />
+    <ExamplesMenu />
   </section>
-  <PipelineRail />
-  <Board />
+
+  <CompareTable />
+
+  <Advanced onpicker={openPicker} onstale={staleChunk} />
 
   {#if PickerDialog !== null}
     <PickerDialog
@@ -234,9 +218,9 @@
   {/if}
 </main>
 
-<Footer entry={app.entry}>
+<Footer>
   {#snippet notices()}
-    <NoticesStrip entry={app.entry} />
+    <NoticesStrip entries={shown} />
   {/snippet}
 </Footer>
 

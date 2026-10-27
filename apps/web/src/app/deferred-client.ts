@@ -1,8 +1,8 @@
 /**
- * A `TokenizerClientLike` whose implementation is imported on first use. The page needs a client the moment it builds
- * its AppState, but not the client's code: today that is the precomputed-examples client over WP01's
- * `MockTokenizerClient` (`examples-client.ts`), and the page first loads a tokenizer only after first paint
- * (`AppState.start`, 06 §3), so the code arrives then, in a chunk of its own, outside the initial Main JS.
+ * A `TokenizerClientLike` whose implementation is imported on first use. The pool needs a client the moment it spawns
+ * one, but not the client's code: under `?mock=1` that is the precomputed-examples client over WP01's
+ * `MockTokenizerClient` (`examples-client.ts`, `clients.ts`), and the page first loads a tokenizer only after first
+ * paint (`AppState.start`, 06 §3), so the code arrives then, in a chunk of its own, outside the initial Main JS.
  *
  * Calls made before the import settles wait on it in call order, so supersession and cancellation behave exactly as on
  * the underlying client (AD-21); `features` and `assets` settle once it exists. A failed import (a chunk missing after a
