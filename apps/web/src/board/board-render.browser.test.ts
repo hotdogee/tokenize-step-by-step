@@ -3,17 +3,17 @@
  * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks
  * (scaling from --cell from 2560 px; the gap track of ≥ 12 px under the token tier) with every token id inside its chip
  * (PA-17: narrowed, then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits; markers, the dummy
- * prefix's compact two-line id and byte-fallback chips; a live part's hex whole, without continuation icons, its lock
- * hidden on 1 and 2 columns; the stop-5 star clear of the id, on chips of two or more columns only), the APG grid's
- * ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in view
- * mounted while scrolling), CSP-safe styling and axe.
+ * prefix's compact two-line id and byte-fallback chips; a live part's hex whole, without continuation icons, a
+ * 1-column locked part's lock in place of its hex and a wider one's beside it; the stop-5 star clear of the id, on chips
+ * of two or more columns only), the APG grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result
+ * (≤ 15 rows in the DOM, every row in view mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import '../motion/motion.css';
 import axe from 'axe-core';
 import { flushSync } from 'svelte';
-import { afterEach, describe, expect, it } from 'vitest';
-import { page } from 'vitest/browser';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
+import { commands, page } from 'vitest/browser';
 import { packRows } from '@tsbs/core/layout/pack-rows';
 import { TokenizationView } from '@tsbs/core/model/view';
 import type { AppState } from '../app/app-state.svelte.ts';
@@ -30,6 +30,12 @@ import {
   type MountedBoard,
 } from './board.test-helper.ts';
 import { columnsFor } from './geometry.ts';
+
+declare module 'vitest/browser' {
+  interface BrowserCommands {
+    emulateContrast: (contrast: 'more' | null) => Promise<void>;
+  }
+}
 
 let mounted: MountedBoard | null = null;
 
@@ -659,42 +665,81 @@ describe('token ids inside every chip (PA-17)', () => {
     });
   }
 
-  it('hides a lock beside a part’s hex on 1 and 2 columns, shrinks it ≤ 1.5 px on 3, never the hex (Gemma 2, 27 px)', async () => {
-    await page.viewport(1280, 800);
-    document.documentElement.dataset['cellSize'] = 'S';
-    expect(cellPx()).toBe(27);
-    // USER_DEFINED whitespace runs: “\n” (1 column), “\n\n” (2) and three spaces (3), parts at stop 4, tokens at stop 6.
-    for (const [caseName, span, hex] of [
-      ['crlf', 1, '0A'],
-      ['en-contraction-code', 2, '0A 0A'],
-      ['trailing-spaces', 3, '20 20 20'],
-    ] as const) {
-      for (const stage of [4, 6] as const) {
-        mounted?.destroy();
-        const board = await showAt(appWith(fixtureResult('google-gemma2', caseName), { stage }), 'S');
-        await digitsLoaded();
-        const locked = cells(board, `[data-tier="token"].s${String(span)} .bd-chip.has-lock`);
-        expect(locked, `${caseName} at stop ${String(stage)}`).toHaveLength(1);
-        const vis = locked[0] ?? board.grid;
-        const lock = vis.querySelector('svg.bd-icon') ?? vis; // on the line under the id where the chip is stacked
-        const what = `${hex} at stop ${String(stage)}`;
-        if (stage === 6) {
-          expect(lock.getBoundingClientRect().width, what).toBe(11); // final tokens keep their marks
-          continue;
-        }
-        const text = vis.querySelector('.bd-chip-line > .bd-part-text') ?? vis;
-        expect(text.textContent).toBe(hex);
-        // The worst case beside the lock: a just-merged part, whose hex line keeps 10 px for the star.
-        if (vis.parentElement !== null) vis.parentElement.dataset['justMerged'] = '';
-        await frames(1);
-        expect(text.scrollWidth, what).toBeLessThanOrEqual(text.clientWidth);
-        expectWithin(glyphRun(text), paddingBox(vis), what);
-        if (span <= 2) expect(getComputedStyle(lock).display, what).toBe('none');
-        // 75 px of line: the star's 10, the lock's 11 + 2 px gap and the 53.3 px hex: the lock gives 1.33 px.
-        else expect(lock.getBoundingClientRect().width, what).toBeGreaterThanOrEqual(9.5);
+  for (const [width, size, cellSize, contrast] of [
+    [1280, 'S', 27, false],
+    [1280, 'M', 30, false],
+    [600, 'M', 36, false],
+    [1280, 'S', 27, true],
+  ] as const) {
+    it(`shows a 1-column locked part’s lock in place of its hex and the lock beside a wider part’s whole hex (Gemma 2, ${String(cellSize)} px${contrast ? ', prefers-contrast: more' : ''})`, async () => {
+      if (contrast) {
+        await commands.emulateContrast('more');
+        onTestFinished(() => commands.emulateContrast(null));
       }
-    }
-  });
+      await page.viewport(width, 900);
+      document.documentElement.dataset['cellSize'] = size;
+      expect(cellPx()).toBe(cellSize);
+      // USER_DEFINED whitespace runs: “\n” (1 column), “\n\n” (2) and three spaces (3), parts at stop 4, tokens at stop 6
+      // (a frozen symbol is never formed by a merge: its hex line never keeps room for the star).
+      for (const [caseName, span, hex] of [
+        ['crlf', 1, '0A'],
+        ['en-contraction-code', 2, '0A 0A'],
+        ['trailing-spaces', 3, '20 20 20'],
+      ] as const) {
+        for (const stage of [4, 6] as const) {
+          mounted?.destroy();
+          const board = await showAt(appWith(fixtureResult('google-gemma2', caseName), { stage }), size);
+          await digitsLoaded();
+          const what = `${hex} at stop ${String(stage)}, ${String(cellSize)} px${contrast ? ', contrast: more' : ''}`;
+          const locked = cells(board, `[data-tier="token"].s${String(span)} .bd-chip.has-lock`);
+          expect(locked, what).toHaveLength(1);
+          const vis = locked[0] ?? board.grid;
+          expect(getComputedStyle(vis).borderLeftWidth, what).toBe(contrast ? '2px' : '1px');
+          const lock = vis.querySelector('svg.bd-icon[width="11"]') ?? vis; // under the id where the chip is stacked
+          const lockBox = (): number[] => {
+            const rect = lock.getBoundingClientRect();
+            return [rect.width, rect.height];
+          };
+          if (stage === 6) {
+            expect(lockBox(), what).toEqual([11, 11]); // final tokens keep their marks
+            continue;
+          }
+          const text = vis.querySelector('.bd-chip-line > .bd-part-text') ?? vis;
+          expect(text.textContent, what).toBe(hex);
+          if (span === 1) {
+            // The byte cell above shows the byte: the lock, a USER_DEFINED symbol's only cue, takes the hex's place.
+            expect(getComputedStyle(text).display, what).toBe('none');
+            expect(lockBox(), what).toEqual([11, 11]);
+            continue;
+          }
+          // The hex is whole, inside the line's content box, and the lock takes what the line's room leaves, ≤ 11 px.
+          const line = vis.querySelector('.bd-chip-line') ?? vis;
+          const lineBox = line.getBoundingClientRect();
+          const lineStyle = getComputedStyle(line);
+          const visStyle = getComputedStyle(vis);
+          const pad = paddingBox(vis);
+          const content = {
+            ...pad,
+            left: lineBox.left + px(lineStyle.paddingLeft),
+            right: lineBox.right - px(lineStyle.paddingRight),
+          };
+          const run = glyphRun(text);
+          expect(text.scrollWidth, what).toBeLessThanOrEqual(text.clientWidth);
+          expectWithin(run, content, `${what}: hex`);
+          // The line's room: the chip's content box (the line's max-width) less the line's own paddings.
+          const room =
+            pad.right -
+            pad.left -
+            px(visStyle.paddingLeft) -
+            px(visStyle.paddingRight) -
+            px(lineStyle.paddingLeft) -
+            px(lineStyle.paddingRight);
+          const left = Math.min(11, room - px(lineStyle.columnGap) - (run.right - run.left));
+          expect(lock.getBoundingClientRect().width, `${what}: lock`).toBeCloseTo(left, 0); // within 0.5 px
+        }
+      }
+    });
+  }
 
   it('draws the stop-5 star only on a just-merged part’s fragments of two or more columns, clear of the id (o200k, 360 px, L)', async () => {
     await page.viewport(360, 780);

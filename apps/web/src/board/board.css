@@ -519,11 +519,10 @@
 /*
  * Stacked chips (≤ 2 columns, and every live part, whose hex would otherwise run into its id): a column with the id on
  * the first line and, under it, one line (`.bd-chip-line`, left out when empty) holding the marks and a part's hex
- * (12 + 1 + 11 px inside the 26 px chip). The line never wraps: the hex gives way first, clipping its end (never in a
- * 1-column chip, below), and marks that still do not fit clip at both ends. The inline paddings shrink to 1 px (5 px on
- * a hatched edge, whose strip is 4 px) to give the id the room. `safe center` aligns a column that overflows to its
- * start; engines without `safe` keep the `center` before it (or fall back to the normal start): either way the id stays
- * in view.
+ * (12 + 1 + 11 px inside the 26 px chip). The line never wraps: a live part's hex never gives way (below); marks that do
+ * not fit clip at both ends. The inline paddings shrink to 1 px (5 px on a hatched edge, whose strip is 4 px) to give
+ * the id the room. `safe center` aligns a column that overflows to its start; engines without `safe` keep the `center`
+ * before it (or fall back to the normal start): either way the id stays in view.
  */
 .bd-chip.stacked {
   --pad-s: 1px;
@@ -553,17 +552,19 @@
   overflow: hidden;
 }
 
-/* A live part keeps its hex whole: its hex never shrinks, it draws no continuation icons (its dashed edges mark the
-   continuation, as on the live tier) and a lock beside the hex hides on parts of ≤ 2 columns (`.s1`/`.s2` are the
-   gridcell's span classes) and shrinks on wider ones (1.33 px at most: a 3-column just-merged lock at the 27 px cell;
-   3.33 px under prefers-contrast: more). Final tokens keep their marks, which clip at both ends when they do not fit. */
+/* A live part keeps its hex whole: its hex never shrinks and it draws no continuation icons (its dashed edges mark the
+   continuation, as on the live tier). A 1-column locked part (`.s1` is the gridcell's span class) shows its lock in
+   place of its 1-byte hex, which the byte cell above it shows already: the lock is a USER_DEFINED symbol's only visual
+   cue (05 §2, §4.1); its label still names the hex. Elsewhere the lock keeps its 11 px beside the whole hex and gives up
+   ≤ 1.2 px only under prefers-contrast: more with a 0.6 em mono font (a 2-column locked part: 46 px of line for the
+   34.2 px hex, the 2 px gap and the lock). Final tokens keep their marks, which clip at both ends when they do not fit. */
 .bd-cell-token[data-variant='part'] .bd-chip-line > .bd-part-text {
   flex-shrink: 0;
 }
 
 .bd-cell-token[data-variant='part'] .cont-start > .bd-chip-line > .bd-icon:first-child,
 .bd-cell-token[data-variant='part'] .cont-end > .bd-chip-line > .bd-icon:last-child,
-.bd-cell-token:is(.s1, .s2)[data-variant='part'] .has-lock > .bd-chip-line > .bd-icon {
+.bd-cell-token.s1[data-variant='part'] .has-lock > .bd-chip-line > .bd-part-text {
   display: none;
 }
 
