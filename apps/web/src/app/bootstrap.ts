@@ -1,75 +1,47 @@
 /**
- * Builds the page's AppState: the precomputed default example on screen (AD-16) — WP03's inlined
- * `generated/examples-default.json` expanded by WP01's `fromFixtureCase` — and the tokenizer client.
+ * Builds the page's AppState: the result hub (PA-19), seeded with the precomputed default rows (AD-16) — WP03's inlined
+ * `generated/examples-default.json` (台灣台南 on each lab's primary tokenizer) expanded by WP01's `fromFixtureCase`.
  *
- * The client is WP07's Worker `TokenizerClient` (PA-8): `new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }))`
- * over the Vite worker import of `@tsbs/worker/entry`, so typing tokenizes live with the real engines. `?mock=1` swaps in
- * the precomputed-examples `ExamplesClient` (WP01's `MockTokenizerClient`) for deterministic results without a Worker
- * (e2e specs that pin precomputed examples, offline debugging; docs/dev.md). Either way the client's code — and the
- * Worker — is imported on its first use, after first paint (`deferred-client.ts`, 06 §3).
+ * The hub's Worker side (`result-hub-engine.ts`) and the clients it spawns — one per tokenizer on screen (`clients.ts`:
+ * WP07's Worker `TokenizerClient`, PA-8, or one precomputed-examples `ExamplesClient` per tokenizer under `?mock=1`) —
+ * are imported with the first load, after first paint (06 §3), so typing tokenizes live with the real engines.
  *
- * While a tokenizer loads, the example chips answer from the precomputed examples (`precomputed.ts`: the inlined
- * default rows, the lazy per-tokenizer files), and the page URL's state (`url-state.ts`) is read once, here.
+ * While a tokenizer loads, the example chips answer from the precomputed examples (`precomputed.ts`, imported on the first
+ * lookup — the seeded default rows need none: the inlined wires, the lazy per-tokenizer files), and the page URL's state
+ * (`url-state.ts`) is read once, here.
  */
-import type { TokenizationResult, TokenizerClientLike } from '@tsbs/core';
+import type { TokenizationResult, TokenizerId } from '@tsbs/core';
 import type { ExamplesWire } from '@tsbs/core/fixture/examples-wire';
 import { fromFixtureCase } from '@tsbs/core/fixture/from-fixture-case';
 import examplesDefault from '../generated/examples-default.json';
 import { AppState } from './app-state.svelte.ts';
-import { DeferredClient } from './deferred-client.ts';
-import { PrecomputedExamples } from './precomputed.ts';
+import type { PrecomputedSource } from './precomputed.ts';
 import { EXAMPLES_INDEX, TOKENIZERS, tokenizerEntry } from './registry.ts';
+import { ResultHub } from './result-hub.svelte.ts';
 import { parseUrlState, type UrlState } from './url-state.ts';
 
 /** The inlined default rows: one wire per lab's primary tokenizer, each with the default chip only (PA-19). */
 const DEFAULT_WIRES = examplesDefault as unknown as readonly ExamplesWire[];
 
-/** The precomputed default example (OD-1: 台灣台南 on o200k_base), as the first paint shows it. */
-export function defaultResult(seq = 0): TokenizationResult {
-  const { tokenizer, case: caseName } = EXAMPLES_INDEX.default;
+/** The inlined precomputed result of `caseName` on `tokenizer`. */
+function inlined(tokenizer: TokenizerId, caseName: string, seq = 0): TokenizationResult {
   const wire = DEFAULT_WIRES.find((candidate) => candidate.tokenizer === tokenizer);
   if (wire === undefined) throw new Error(`examples-default.json has no ${tokenizer}`);
   return fromFixtureCase(wire, caseName, tokenizerEntry(tokenizer), { seq });
 }
 
-/** True when the page URL asks for the precomputed-examples client (`?mock=1`). */
-export function wantsMockClient(search: string = 'location' in globalThis ? globalThis.location.search : ''): boolean {
-  return new URLSearchParams(search).get('mock') === '1';
+/** The precomputed default example (OD-1: 台灣台南 on o200k_base), as the board's first paint shows it. */
+export function defaultResult(seq = 0): TokenizationResult {
+  const { tokenizer, case: caseName } = EXAMPLES_INDEX.default;
+  return inlined(tokenizer, caseName, seq);
 }
 
-/**
- * The precomputed-examples client: answers the example chips from the lazy `examples/<id>.<sha8>.json` files and rejects
- * any other text with `NoPrecomputedResultError` (the code arrives with the first call).
- */
-export function createExamplesClient(fetchImpl?: (url: string) => Promise<Response>): TokenizerClientLike {
-  return new DeferredClient(async () => {
-    const [{ ExamplesClient }, { probeFeatures }] = await Promise.all([
-      import('./examples-client.ts'),
-      import('./features.ts'),
-    ]);
-    return new ExamplesClient({
-      refs: TOKENIZERS,
-      files: EXAMPLES_INDEX.files,
-      features: probeFeatures(),
-      ...(fetchImpl === undefined ? {} : { fetch: fetchImpl }),
-    });
-  });
-}
-
-/** The Worker client (PA-8): the client module and the Worker's entry chunk arrive with the first call. */
-export function createWorkerClient(): TokenizerClientLike {
-  return new DeferredClient(async () => {
-    const [{ TokenizerClient, WORKER_NAME }, { default: TokWorker }] = await Promise.all([
-      import('@tsbs/worker/client'),
-      import('@tsbs/worker/entry?worker'),
-    ]);
-    return new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }));
-  });
-}
-
-/** The client of the page: the Worker, or the precomputed examples under `?mock=1`. */
-export function createClient(): TokenizerClientLike {
-  return wantsMockClient() ? createExamplesClient() : createWorkerClient();
+/** The precomputed default rows (PA-19): 台灣台南 on each lab's primary tokenizer, as the table's first paint shows them. */
+export function defaultResults(): Partial<Record<TokenizerId, TokenizationResult>> {
+  const results: Partial<Record<TokenizerId, TokenizationResult>> = {};
+  for (const { tokenizer, case: caseName } of EXAMPLES_INDEX.defaults)
+    results[tokenizer] = inlined(tokenizer, caseName);
+  return results;
 }
 
 /** The page URL's state (read once at load), among the tokenizers the picker offers. */
@@ -80,7 +52,25 @@ export function initialUrlState(search: string = 'location' in globalThis ? glob
   );
 }
 
+/** The precomputed examples, imported on the first lookup (a failed import is retried on the next one). */
+function lazyPrecomputed(): PrecomputedSource {
+  let source: Promise<PrecomputedSource> | null = null;
+  return {
+    find: (ref, text, options) => {
+      source ??= import('./precomputed.ts').then(
+        (module) => new module.PrecomputedExamples(EXAMPLES_INDEX.files, DEFAULT_WIRES),
+        (error: unknown) => {
+          source = null;
+          throw error;
+        },
+      );
+      return source.then((examples) => examples.find(ref, text, options));
+    },
+  };
+}
+
+/** The page's AppState over a result hub seeded with the default rows. */
 export function createAppState(): AppState {
-  const precomputed = new PrecomputedExamples(EXAMPLES_INDEX.files, DEFAULT_WIRES);
-  return new AppState(createClient(), defaultResult(), precomputed, initialUrlState());
+  const hub = new ResultHub({ precomputed: lazyPrecomputed(), seeds: Object.values(defaultResults()) });
+  return new AppState(hub, initialUrlState());
 }

@@ -68,9 +68,11 @@ Worker heap check fails under `TSBS_PERF=1` instead of skipping, so a green opt-
 
 ## Tokenizer client (`?mock=1`)
 
-The page tokenizes in a Web Worker (`@tsbs/worker`, PA-8): `apps/web/src/app/bootstrap.ts` builds
+The page tokenizes in Web Workers (`@tsbs/worker`, PA-8), one per tokenizer it shows (PA-19: a pool of at most six,
+`apps/web/src/app/tokenizer-pool.ts`): for each, `apps/web/src/app/clients.ts` builds
 `new TokenizerClient(() => new TokWorker({ name: WORKER_NAME }))` from the Vite worker import
-`@tsbs/worker/entry?worker`, behind `DeferredClient`, so the client code, the Worker's host chunks (`assets/entry-*.js`
+`@tsbs/worker/entry?worker`. The result hub imports that code with its Worker side (`result-hub-engine.ts`, the
+`lazy-result-hub-engine-*.js` chunk) on the first load, so the client code, the Worker's host chunks (`assets/entry-*.js`
 and the `assets/entry-core-*.js` it imports) and the first engine chunk (`assets/bytelevel-*.js` or `assets/spm-*.js`,
 plus the shared `assets/engine-core-*.js`) load after first paint, followed by the tokenizer's `/tok/<id>/<sha12>.bin`.
 Typed text is tokenized live. No chunk may import `entry-*.js` itself: WebKit evaluates a module Worker's top-level
@@ -78,7 +80,7 @@ script again when another module imports it (a second host), so `apps/web/vite.c
 imports into `entry-core` and `check:dist` fails on such an import.
 
 Append `?mock=1` to the URL (`http://localhost:5173/?mock=1`, or `/?lang=ja&mock=1`) to use the precomputed-examples
-client instead (`ExamplesClient` over WP01's `MockTokenizerClient`): no Worker and no vocabulary download; the example
+client instead (one `ExamplesClient` over WP01's `MockTokenizerClient` per tokenizer): no Worker and no vocabulary download; the example
 chips answer from the lazy `examples/<id>.<sha8>.json` files (the oracle's results), and any other text shows "waiting
 for the tokenizer". E2E specs that need deterministic precomputed results open `/?mock=1`
 (`e2e/specs/live-worker.spec.ts` covers both modes); the Worker's generated inputs
@@ -86,23 +88,29 @@ for the tokenizer". E2E specs that need deterministic precomputed results open `
 
 ## How the page is wired (WP13)
 
-One `AppState` (`apps/web/src/app/app-state.svelte.ts`, 05 §1.1) drives the client, the board, the rail, the inspector
-and the drawer:
+One `AppState` (`apps/web/src/app/app-state.svelte.ts`, 05 §1.1) drives the board, the rail, the inspector and the
+drawer, over the result hub (`result-hub.svelte.ts`, PA-19), which holds one result per tokenizer and token options for
+every view and owns the pool of clients:
 
-- **Startup.** The precomputed default example (台灣台南 on o200k, inlined) is on screen at first paint, badge
-  "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
+- **Startup.** The precomputed default rows (台灣台南 on each lab's primary tokenizer, inlined) seed the hub, and the
+  board's (o200k) is on screen at first paint, badge "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
   the first paint entry (`largest-contentful-paint`, else `paint`) and two animation frames (`load-trigger.ts`, 06 §3);
   `integration-load.spec.ts` asserts the Worker script and the `.bin` start after the last LCP entry. While a tokenizer
   loads, an example chip answers from the precomputed examples (`precomputed.ts`); the engine's first answer replaces a
   precomputed result inside the board's View Transition (`setResultTransition`, skipped above 8 MB, where the previous
   result is released first) and the badge says "live".
+- **Results and Workers** (PA-19). `hub.request(id, text, options, { trace })` answers precomputed while `id` is not
+  loaded and live once it is; a view `retain`s the entries it shows. Other tokenizers load on the first free-text edit,
+  a row switch (`hub.ensureRows`) or the board's need, and `hub.prefetchIdle` caches more vocabularies 10 s after the
+  load trigger unless Save-Data. Switching the board's tokenizer selects another Worker: nothing is unloaded, and a
+  tokenizer loaded before answers at once.
 - **Requests.** Every encode carries one sequence number: an older answer is dropped, a superseded encode settles as
   `cancelled` (never an error), keystrokes coalesce in the 40 ms debounce, an encode asked for during a load is sent once
   after `loaded`, a paste (`inputType` `insertFromPaste`) skips the debounce, an IME composition sends nothing until it is
   committed (05 §6; meanwhile the counts line keeps the last result's tokens, marked "stale").
 - **The board's result** is `AppState.board`: `final` (the current result, or its window), `stale` (the last result, kept
   with `data-pending` until its successor arrives — a keystroke on a loaded tokenizer renders once, PA-11; a tokenizer
-  switch keeps the last result, AD-19) or `text` (text-only stops 1–3, only while nothing is loaded for the text, an IME
+  switch keeps the last result until the new tokenizer answers) or `text` (text-only stops 1–3, only while nothing is loaded for the text, an IME
   composition is open or a long input waits). Rows virtualize above 600 cells or 8 packed rows (`board/window.ts`).
 - **Long input** (AD-27, `long-input.ts`): ≤ 2,000 code points live; ≤ 20,000 virtualized with scoped replay; above that
   the "Long input — tokenize on demand" banner runs the WHOLE analysed text once (`trace: { maxSteps: 50_000 }` up to

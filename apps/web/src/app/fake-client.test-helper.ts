@@ -1,7 +1,7 @@
 /**
- * Test-only: a `TokenizerClientLike` whose every `load` and `encode` is a promise the test settles by hand, and a
- * synthetic result builder (one chunk, one token per code point, ids = code points) for texts no fixture has. Never
- * imported by app code.
+ * Test-only: a `TokenizerClientLike` whose every `load` and `encode` is a promise the test settles by hand, a spawner
+ * that hands out one per pool entry (`FakeClients`), a result hub over them (`hubOf`), and a synthetic result builder
+ * (one chunk, one token per code point, ids = code points) for texts no fixture has. Never imported by app code.
  */
 import type {
   AssetSummary,
@@ -18,7 +18,11 @@ import { buildResult } from '@tsbs/core/model/build-result';
 import { CancelledError } from '@tsbs/core/model/cancelled';
 import { ChunkKind, TokenKind } from '@tsbs/core/model/result';
 import { analyzeText } from '@tsbs/core/text/analyze';
+import type { PrecomputedSource } from './precomputed.ts';
 import { tokenizerEntry } from './registry.ts';
+import { createEngine } from './result-hub-engine.ts';
+import { ResultHub, type EngineSource } from './result-hub.svelte.ts';
+import { TokenizerPool } from './tokenizer-pool.ts';
 
 /** One chunk, one token per code point (id = the code point), no timeline unless `steps` asks for one. */
 export function syntheticResult(
@@ -83,7 +87,10 @@ export class FakeClient implements TokenizerClientLike {
   readonly assets: Promise<AssetSummary> = Promise.reject(new Error('no assets in tests'));
   readonly loads: LoadCall[] = [];
   readonly encodes: EncodeCall[] = [];
+  /** Tokenizers whose vocabulary was prefetched through this client, in call order. */
+  readonly prefetches: TokenizerId[] = [];
   unloads = 0;
+  terminated = false;
   #resident: TokenizerId | null = null;
   readonly #listeners = new Set<(id: TokenizerId | null) => void>();
 
@@ -146,7 +153,8 @@ export class FakeClient implements TokenizerClientLike {
     return call.promise;
   }
 
-  prefetch(): Promise<void> {
+  prefetch(id: TokenizerId): Promise<void> {
+    this.prefetches.push(id);
     return Promise.resolve();
   }
 
@@ -177,8 +185,56 @@ export class FakeClient implements TokenizerClientLike {
   }
 
   terminate(): void {
+    this.terminated = true;
     this.setResident(null);
   }
+}
+
+/** Spawns a new `FakeClient` per pool entry (one Worker per tokenizer, PA-19) and keeps them in spawn order. */
+export class FakeClients {
+  readonly all: FakeClient[] = [];
+  readonly #features: Partial<Features>;
+
+  constructor(features: Partial<Features> = {}) {
+    this.#features = features;
+  }
+
+  readonly spawn = (): FakeClient => {
+    const client = new FakeClient(this.#features);
+    this.all.push(client);
+    return client;
+  };
+
+  /** The client whose first load asked for `id`. */
+  of(id: TokenizerId): FakeClient {
+    const client = this.all.find((candidate) => candidate.loads[0]?.id === id);
+    if (client === undefined) throw new Error(`no client loaded ${id}`);
+    return client;
+  }
+}
+
+export interface HubSetup {
+  /** Results on their entries before any request (the page seeds the inlined default rows). */
+  readonly seeds?: readonly TokenizationResult[];
+  readonly precomputed?: PrecomputedSource | null;
+}
+
+/** The hub's engine over `pool`, created at once (the page imports its engine with the first load). */
+export function engineOver(pool: TokenizerPool): EngineSource {
+  return () => (host) => createEngine(host, pool);
+}
+
+/**
+ * A result hub over `clients`: one client every pool entry shares (a test that stays on one tokenizer), or a spawn
+ * function such as `FakeClients.spawn` (one client per tokenizer).
+ */
+export function hubOf(clients: TokenizerClientLike | (() => TokenizerClientLike), setup: HubSetup = {}): ResultHub {
+  const spawn = typeof clients === 'function' ? clients : (): TokenizerClientLike => clients;
+  return new ResultHub({
+    precomputed: setup.precomputed ?? null,
+    seeds: setup.seeds ?? [],
+    engine: engineOver(new TokenizerPool(spawn)),
+  });
 }
 
 /** Lets pending promise callbacks run. */

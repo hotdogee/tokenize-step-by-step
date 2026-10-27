@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { packRows } from '@tsbs/core/layout/pack-rows';
 import { AppState } from '../app/app-state.svelte.ts';
+import { hubOf } from '../app/fake-client.test-helper.ts';
 import { motionPrefs } from '../motion/motion-prefs.svelte.ts';
 import {
   appWith,
@@ -157,7 +158,7 @@ describe('keyboard state machine on a 3-row fixture (05 §8)', () => {
     // 25,000 CJK code points (3 bytes each, 5,000 distinct): the on-demand tier; one token per code point, id = it.
     const text = Array.from({ length: 25_000 }, (_, i) => String.fromCodePoint(0x4e00 + (i % 5000))).join('');
     const result = syntheticResult(text);
-    const app = new AppState(idleClient(), null);
+    const app = new AppState(hubOf(idleClient()));
     app.setText(text);
     app.options = result.options;
     app.result = result; // the whole-text run, current for the text

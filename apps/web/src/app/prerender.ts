@@ -1,8 +1,9 @@
 /**
  * Server entry of the static first paint of `/` (PA-15). `plugins/first-paint.ts` builds this module for SSR during
  * `vite build` (the hydration-parity test loads it through Vite too) and renders the page's first state — the
- * precomputed default example at stop 6 (AD-16) — once per UI locale and board view; boot.js clones the matching markup
- * into `#app` before the first paint and main.ts hydrates it (app/first-paint.ts).
+ * precomputed default example at stop 6 (AD-16), from an AppState whose result hub is seeded with the inlined default
+ * rows (PA-19) — once per UI locale and board view; boot.js clones the matching markup into `#app` before the first
+ * paint and main.ts hydrates it (app/first-paint.ts).
  *
  * Not part of the client bundle: nothing in the app imports it.
  */

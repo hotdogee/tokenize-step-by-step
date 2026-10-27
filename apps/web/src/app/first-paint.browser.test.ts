@@ -14,7 +14,7 @@ import { LOCALES } from '../i18n/types.ts';
 import App from './App.svelte';
 import { AppState } from './app-state.svelte.ts';
 import { defaultResult } from './bootstrap.ts';
-import { FakeClient } from './fake-client.test-helper.ts';
+import { FakeClient, hubOf } from './fake-client.test-helper.ts';
 import { setFirstPaintView, type FirstPaintView } from './first-paint.ts';
 import { STORAGE_KEYS } from './storage.ts';
 
@@ -71,7 +71,7 @@ function shape(root: Node): string[] {
 
 /** The page state the prerender renders: the precomputed default example, no URL state (FakeClient: no Worker). */
 function firstState(): AppState {
-  return new AppState(new FakeClient(), defaultResult(), null, {});
+  return new AppState(hubOf(new FakeClient(), { seeds: [defaultResult()] }), {});
 }
 
 /** A container for one render, removed after the test. */

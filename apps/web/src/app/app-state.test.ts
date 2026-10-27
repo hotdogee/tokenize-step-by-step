@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { cachedTokenizers } from '../shell/cache-probe.ts';
 import { progressPercent } from '../shell/progress.ts';
 import { AppState, optionsFor } from './app-state.svelte.ts';
-import { createExamplesClient, defaultResult } from './bootstrap.ts';
+import { defaultResult } from './bootstrap.ts';
+import { createExamplesClient } from './clients.ts';
+import { hubOf } from './fake-client.test-helper.ts';
 import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
 import { isNoPrecomputedResult } from './no-precomputed.ts';
 import { EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
@@ -84,7 +86,9 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
 });
 
 describe('AppState (05 §1.1)', () => {
-  const make = (): AppState => new AppState(createExamplesClient(fixtureFetch()), defaultResult());
+  /** One examples client per tokenizer, as `?mock=1` spawns them (PA-19). */
+  const make = (): AppState =>
+    new AppState(hubOf(() => createExamplesClient(fixtureFetch()), { seeds: [defaultResult()] }));
 
   it('starts with the precomputed default example on o200k', () => {
     const app = make();
@@ -105,7 +109,7 @@ describe('AppState (05 §1.1)', () => {
     expect(app.status).toContain('o200k_base');
   });
 
-  it('lets the last tokenizer switch win (strict one-resident, AD-19)', async () => {
+  it('lets the last tokenizer switch win; the other one loads in its own Worker (PA-19, AD-19 per Worker)', async () => {
     const app = make();
     const first = app.selectTokenizer('xai-grok2');
     const second = app.selectTokenizer('google-gemma4');
@@ -113,6 +117,7 @@ describe('AppState (05 §1.1)', () => {
     await flush();
     expect(app.tokenizer).toBe('google-gemma4');
     expect(app.resident).toBe('google-gemma4');
+    expect(app.hub.loaded('xai-grok2')).toBe(true);
     expect(app.loading).toBeNull();
     expect(app.error).toBeNull();
   });

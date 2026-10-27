@@ -10,6 +10,7 @@ import { fromFixtureCase, type FromFixtureOptions } from '@tsbs/core/fixture/fro
 import { analyzeText } from '@tsbs/core/text/analyze';
 import { flushSync, mount, unmount } from 'svelte';
 import { AppState, type Stage } from '../app/app-state.svelte.ts';
+import { hubOf } from '../app/fake-client.test-helper.ts';
 import { SHIPPING_FIXTURES } from '../app/fixtures.test-helper.ts';
 import { tokenizerEntry } from '../app/registry.ts';
 import BoardHarness from './BoardHarness.test-helper.svelte';
@@ -57,7 +58,7 @@ export interface BoardSetup {
 
 /** An AppState showing `result` (its tokenizer and text) at `stage`. */
 export function appWith(result: TokenizationResult, setup: BoardSetup = {}): AppState {
-  const app = new AppState(idleClient(), result);
+  const app = new AppState(hubOf(idleClient(), { seeds: [result] }));
   app.tokenizer = result.tokenizer;
   app.text = result.input.text;
   app.textLang = 'auto';

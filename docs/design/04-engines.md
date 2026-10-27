@@ -255,6 +255,8 @@ Rules (all FROZEN):
 7. `heapHint` is `null` in browsers (`performance.memory` is Window-only/Chrome-only and `measureUserAgentSpecificMemory` needs cross-origin isolation, which this site does not have); it is populated only in the Node bench harness from `process.memoryUsage().arrayBuffers`.
 8. No `SharedArrayBuffer`, so no COOP/COEP requirements.
 
+**Several clients on one page (PA-19).** The page runs one `TokenizerClient` — one Worker — per tokenizer it shows: a pool of at most six (the comparison table's five rows plus the board's tokenizer; `apps/web/src/app/tokenizer-pool.ts`, the least recently used idle client is terminated beyond six). Each Worker keeps every rule above, strict one-resident included (AD-19 holds **per Worker**: a client only ever loads its own tokenizer, so it never needs rule 4's `unload`), and the protocol is unchanged; switching the board's tokenizer selects another client instead of unloading. The result hub (`result-hub.svelte.ts`; its Worker side, `result-hub-engine.ts`, owns the pool) gives each client one encode at a time across the views that share it (a row and the board with different token options take turns, since rule 1 would cancel the older encode). The Workers share the vocabulary cache through the Cache API; its LRU index is advisory across them (03 §C.6 step 9).
+
 ```ts
 // @tsbs/worker/client.ts (main thread) — framework-free; apps/web wraps `onResident` in a rune
 export interface TokenizerClientLike {
