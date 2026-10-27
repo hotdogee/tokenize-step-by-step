@@ -466,10 +466,12 @@ load(tokenizerId)
  7. phase 'build': readTsbv1 (copies PCES; container released) → ByteVocab (offsets + table) → engine factory (lazy import per family) → phase steps 'pieces' | 'merges'
  8. cache.put(url, new Response(bytes, { headers: { 'x-tsbs-layer': layer } })) when it came from the network and quota allows
       (navigator.storage.estimate(): need ≥ 2× asset free); the stored body is exactly what was verified
- 9. index entry (JSON at `index` in the same cache) records { url, bytes, lastUsed }; keep ≤ 3 tokenizers or ≤ 12 MiB (LRU evict)
+ 9. index entry (JSON at `index` in the same cache) records { url, bytes, lastUsed }; keep ≤ 9 tokenizers (every local one, PA-19) or ≤ 12 MiB (LRU evict)
 10. on startup: delete caches named 'tsbs-tok-*' with another version; delete entries whose url is not in the manifest
 11. post 'loaded' { fromCache, ms, bytesTransferred, contentEncoding: resp.headers.get('content-encoding'), layer }   (perf log + About diagnostics)
 ```
+
+The index is **advisory across Workers** (PA-19): the page runs one Worker per tokenizer on screen, each loader serializes only its own cache operations, so two Workers that commit at the same moment may lose a row of the read-modify-write index (the asset itself stays cached, and startup cleanup still drops what the manifest no longer names). Eviction never triggers below nine tokenizers, which is every local one, so a lost row costs nothing today.
 
 Progress weights for the picker bar (from measured times): download 0–75 %, verify 75–78 %, decompress 78–84 %, build 84–100 %. `prefetch(id)` = steps 3–5 + 8 only (download + cache, no build), issued by the client on `requestIdleCallback` for the lab's secondary tokenizer when `navigator.connection` is **undefined** (Firefox, Safari) **or** `effectiveType === '4g'`, and never when `saveData` is true (AD-19). Prefetching the id that is currently loading is a no-op. A 404 (stale client after a deploy) → `error { code: 'fetch', retryable: false }` → UI "A new version is available — reload". The picker's "downloaded ✓" state is derived from a `cache.keys()` probe each time the picker opens, never from the index entry alone: iOS Safari evicts script-writable storage (Cache API included) after 7 days without interaction, and About › Diagnostics says so next to the cache listing so the behaviour is not mistaken for a bug.
 

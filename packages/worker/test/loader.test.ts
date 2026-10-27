@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { Progress } from '@tsbs/core/protocol';
 import { assetUrl } from '../src/cache-store.ts';
 import { TokenizerError } from '../src/errors.ts';
-import { createLoader, sniffLayer, type LoaderProgress } from '../src/loader.ts';
+import { createLoader, DEFAULT_LIMITS, sniffLayer, type LoaderProgress } from '../src/loader.ts';
 import {
   FakeCacheStorage,
   fakeFetch,
@@ -285,12 +285,37 @@ describe('Cache API', () => {
     expect(await memoryOnly.cachedIds()).toEqual([]);
   });
 
-  it('keeps at most three tokenizers (LRU); a cache hit refreshes recency', async () => {
-    const ids = ['openai-o200k_base', 'openai-cl100k_base', 'meta-llama3', 'xai-grok2'] as const;
+  it('keeps every local tokenizer by default: nine entries (PA-19, 03 §C.6 step 9)', async () => {
+    const ids = [
+      'openai-o200k_base',
+      'openai-cl100k_base',
+      'anthropic-claude-legacy',
+      'google-gemma4',
+      'google-gemma2',
+      'meta-llama4-muse',
+      'meta-llama3',
+      'xai-grok2',
+      'xai-grok1',
+    ] as const;
+    expect(DEFAULT_LIMITS.maxEntries).toBe(ids.length);
     const assets = await Promise.all(ids.map((id) => makeAsset(id)));
     const server = fakeFetch(Object.fromEntries(assets.map((a) => [a.url, respond(a.gz)])));
     const storage = new FakeCacheStorage();
     const loader = createLoader(manifestOf(...assets), loaderEnv({ fetch: server.fetch, caches: storage }));
+    for (const id of ids) await (await loader.load(id, () => undefined)).commit();
+    expect((await storage.cache().index()).map((e) => e.url)).toEqual(assets.map((a) => a.url));
+    expect(assets.every((a) => storage.cache().store.has(a.url))).toBe(true);
+  });
+
+  it('evicts the least recently used tokenizer beyond the entry limit; a cache hit refreshes recency', async () => {
+    const ids = ['openai-o200k_base', 'openai-cl100k_base', 'meta-llama3', 'xai-grok2'] as const;
+    const assets = await Promise.all(ids.map((id) => makeAsset(id)));
+    const server = fakeFetch(Object.fromEntries(assets.map((a) => [a.url, respond(a.gz)])));
+    const storage = new FakeCacheStorage();
+    const loader = createLoader(manifestOf(...assets), loaderEnv({ fetch: server.fetch, caches: storage }), {
+      ...DEFAULT_LIMITS,
+      maxEntries: 3,
+    });
     const [a, b, c, d] = assets;
     for (const id of ids.slice(0, 3)) await (await loader.load(id, () => undefined)).commit();
     await (await loader.load('openai-o200k_base', () => undefined)).commit(); // hit: A becomes most recent

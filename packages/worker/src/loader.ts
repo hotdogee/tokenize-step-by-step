@@ -8,8 +8,10 @@
  *
  * The verified bytes reach the cache only through {@link FetchedAsset.commit}, which the host calls once the container
  * decoded (so a bad asset is never stored), with a quota fallback (`navigator.storage.estimate()` must show 2× the asset
- * free, and a failing `put` just leaves the load memory-only). An index entry at `/__tsbs-index` keeps at most three
- * tokenizers / 12 MiB (LRU). Every cache operation runs on one serial queue, so a load right after a commit sees it.
+ * free, and a failing `put` just leaves the load memory-only). An index entry at `/__tsbs-index` keeps at most nine
+ * tokenizers / 12 MiB (LRU). Every cache operation runs on one serial queue, so a load right after a commit sees it. The
+ * queue is per loader, i.e. per Worker: with one Worker per tokenizer (PA-19) the index is advisory, and two Workers
+ * committing at once may lose a row of it (03 §C.6).
  */
 import type { VocabAssetEntry, VocabManifest } from '@tsbs/core/format/types';
 import { TSBV1_MAGIC } from '@tsbs/core/format/tsbv1';
@@ -55,7 +57,11 @@ export interface LoaderLimits {
   readonly maxBytes: number;
 }
 
-export const DEFAULT_LIMITS: LoaderLimits = { maxEntries: 3, maxBytes: 12 * 1024 * 1024 };
+/**
+ * Nine entries: every local tokenizer (PA-19's table keeps five Workers loading side by side, so a smaller count would
+ * evict a row's vocabulary on every visit); the byte bound still caps the cache.
+ */
+export const DEFAULT_LIMITS: LoaderLimits = { maxEntries: 9, maxBytes: 12 * 1024 * 1024 };
 
 /** Progress callback: one of the loader's phases, bytes done, denominator (null when unknown). */
 export type LoaderProgress = (phase: Progress['phase'], loaded: number, total: number | null) => void;
