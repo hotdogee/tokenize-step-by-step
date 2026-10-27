@@ -304,7 +304,27 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   captions cap at the scroller's measured width (`--cmp-view`); explanatory notices read as muted text with a short
   trailing link; the mock client answers the empty text with "0 tokens". Measured on the round's final build: Main JS
   **76.91 kB** brotli, i18n chunk **9.51 kB**, CSS **14.91 kB**, `index.html` **8.59 kB** brotli-11 and 12,427 B at
-  zstd-3 (the reserved hint line and the long partial form are in the static paint); every other budget unchanged.
+  zstd-3 (the reserved hint line and the long partial form are in the static paint); every other budget unchanged; local
+  Lighthouse's `document` 17,693 B (wrangler dev's gzip-only answer, informational, as above).
+  *Review round 2* (2026-10-28, fixes on the same branch): a failed load's request runs again on the next load only
+  while nothing has dropped it (`forget` clears the retry, a failed load re-arms it only for its entry's current
+  request, and a row's Retry in an on-demand tier forgets the row's entry once the text has moved on from the run's),
+  so no Retry encodes a whole text the page has left; the captions and the API note cap at `100cqw` of their scroller
+  (`.cmp-thead` and `.cmp-tbody` are inline-size containers) instead of the measured `--cmp-view`, so a classic page
+  scrollbar narrows them in the static paint too and hydration shifts nothing (first-paint.spec launches chromium
+  without Playwright's `--hide-scrollbars` at 360 px en and ja, 375 zh-TW and 390 ja, where the old cap shifted 0.0051
+  to 0.0094; the other CLS tests keep the hidden scrollbars); a row out of memory on its lab's primary reads "Not
+  enough memory to load {name} on this device" (`compare.oomRow`) beside Retry, a secondary keeps "try <the primary>"
+  and Go back; a press on the pinned scrollbar no longer scrolls the page (the focusin check skips the bar, as it does
+  the header box); the in-app reduced-motion choice applies from boot (main.ts imports motion-prefs and the
+  `data-motion` rule moved from motion.css to theme/base.css), not only once Advanced has loaded the board; rows the
+  on-demand run has not reached yet read "waiting for the tokenizer" and dim after 300 ms (row state `queued`) instead
+  of "press Tokenize now"; an error row carries no source badge. Measured on the round's final build: Main JS
+  **77.29 kB** brotli, i18n chunk **9.54 kB**, CSS **14.93 kB**, `index.html` **8.58 kB** brotli-11 and 12,450 B at
+  zstd-3 (the source badge's `{#if}`, none on an error, adds hydration markers to each row); every other budget
+  unchanged; local Lighthouse (3 runs, report only) performance 0.99, accessibility 1, best practices 1, LCP 1,973 /
+  1,969 / 1,968 ms, FCP 1,215 / 1,384 / 1,371 ms, TBT 15–16 ms, CLS 0, `other` 1,049,646 B (the o200k `.bin` alone),
+  `document` 17,705 B (wrangler dev's gzip-only answer, informational).
 
 ## D. Owner answers to the open questions (2026-10-25)
 
