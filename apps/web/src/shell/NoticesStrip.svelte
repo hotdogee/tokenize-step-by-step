@@ -4,8 +4,9 @@
    * deduplicated union of `requiredNotices` over the table's rows and, while Advanced is open, the board's tokenizer,
    * prominent legal notices first ("Powered by xAI", "Built with Meta Llama 3", heading-sized), then the other legal
    * strings (verbatim, marked `lang="en"`, never translated), then the explanatory ones in the UI locale; the first
-   * occurrence of a notice key wins, each linked to its first licences.json link. It is never collapsed and wraps at
-   * 360 px; with no notices it renders nothing.
+   * occurrence of a notice key wins. A legal notice is a link of its own (its first licences.json link); an explanatory
+   * one is plain muted text followed by that link under its short licences.json label (PA-19 review: the default page's
+   * notices read lighter). It is never collapsed and wraps at 360 px; with no notices it renders nothing.
    */
   import type { TokenizerEntry } from '@tsbs/registry';
   import { notice, noticeText } from '../app/registry.ts';
@@ -35,6 +36,7 @@
           prominent,
           text: noticeText(found, i18n.current),
           href: found.links?.[0]?.href,
+          label: found.links?.[0]?.label[i18n.current],
         };
       })
       .sort((a, b) => rank(a.legal, a.prominent) - rank(b.legal, b.prominent) || a.order - b.order);
@@ -54,8 +56,11 @@
     <ul>
       {#each notices as notice (notice.key)}
         <li class="prose" class:headline={notice.prominent} data-notice={notice.key}>
-          {#if notice.href !== undefined}
-            <a href={notice.href} lang={notice.legal ? 'en' : undefined}>{notice.text}</a>
+          {#if notice.href !== undefined && notice.legal}
+            <a href={notice.href} lang="en">{notice.text}</a>
+          {:else if notice.href !== undefined}
+            <span class="explain">{notice.text}</span>
+            <a href={notice.href}>{notice.label}</a>
           {:else}
             <span lang={notice.legal ? 'en' : undefined}>{notice.text}</span>
           {/if}
@@ -95,5 +100,9 @@
   .headline {
     font-size: 1rem;
     font-weight: 700;
+  }
+
+  .explain {
+    color: var(--fg-muted);
   }
 </style>

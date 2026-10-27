@@ -80,6 +80,16 @@ describe('App shell (server-rendered)', () => {
     expect(llama3.indexOf('Built with Meta Llama 3')).toBeLessThan(llama3.indexOf('Powered by xAI')); // row order
   });
 
+  it('sets an explanatory notice as muted text with its short link after it; legal notices stay links', () => {
+    i18n.current = 'en';
+    const body = renderApp();
+    expect(body).toMatch(/<span class="explain[^"]*">This is the public Claude 1\/2-era vocabulary/);
+    expect(body).toMatch(
+      /<a href="https:\/\/github\.com\/anthropics\/anthropic-tokenizer-typescript"[^>]*>Archived @anthropic-ai\/tokenizer repository<\/a>/,
+    );
+    expect(body).toMatch(/<a href="\/licenses\/xai-grok2\/LICENSE" lang="en"[^>]*>Powered by xAI<\/a>/);
+  });
+
   it('lists every example in the Examples menu, grouped, as menu item radios (PA-19)', () => {
     i18n.current = 'en';
     const body = renderApp();
