@@ -253,8 +253,9 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
       }>
     )[0];
     const sizes = Object.fromEntries((budgets?.resourceSizes ?? []).map((entry) => [entry.resourceType, entry.budget]));
-    // script and total are stated as served by the edge (PA-14: zstd / fast brotli ≈ 1.3× the brotli-11 engineering budgets).
-    expect(sizes).toEqual({ document: 14, script: 143, stylesheet: 20, font: 4, other: 1100, total: 1300 });
+    // script and total are stated as served by the edge (PA-14: zstd / fast brotli ≈ 1.3× the brotli-11 engineering budgets);
+    // font counts transfer size with response headers (two WOFF2 responses: 3.27 kB of bytes measured 4,976–4,988 B on PR #1).
+    expect(sizes).toEqual({ document: 14, script: 143, stylesheet: 20, font: 6, other: 1100, total: 1300 });
     for (const [type, kb] of Object.entries(sizes))
       expect(assertion(`resource-summary:${type}:size`), type).toBe(kb * 1024);
     const timings = Object.fromEntries((budgets?.timings ?? []).map((entry) => [entry.metric, entry.budget]));

@@ -37,7 +37,7 @@
 | Main JS (Svelte runtime + app shell + board + inspector + rail + motion ≤ 67; i18n chunk ≤ 9 (PA-10); inlined default example ≤ 4; manifest summary ≤ 1 — PA-7; the wave 1 shell alone measured 55.92 KB) | ≤ 81 KB brotli (PA-17 amends PA-7's 80: the token ids' rendering) | `size-limit` |
 | Worker core (loader + protocol + host) | ≤ 12 KB brotli | `size-limit` |
 | Engine chunks (lazy inside the Worker; the bytelevel chunk **is** fetched during the Lighthouse trace because o200k starts loading after LCP) | bytelevel ≤ 16 KB br (incl. 5.7 KB Unicode tables); spm ≤ 10 KB br — each measured together with the shared `assets/engine-core-[hash].js` chunk that loads with the first engine (PA-8 addendum) | `size-limit` |
-| CSS (incl. the stand-in + digits WOFF2 subsets as a separate `font` budget: 908 + 2,360 B, PA-17) | ≤ 20 KB brotli; font ≤ 4 KB | `size-limit`; LHCI `stylesheet ≤ 20`, `font ≤ 4` |
+| CSS (incl. the stand-in + digits WOFF2 subsets as a separate `font` budget: 908 + 2,360 B, PA-17) | ≤ 20 KB brotli; font ≤ 4 KB of file bytes | `size-limit`; LHCI `stylesheet ≤ 20`, `font ≤ 6` as served (transfer size with response headers: the two WOFF2 responses measured 4,976–4,988 B on PR #1's preview) |
 | `boot-[hash].js` | ≤ 0.5 KB | `size-limit` |
 | `first-paint-[hash].js` (the static first paint's clone script, `/` only, classic, right after `#app`; PA-15) | ≤ 0.5 KB | `size-limit` |
 | **Script total in the trace** (main 81 + worker 12 + bytelevel engine 16 + boot 0.5 + slack; PA-7) | ≤ 110 KB brotli-11 (engineering); LHCI asserts ≤ 143 KB as served by the edge (zstd / fast brotli, PA-14) | `size-limit` sums; LHCI `budgets.json` `script ≤ 143` |
