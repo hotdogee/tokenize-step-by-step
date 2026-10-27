@@ -9,7 +9,7 @@ import type { TokenizationResult } from '@tsbs/core';
 import { CancelledError } from '@tsbs/core/model/cancelled';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppState, ENCODE_DEBOUNCE_MS } from './app-state.svelte.ts';
-import { defaultResult } from './bootstrap.ts';
+import { defaultResults } from './bootstrap.ts';
 import { errorView } from './errors.ts';
 import { FakeClient, FakeClients, flush, hubOf, syntheticResult } from './fake-client.test-helper.ts';
 import { ANALYSED_MAX, ON_DEMAND_MAX_STEPS, RELEASE_ABOVE_BYTES, resultBytes } from './long-input.ts';
@@ -42,7 +42,7 @@ async function loadedApp(
   source: PrecomputedSource | null = null,
 ): Promise<AppState> {
   const spawn = clients instanceof FakeClients ? clients.spawn : clients;
-  const app = new AppState(hubOf(spawn, { seeds: [defaultResult()], precomputed: source }));
+  const app = new AppState(hubOf(spawn, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!], precomputed: source }));
   const start = app.start();
   await flush();
   const client = clients instanceof FakeClients ? clients.of('openai-o200k_base') : clients;
@@ -119,7 +119,7 @@ describe('requests: seq, debounce, load, cancelled', () => {
   it('keeps an encode asked for during a load pending and sends exactly one, for the latest text, after `loaded`', async () => {
     vi.useRealTimers();
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()] }));
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     const start = app.start();
     await flush();
     expect(client.loads).toHaveLength(1);
@@ -209,7 +209,7 @@ describe('the board: final, stale, text (PA-11, AD-19, 05 §12)', () => {
 
   it('shows the text-only board while no tokenizer is loaded for the text, and while an IME composition is open', async () => {
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()] }));
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('typed before load');
     expect(app.board.kind).toBe('text');
     expect(app.board.result.tokens.count).toBe(0);
@@ -305,7 +305,7 @@ describe('precomputed → live (AD-16, 05 §12)', () => {
       find: (ref, text) => Promise.resolve(text === chip.text ? syntheticResult(text, ref.id) : null),
     };
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()], precomputed: source }));
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!], precomputed: source }));
     const swaps: number[] = [];
     app.setResultTransition((update) => {
       swaps.push(1);
@@ -520,7 +520,7 @@ describe('long input tiers (AD-27)', () => {
 
   it('runs the on-demand request after the load when the tokenizer is not resident yet', async () => {
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()] }));
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('e'.repeat(30_000));
     void app.runOnDemand();
     await flush();
@@ -533,7 +533,7 @@ describe('long input tiers (AD-27)', () => {
 
   it('drops a run asked for during a load once the text is short again: the load encodes the short text', async () => {
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()] }));
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('e'.repeat(30_000));
     const run = app.runOnDemand();
     await flush();
@@ -654,7 +654,7 @@ describe('error recovery (05 §12)', () => {
 
   it('runs a run asked for before a failed load once Retry loads the tokenizer', async () => {
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()] }));
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     app.setText('j'.repeat(30_000));
     const run = app.runOnDemand();
     await flush();
@@ -671,7 +671,7 @@ describe('error recovery (05 §12)', () => {
 
   it('loads again when "Tokenize now" is pressed after a failed load was dismissed', async () => {
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()] }));
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
     const start = app.start();
     await flush();
     client.loads[0]?.reject(failure('internal'));
@@ -705,7 +705,7 @@ describe('error recovery (05 §12)', () => {
 describe('URL state (05 §1.1)', () => {
   it('applies a deep link and re-applies its merge step when the live result arrives', async () => {
     const client = new FakeClient();
-    const app = new AppState(hubOf(client, { seeds: [defaultResult()] }), {
+    const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }), {
       tokenizer: 'openai-cl100k_base',
       text: '熱鬧',
       stage: 5,

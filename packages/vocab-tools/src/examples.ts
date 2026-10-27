@@ -47,7 +47,7 @@ export interface ExamplesWire {
 /** `examples-index.json`: where each tokenizer's lazy file lives and which chips yield a partial-character token. */
 export interface ExamplesIndex {
   schema: 1;
-  /** The board's first paint: the default chip on the default tokenizer. */
+  /** The default chip on the default tokenizer, the first of `defaults` (the app reads `defaults`). */
   default: { tokenizer: TokenizerId; case: string };
   /** The table's first paint (PA-19): the default chip on each lab's primary tokenizer, inlined in examples-default.json. */
   defaults: Array<{ tokenizer: TokenizerId; case: string }>;

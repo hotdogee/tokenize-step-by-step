@@ -6,7 +6,7 @@
 import type { TiktokenFixture } from '@tsbs/core';
 import { checkInvariants } from '@tsbs/core/model/invariants';
 import { describe, expect, it } from 'vitest';
-import { createAppState, defaultResult, defaultResults } from './bootstrap.ts';
+import { createAppState, defaultResults } from './bootstrap.ts';
 import { wantsMockClient } from './clients.ts';
 import { DEFAULT_EXAMPLE } from './constants.ts';
 import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
@@ -23,9 +23,8 @@ describe('default example (examples-default.json → fromFixtureCase)', () => {
   });
 
   it('reproduces fixtures/openai-o200k_base.json › zh-tw-tainan (4 cp, 12 B, 4 tokens, 8 merges)', () => {
-    const result = defaultResult(7);
+    const result = defaultResults()[DEFAULT_TOKENIZER]!;
     expect(checkInvariants(result)).toEqual([]);
-    expect(result.seq).toBe(7);
     expect(result.text).toBe(tainan?.text);
     expect([...result.tokens.id]).toEqual(tainan?.ids);
     expect(result.stats).toMatchObject({ codePoints: 4, bytes: 12, tokens: 4, partialTokens: 0, mergeSteps: 8 });

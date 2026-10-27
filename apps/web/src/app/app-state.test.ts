@@ -6,12 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { cachedTokenizers } from '../shell/cache-probe.ts';
 import { progressPercent } from '../shell/progress.ts';
 import { AppState, optionsFor } from './app-state.svelte.ts';
-import { defaultResult } from './bootstrap.ts';
+import { defaultResults } from './bootstrap.ts';
 import { createExamplesClient } from './clients.ts';
 import { hubOf } from './fake-client.test-helper.ts';
 import { SHIPPING_FIXTURES } from './fixtures.test-helper.ts';
 import { isNoPrecomputedResult } from './no-precomputed.ts';
-import { EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
+import { DEFAULT_TOKENIZER, EXAMPLES, EXAMPLES_INDEX, tokenizerEntry } from './registry.ts';
 import { STORAGE_KEYS } from './storage.ts';
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
@@ -99,7 +99,7 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
 describe('AppState (05 §1.1)', () => {
   /** One examples client per tokenizer, as `?mock=1` spawns them (PA-19). */
   const make = (): AppState =>
-    new AppState(hubOf(() => createExamplesClient(fixtureFetch()), { seeds: [defaultResult()] }));
+    new AppState(hubOf(() => createExamplesClient(fixtureFetch()), { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));
 
   it('starts with the precomputed default example on o200k', () => {
     const app = make();

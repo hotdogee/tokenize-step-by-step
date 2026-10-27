@@ -25,16 +25,10 @@ import { parseUrlState, type UrlState } from './url-state.ts';
 const DEFAULT_WIRES = examplesDefault as unknown as readonly ExamplesWire[];
 
 /** The inlined precomputed result of `caseName` on `tokenizer`. */
-function inlined(tokenizer: TokenizerId, caseName: string, seq = 0): TokenizationResult {
+function inlined(tokenizer: TokenizerId, caseName: string): TokenizationResult {
   const wire = DEFAULT_WIRES.find((candidate) => candidate.tokenizer === tokenizer);
   if (wire === undefined) throw new Error(`examples-default.json has no ${tokenizer}`);
-  return fromFixtureCase(wire, caseName, tokenizerEntry(tokenizer), { seq });
-}
-
-/** The precomputed default example (OD-1: 台灣台南 on o200k_base), as the board's first paint shows it. */
-export function defaultResult(seq = 0): TokenizationResult {
-  const { tokenizer, case: caseName } = EXAMPLES_INDEX.default;
-  return inlined(tokenizer, caseName, seq);
+  return fromFixtureCase(wire, caseName, tokenizerEntry(tokenizer), { seq: 0 });
 }
 
 /** The precomputed default rows (PA-19): 台灣台南 on each lab's primary tokenizer, as the table's first paint shows them. */

@@ -7,8 +7,9 @@ import '../theme/base.css';
 import { flushSync, mount, unmount } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AppState } from '../app/app-state.svelte.ts';
-import { defaultResult } from '../app/bootstrap.ts';
+import { defaultResults } from '../app/bootstrap.ts';
 import { FakeClient, hubOf } from '../app/fake-client.test-helper.ts';
+import { DEFAULT_TOKENIZER } from '../app/registry.ts';
 import { i18n } from '../i18n/locale.svelte.ts';
 import PickerHarness from './PickerHarness.test-helper.svelte';
 
@@ -32,7 +33,7 @@ function openPicker(): Mounted {
   const component = mount(PickerHarness, {
     target: root,
     props: {
-      app: new AppState(hubOf(new FakeClient(), { seeds: [defaultResult()] })),
+      app: new AppState(hubOf(new FakeClient(), { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] })),
       onlivecheck: () => {
         calls++;
       },
