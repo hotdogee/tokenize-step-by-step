@@ -338,6 +338,26 @@ describe('token ids inside every chip (PA-17)', () => {
     await frames(2);
   };
 
+  /**
+   * Chromium on Linux at device scale 1 positions glyphs on whole pixels (no subpixel positioning): every advance of a
+   * narrowed digit rounds to an integer, so a run of n digits can measure up to n × 0.5 px wider than the fit the CSS
+   * computes — centred, up to n × 0.25 px past the content box on each side (a 6-digit id at the 27 px cell: 24 px in a
+   * 21 px box, 0.5 px into the border; 05 §4). Elsewhere the fit is exact. Measured on a probe digit, after
+   * `digitsLoaded()`: a 10 px digit at width 62.5 % advances 4.29 px, or 4 px where advances round.
+   */
+  const advanceSlack = (digits: number): number => {
+    const probe = document.createElement('span');
+    probe.style.font = "10px 'TSBS Digits'";
+    probe.style.setProperty('font-stretch', '62.5%');
+    probe.textContent = '0';
+    document.body.append(probe);
+    const range = document.createRange();
+    range.selectNodeContents(probe);
+    const width = range.getBoundingClientRect().width;
+    probe.remove();
+    return Number.isInteger(width) ? digits * 0.25 : 0;
+  };
+
   /** `font-stretch` as computed (`fontStretch` is typed deprecated: CSS Fonts 4 renames it `font-width`). */
   const fontStretch = (element: Element): string => getComputedStyle(element).getPropertyValue('font-stretch');
   const px = (value: string): number => Number.parseFloat(value);
@@ -374,10 +394,13 @@ describe('token ids inside every chip (PA-17)', () => {
     return { left: text.left, right: text.right, top: box.top, bottom: box.bottom };
   };
 
-  /** `inner` lies inside `outer` (0.02 px: layout positions are 1/64 px units). */
-  const expectWithin = (inner: Box, outer: Box, what: string): void => {
-    expect(inner.left, `${what} left`).toBeGreaterThanOrEqual(outer.left - 0.02);
-    expect(inner.right, `${what} right`).toBeLessThanOrEqual(outer.right + 0.02);
+  /**
+   * `inner` lies inside `outer` (0.02 px: layout positions are 1/64 px units); `slack` widens the horizontal bound by
+   * what a platform's whole-pixel glyph advances may add (`advanceSlack`).
+   */
+  const expectWithin = (inner: Box, outer: Box, what: string, slack = 0): void => {
+    expect(inner.left, `${what} left`).toBeGreaterThanOrEqual(outer.left - 0.02 - slack);
+    expect(inner.right, `${what} right`).toBeLessThanOrEqual(outer.right + 0.02 + slack);
     expect(inner.top, `${what} top`).toBeGreaterThanOrEqual(outer.top - 0.02);
     expect(inner.bottom, `${what} bottom`).toBeLessThanOrEqual(outer.bottom + 0.02);
   };
@@ -503,7 +526,8 @@ describe('token ids inside every chip (PA-17)', () => {
         expect(id.classList.contains('two')).toBe(false);
         expect(fontStretch(id)).toBe('62.5%');
         expect(px(getComputedStyle(id).fontSize)).toBeCloseTo(idSize, 1);
-        expectWithin(glyphRun(id), paddingBox(vis), '654321');
+        // The 1 px padding absorbs the first pixel of whole-pixel advances (Linux at device scale 1); 0.5 px may remain.
+        expectWithin(glyphRun(id), paddingBox(vis), '654321', Math.max(0, advanceSlack(6) - 1));
         expect(vis.querySelector('.bd-chip-line svg.bd-icon')).not.toBeNull();
       }
     });
