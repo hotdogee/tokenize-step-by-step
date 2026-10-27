@@ -28,7 +28,10 @@ export const DEFAULT_TOKENIZER: TokenizerId = defaultTokenizerId;
 
 /** The subset of `examples-index.json` (03 §C.7) the shell reads. */
 interface ExamplesIndexView {
+  /** The board's first paint: the default chip on the default tokenizer. */
   readonly default: { readonly tokenizer: TokenizerId; readonly case: string };
+  /** The table's first paint: the default chip on each lab's primary tokenizer (inlined in examples-default.json). */
+  readonly defaults: ReadonlyArray<{ readonly tokenizer: TokenizerId; readonly case: string }>;
   readonly files: Readonly<Partial<Record<TokenizerId, string>>>;
   readonly partial: Readonly<Partial<Record<TokenizerId, readonly string[]>>>;
 }

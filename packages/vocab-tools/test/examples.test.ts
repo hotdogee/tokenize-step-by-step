@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TokenFlag, TokenKind, type Fixture, type TokenizerId } from '@tsbs/core';
 import {
   DEFAULT_CHIP_CASES,
+  DEFAULT_EXAMPLES,
   DEFAULT_EXAMPLE_BUDGET_GZ,
   EXAMPLES_BUDGET_GZ,
   buildExamples,
@@ -96,12 +97,34 @@ describe('buildExamples', () => {
       for (const name of ['zh-tw-paragraph', 'ja-paragraph', 'en-paragraph'])
         expect(wire.cases[name]?.merges).toBeUndefined();
     }
-    expect(out.defaultExample.gzipBytes).toBeLessThanOrEqual(DEFAULT_EXAMPLE_BUDGET_GZ);
     const index = JSON.parse(out.index.json) as ExamplesIndex;
     expect(index.default).toEqual({ tokenizer: 'openai-o200k_base', case: 'zh-tw-tainan' });
     expect(index.files['xai-grok1']).toMatch(/^\/examples\/xai-grok1\.[0-9a-f]{8}\.json$/);
     expect(index.partial['openai-cl100k_base']).toContain('zh-tw-tainan');
     expect(index.partial['openai-o200k_base']).not.toContain('zh-tw-tainan');
+  });
+
+  it('inlines the default rows: the default chip on each lab’s primary tokenizer, one wire each (PA-19)', () => {
+    const out = buildExamples(fixtures, CHIPS);
+    expect(out.defaultExamples.name).toBe('examples-default.json');
+    expect(out.defaultExamples.gzipBytes).toBeLessThanOrEqual(DEFAULT_EXAMPLE_BUDGET_GZ);
+    const wires = JSON.parse(out.defaultExamples.json) as ExamplesWire[];
+    expect(wires.map((wire) => wire.tokenizer)).toEqual([
+      'openai-o200k_base',
+      'anthropic-claude-legacy',
+      'google-gemma4',
+      'meta-llama4-muse',
+      'xai-grok2',
+    ]);
+    for (const wire of wires) {
+      expect(Object.keys(wire.cases), wire.tokenizer).toEqual(['zh-tw-tainan']);
+      expect(wire.cases['zh-tw-tainan'], wire.tokenizer).toEqual(
+        caseToWire(fixture(wire.tokenizer), 'zh-tw-tainan', true),
+      );
+    }
+    const index = JSON.parse(out.index.json) as ExamplesIndex;
+    expect(index.defaults).toEqual([...DEFAULT_EXAMPLES]);
+    expect(index.defaults[0]).toEqual(index.default);
   });
 
   it('is deterministic and rejects chips the fixtures do not have or whose text differs', () => {

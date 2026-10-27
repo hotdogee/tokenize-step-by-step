@@ -9,7 +9,7 @@
  * Worker — is imported on its first use, after first paint (`deferred-client.ts`, 06 §3).
  *
  * While a tokenizer loads, the example chips answer from the precomputed examples (`precomputed.ts`: the inlined
- * default, the lazy per-tokenizer files), and the page URL's state (`url-state.ts`) is read once, here.
+ * default rows, the lazy per-tokenizer files), and the page URL's state (`url-state.ts`) is read once, here.
  */
 import type { TokenizationResult, TokenizerClientLike } from '@tsbs/core';
 import type { ExamplesWire } from '@tsbs/core/fixture/examples-wire';
@@ -21,10 +21,15 @@ import { PrecomputedExamples } from './precomputed.ts';
 import { EXAMPLES_INDEX, TOKENIZERS, tokenizerEntry } from './registry.ts';
 import { parseUrlState, type UrlState } from './url-state.ts';
 
+/** The inlined default rows: one wire per lab's primary tokenizer, each with the default chip only (PA-19). */
+const DEFAULT_WIRES = examplesDefault as unknown as readonly ExamplesWire[];
+
 /** The precomputed default example (OD-1: 台灣台南 on o200k_base), as the first paint shows it. */
 export function defaultResult(seq = 0): TokenizationResult {
   const { tokenizer, case: caseName } = EXAMPLES_INDEX.default;
-  return fromFixtureCase(examplesDefault as unknown as ExamplesWire, caseName, tokenizerEntry(tokenizer), { seq });
+  const wire = DEFAULT_WIRES.find((candidate) => candidate.tokenizer === tokenizer);
+  if (wire === undefined) throw new Error(`examples-default.json has no ${tokenizer}`);
+  return fromFixtureCase(wire, caseName, tokenizerEntry(tokenizer), { seq });
 }
 
 /** True when the page URL asks for the precomputed-examples client (`?mock=1`). */
@@ -76,6 +81,6 @@ export function initialUrlState(search: string = 'location' in globalThis ? glob
 }
 
 export function createAppState(): AppState {
-  const precomputed = new PrecomputedExamples(EXAMPLES_INDEX.files, [examplesDefault as unknown as ExamplesWire]);
+  const precomputed = new PrecomputedExamples(EXAMPLES_INDEX.files, DEFAULT_WIRES);
   return new AppState(createClient(), defaultResult(), precomputed, initialUrlState());
 }

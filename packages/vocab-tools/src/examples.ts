@@ -2,8 +2,9 @@
  * Precomputed example results (AD-16, 03 §C.7): every example chip × every shipped tokenizer, as the compact
  * `ExamplesWire` fixture subset that `fromFixtureCase` (WP01) expands on the main thread. Paragraph chips omit
  * `merges` (their timeline arrives with the live engine). Outputs: one `<tokenizerId>.<sha8>.json` per tokenizer
- * (≤ 16 KB gzip each), `examples-default.json` (default chip × default tokenizer, inlined, ≤ 4 KB gzip) and
- * `examples-index.json` (file paths and which chips split a character, for the chips' hatch mark).
+ * (≤ 16 KB gzip each), `examples-default.json` (an array of one wire per default row — the default chip on each lab's
+ * primary tokenizer, PA-19 — inlined, ≤ 4 KB gzip together) and `examples-index.json` (file paths, the default pairs
+ * and which chips split a character, for the chips' hatch mark).
  */
 import { Buffer } from 'node:buffer';
 import { readFile } from 'node:fs/promises';
@@ -46,7 +47,10 @@ export interface ExamplesWire {
 /** `examples-index.json`: where each tokenizer's lazy file lives and which chips yield a partial-character token. */
 export interface ExamplesIndex {
   schema: 1;
+  /** The board's first paint: the default chip on the default tokenizer. */
   default: { tokenizer: TokenizerId; case: string };
+  /** The table's first paint (PA-19): the default chip on each lab's primary tokenizer, inlined in examples-default.json. */
+  defaults: Array<{ tokenizer: TokenizerId; case: string }>;
   chips: string[];
   files: Partial<Record<TokenizerId, string>>;
   partial: Partial<Record<TokenizerId, string[]>>;
@@ -84,13 +88,25 @@ export const DEFAULT_CHIP_CASES = [
   'en-paragraph',
 ] as const;
 
-/** Default chip × default tokenizer (OD-1 台灣台南 on o200k_base). */
+/** Default chip × default tokenizer (OD-1 台灣台南 on o200k_base): the board's first paint. */
 export const DEFAULT_EXAMPLE = {
   tokenizer: 'openai-o200k_base',
   case: 'zh-tw-tainan',
 } as const satisfies ExamplesIndex['default'];
 
-/** Budgets (03 §C.7 / 06 §3), gzip bytes. */
+/**
+ * The default rows (PA-19): the default chip on each lab's `tier: 'primary'` tokenizer, in the registry's lab order
+ * (the web app's registry test checks the list against tokenizers.json). The first is {@link DEFAULT_EXAMPLE}.
+ */
+export const DEFAULT_EXAMPLES = [
+  DEFAULT_EXAMPLE,
+  { tokenizer: 'anthropic-claude-legacy', case: DEFAULT_EXAMPLE.case },
+  { tokenizer: 'google-gemma4', case: DEFAULT_EXAMPLE.case },
+  { tokenizer: 'meta-llama4-muse', case: DEFAULT_EXAMPLE.case },
+  { tokenizer: 'xai-grok2', case: DEFAULT_EXAMPLE.case },
+] as const satisfies ReadonlyArray<ExamplesIndex['default']>;
+
+/** Budgets (03 §C.7 / 06 §3), gzip bytes; the default budget covers the five default rows together. */
 export const EXAMPLES_BUDGET_GZ = 16 * 1024;
 export const DEFAULT_EXAMPLE_BUDGET_GZ = 4 * 1024;
 
@@ -201,7 +217,8 @@ function generated(name: string, value: unknown): GeneratedJson {
 /** Output of {@link buildExamples}. */
 export interface ExamplesOutput {
   readonly perTokenizer: ReadonlyArray<GeneratedJson & { readonly tokenizer: TokenizerId }>;
-  readonly defaultExample: GeneratedJson;
+  /** `examples-default.json`: an `ExamplesWire[]`, one wire per default row, each with the default chip only. */
+  readonly defaultExamples: GeneratedJson;
   readonly index: GeneratedJson;
 }
 
@@ -231,6 +248,7 @@ export function buildExamples(
   const index: ExamplesIndex = {
     schema: 1,
     default: DEFAULT_EXAMPLE,
+    defaults: DEFAULT_EXAMPLES.map(({ tokenizer, case: name }) => ({ tokenizer, case: name })),
     chips: chips.map((c) => c.fixtureCase),
     files: {},
     partial: {},
@@ -249,17 +267,14 @@ export function buildExamples(
     index.files[tokenizer] = `${pathPrefix}${name}`;
     index.partial[tokenizer] = partial;
   }
-  const defaultFixture = fixtures.get(DEFAULT_EXAMPLE.tokenizer);
-  if (defaultFixture === undefined)
-    throw new Error(`no fixture for the default tokenizer ${DEFAULT_EXAMPLE.tokenizer}`);
-  const defaultWire: ExamplesWire = {
-    schema: 1,
-    tokenizer: DEFAULT_EXAMPLE.tokenizer,
-    cases: { [DEFAULT_EXAMPLE.case]: caseToWire(defaultFixture, DEFAULT_EXAMPLE.case, true) },
-  };
+  const defaultWires = DEFAULT_EXAMPLES.map(({ tokenizer, case: name }): ExamplesWire => {
+    const fixture = fixtures.get(tokenizer);
+    if (fixture === undefined) throw new Error(`no fixture for the default row ${tokenizer}`);
+    return { schema: 1, tokenizer, cases: { [name]: caseToWire(fixture, name, true) } };
+  });
   return {
     perTokenizer,
-    defaultExample: generated('examples-default.json', defaultWire),
+    defaultExamples: generated('examples-default.json', defaultWires),
     index: generated('examples-index.json', index),
   };
 }

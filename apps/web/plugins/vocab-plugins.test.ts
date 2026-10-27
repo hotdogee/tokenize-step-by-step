@@ -122,20 +122,23 @@ describe('WP03 Vite plugins', () => {
     await expect(readFile(join(root, 'dist', 'licenses', 'meta-llama4-model', 'LICENSE'))).rejects.toThrow();
   });
 
-  it('examples() writes the inlined default + index and emits one lazy file per tokenizer', async () => {
+  it('examples() writes the inlined default rows + index and emits one lazy file per tokenizer', async () => {
     const plugin = examples({ fixtures: resolve(REPO, 'fixtures'), chips: join(dir, 'missing-examples.json') });
     await call(plugin, 'configResolved', context, config(root, 'build'));
     await call(plugin, 'buildStart', context);
     await call(plugin, 'generateBundle', context);
     const index = JSON.parse(await readFile(join(root, 'src', 'generated', 'examples-index.json'), 'utf8')) as {
       files: Record<string, string>;
+      defaults: Array<{ tokenizer: string; case: string }>;
     };
     expect(Object.keys(index.files)).toHaveLength(9);
     expect(context.emitted.map((f) => `/${f.fileName}`).sort()).toEqual(Object.values(index.files).sort());
-    const def = JSON.parse(await readFile(join(root, 'src', 'generated', 'examples-default.json'), 'utf8')) as {
+    const rows = JSON.parse(await readFile(join(root, 'src', 'generated', 'examples-default.json'), 'utf8')) as Array<{
+      tokenizer: string;
       cases: Record<string, unknown>;
-    };
-    expect(Object.keys(def.cases)).toEqual(['zh-tw-tainan']);
+    }>;
+    expect(rows.map((row) => row.tokenizer)).toEqual(index.defaults.map((pair) => pair.tokenizer));
+    for (const row of rows) expect(Object.keys(row.cases)).toEqual(['zh-tw-tainan']);
     expect(context.warnings[0]).toMatch(/not found/);
   });
 });

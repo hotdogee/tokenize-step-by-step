@@ -480,7 +480,7 @@ Progress weights for the picker bar (from measured times): download 0–75 %, ve
 `fromFixtureCase(fixture, caseName, tokenizerEntry)` (core/fixture, pure, runs on the **main thread**) converts a fixture case into a `TokenizationResult` (tables + timeline from `merges[].steps` for the tiktoken family; spm cases carry no steps, so `timeline` is null; the rail then shows stops 1–4 and 6 with stop 4 derived from the final tokens — each token is one symbol, kinds from `type` — and stop 5 disabled with the hint "merge replay available once the tokenizer is loaded"). What ships is **not** the expanded result but the compact fixture subset it is built from:
 
 ```ts
-// wire format of generated/examples-default.json and dist/examples/<tokenizerId>.<sha8>.json (plain JSON; typed arrays are rebuilt by fromFixtureCase)
+// wire format of dist/examples/<tokenizerId>.<sha8>.json and of each element of the generated/examples-default.json array (plain JSON; typed arrays are rebuilt by fromFixtureCase)
 interface ExamplesWire { schema: 1; tokenizer: TokenizerId; cases: Record<string /* case name */, ExampleCaseWire>; }
 interface ExampleCaseWire {
   text: string; ids: number[];
@@ -493,7 +493,7 @@ interface ExampleCaseWire {
 }
 ```
 
-Paragraph chips (`zh-tw-paragraph` 814 o200k steps, `ja-paragraph` 660, `en-paragraph`) omit `merges`: their timeline arrives with the live engine (the board shows stops 1–4 and 6 meanwhile, the same as spm precomputed cases). Budgets: `generated/examples-default.json` (default chip × default tokenizer, inlined) ≤ 4 KB gz; `dist/examples/<tokenizerId>.<sha8>.json` (all chips for that tokenizer) **≤ 16 KB gz** each — a ceiling to be measured by WP03 and recorded in 06 §3 (estimate: 16 small chips with merges ≈ 6 KB + 3 paragraphs' ids/ends ≈ 7 KB). Served from `/examples/*` as `application/json`, edge-compressed, immutable. The chips list (`examples.json`) references fixture case names and `registry:check` asserts `chip.text === case.text`, so a chip can never show a result the oracles did not produce.
+Paragraph chips (`zh-tw-paragraph` 814 o200k steps, `ja-paragraph` 660, `en-paragraph`) omit `merges`: their timeline arrives with the live engine (the board shows stops 1–4 and 6 meanwhile, the same as spm precomputed cases). Budgets: `generated/examples-default.json` (an array of five wires: the default chip on each lab's primary tokenizer, the table's first paint, PA-19; inlined; `examples-index.json` names them in `defaults` and keeps `default` for the board's o200k pair) ≤ 4 KB gz together (measured 474 B); `dist/examples/<tokenizerId>.<sha8>.json` (all chips for that tokenizer) **≤ 16 KB gz** each — a ceiling to be measured by WP03 and recorded in 06 §3 (estimate: 16 small chips with merges ≈ 6 KB + 3 paragraphs' ids/ends ≈ 7 KB). Served from `/examples/*` as `application/json`, edge-compressed, immutable. The chips list (`examples.json`) references fixture case names and `registry:check` asserts `chip.text === case.text`, so a chip can never show a result the oracles did not produce.
 
 ### C.8 Guards (`tsbs-vocab guard`, also run by `pnpm check:dist`)
 

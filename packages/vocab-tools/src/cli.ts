@@ -80,7 +80,7 @@ async function main(argv: readonly string[]): Promise<number> {
     case 'examples': {
       const { output, warning } = await runExamples(command.options);
       if (warning !== null) warn(warning);
-      for (const f of [...output.perTokenizer, output.defaultExample, output.index])
+      for (const f of [...output.perTokenizer, output.defaultExamples, output.index])
         console.log(`  ${f.name}: ${String(f.bytes)} B, gzip ${String(f.gzipBytes)} B`);
       return 0;
     }
