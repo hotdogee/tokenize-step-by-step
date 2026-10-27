@@ -209,6 +209,15 @@ dialog::backdrop {
   }
 }
 
+/* Reduced motion chosen in the app (`<html data-motion="reduced">`, motion/motion-prefs.svelte.ts, set when `/` boots)
+   behaves like the system setting: no CSS transitions, no smooth scrolling — before the lazy board chunk ever loads. */
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
+}
+
 /*
  * Forced colours (Windows High Contrast, 05 §11) drop box-shadow, so the focus ring above vanishes there: every
  * focusable element gets a Highlight outline instead (WCAG 2.4.7). Components that draw their ring on another element

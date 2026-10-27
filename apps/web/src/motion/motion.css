@@ -3,9 +3,9 @@
  *
  * - The switch crossfades: one View Transition group for the board (`view-transition-name` is set through the CSSOM only
  *   while a switch runs, view-transition.ts), 220 ms.
- * - Reduced motion chosen in the app (`<html data-motion="reduced">`, motion-prefs.svelte.ts) behaves like the system
- *   setting does in theme/base.css: no CSS transitions (the picker's loading bar gets `transition: none`), no smooth
- *   scrolling.
+ * - Reduced motion chosen in the app (`<html data-motion="reduced">`, motion-prefs.svelte.ts): theme/base.css switches CSS
+ *   transitions and smooth scrolling off from boot, as the system setting does (PA-19: `/` loads this file only with
+ *   the board); here the picker's loading bar also gets `transition: none`.
  * - The anchored inspector panel's entrance (translateY + opacity, `@starting-style` where available).
  * - The part the current step formed (`data-just-merged`, motion/director.svelte.ts): a 1 px accent ring at the chip's
  *   edge on every just-merged cell, at every span (the cell's `::before`, in the 1 px gaps beside the chip, so it costs
@@ -49,13 +49,6 @@
 ::view-transition-new(*) {
   animation-duration: 220ms;
   animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
-
-html[data-motion='reduced'] *,
-html[data-motion='reduced'] *::before,
-html[data-motion='reduced'] *::after {
-  transition-duration: 0s !important;
-  scroll-behavior: auto !important;
 }
 
 html[data-motion='reduced'] [role='progressbar'] {

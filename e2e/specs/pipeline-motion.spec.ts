@@ -6,6 +6,8 @@
  * - fast scrubbing cancels the running FLIP and only crossfades, so `document.getAnimations()` drains;
  * - with `prefers-reduced-motion: reduce` no animation touches `transform`, opacity swaps stay ≤ 150 ms, every
  *   programmatic scroll uses `behavior: 'auto'` and the picker's loading bar has no transition;
+ * - the in-app "Reduce motion" choice (`tsbs:motion`) holds on `/` from boot, before Advanced loads the board: no
+ *   chevron rotation, and a stale row's dim snaps (every engine);
  * - a byte-view switch is a View Transition where the engine has `document.startViewTransition`, and an opacity fade of
  *   the board under a Firefox 143 user agent without it (Firefox < 144 has no View Transitions).
  */
@@ -155,6 +157,35 @@ test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls
   const bar = page.locator('[role="progressbar"]');
   await expect(bar).toBeAttached(); // scaleX(0) until the first bytes arrive
   expect(await bar.evaluate((el) => getComputedStyle(el).transitionDuration)).toBe('0s');
+});
+
+test('the in-app "Reduce motion" choice holds on / from boot, before Advanced first opens', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('tsbs:motion', 'reduce');
+    } catch {
+      // storage blocked: nothing to restore
+    }
+  });
+  await openShell(page, 'en');
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'reduced');
+  expect(await page.locator('details#advanced').getAttribute('open')).toBeNull(); // the board's chunk is not in
+  const motion = await page.evaluate(() => {
+    const summary = document.querySelector('[data-testid="advanced-summary"]');
+    const row = document.querySelector('#compare [data-row="google"] .cmp-row');
+    if (summary === null || row === null) return null;
+    row.setAttribute('data-pending', ''); // a stale row
+    const dim = `${getComputedStyle(row).transitionDuration} after ${getComputedStyle(row).transitionDelay}`;
+    row.removeAttribute('data-pending');
+    const chevron = [summary, ...summary.querySelectorAll('*')]
+      .flatMap((element) => [null, '::before', '::after'].map((pseudo) => getComputedStyle(element, pseudo)))
+      .map((style) => style.transitionDuration)
+      .filter((duration) => duration.split(',').some((part) => part.trim() !== '0s'));
+    return { chevron, dim };
+  });
+  expect(motion?.chevron).toEqual([]); // the Advanced chevron does not rotate
+  expect(motion?.dim).toBe('0s after 0.3s'); // a stale row's dim snaps at 300 ms instead of fading
 });
 
 test('a byte-view switch is a View Transition when the engine has one', async ({ page, browserName }) => {

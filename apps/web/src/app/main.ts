@@ -9,6 +9,9 @@
  * after first paint (06 §3). `#app[data-boot]` says which happened (`hydrated` | `mounted`; e2e and diagnostics read it).
  */
 import '../theme/base.css';
+// The in-app reduced-motion choice (`tsbs:motion`) applies from boot (`<html data-motion>`, theme/base.css), not only
+// once Advanced has loaded the board.
+import '../motion/motion-prefs.svelte.ts';
 import { hydrate, mount } from 'svelte';
 import App from './App.svelte';
 import { createAppState } from './bootstrap.ts';
