@@ -328,8 +328,9 @@ App
 - **States.** A row draws its current result; while a loaded tokenizer encodes a new text, its last result, muted only
   once the answer has taken 300 ms (an answer inside the 40 ms debounce never dims it, so typing does not flicker); no
   chips while loading, waiting, failed or in an on-demand tier (the header caption then offers "Tokenize now"; a failed
-  row shows its error there too, and a failed load never holds up the other rows of the run). Empty text: "0 code points
-  · 0 bytes" and an empty row per lab ("0 tokens").
+  row shows its error there too, and a failed load never holds up the other rows of the run; once the run has started, a
+  row it has not reached yet reads "waiting for the tokenizer", muted after 300 ms, instead of "press Tokenize now").
+  Empty text: "0 code points · 0 bytes" and an empty row per lab ("0 tokens").
 
 ## 5. Inspector (AD-34)
 

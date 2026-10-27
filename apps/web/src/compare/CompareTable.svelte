@@ -52,6 +52,8 @@
   const lang = $derived(resolveTextLang(app.textLang, app.text, i18n.current));
   const byteViews: ReadonlyArray<'hex' | 'dec'> = $derived(app.byteView === 'both' ? ['hex', 'dec'] : [app.byteView]);
   const onDemand = $derived(isOnDemand(app.longInput));
+  /** The on-demand run whose rows the table is asking for, one after another, until the last has answered. */
+  let rowsRun: { readonly text: string } | null = $state.raw(null);
 
   const views = $derived(
     app.rows.labs.map((row) => {
@@ -66,6 +68,7 @@
         loading: hub?.progress !== null && hub?.progress !== undefined,
         failed: hub?.error !== null && hub?.error !== undefined,
         onDemand,
+        queued: rowsRun?.text === text,
       });
       const result = state === 'current' || state === 'stale' ? (hub?.result ?? null) : null;
       return { row, choice, entry, hub, state, result };
@@ -123,16 +126,20 @@
   });
 
   // After the board's on-demand run: the rows on the same text, one after another (AD-27); a failed row never holds up
-  // the next (its caption shows the error with its action).
+  // the next (its caption shows the error with its action). Until its turn a row is `queued`, no longer "press Tokenize
+  // now".
   $effect(() => {
     const run = app.rowRun;
     if (run === null) return;
+    rowsRun = run;
     void runRows(
       app.rows.visibleTokenizers(),
       run.text,
       (id, text) => app.hub.request(id, text, ROW_OPTIONS, { trace: false }),
       () => app.analysed === run.text,
-    );
+    ).then(() => {
+      if (rowsRun === run) rowsRun = null;
+    });
   });
 
   // A whole-text result that no longer answers the text goes at once (AD-27, the 8 MiB rule per entry): in an on-demand

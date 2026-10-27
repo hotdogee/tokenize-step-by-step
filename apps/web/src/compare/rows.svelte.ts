@@ -120,10 +120,11 @@ export class CompareRows {
  * What a row draws: `current` (its result answers the analysed text), `stale` (the last result, kept while a loaded
  * tokenizer encodes the new text and muted only after 300 ms, compare.css, so a keystroke renders once, as on the board),
  * `loading` (its tokenizer loads; the caption says how far), `waiting` (no result yet, nothing loading), `onDemand` (an
- * on-demand tier waits for "Tokenize now", AD-27), `error` (the caption shows it with its action, in an on-demand tier
- * too) or `api` (the Anthropic API-key mode).
+ * on-demand tier waits for "Tokenize now", AD-27), `queued` (the on-demand run is asking the rows for this text, one
+ * after another, and has not answered this one yet: "waiting", muted after 300 ms like `stale`), `error` (the caption
+ * shows it with its action, in an on-demand tier too) or `api` (the Anthropic API-key mode).
  */
-export type RowState = 'current' | 'stale' | 'loading' | 'waiting' | 'onDemand' | 'error' | 'api';
+export type RowState = 'current' | 'stale' | 'loading' | 'waiting' | 'onDemand' | 'queued' | 'error' | 'api';
 
 export interface RowStateInput {
   readonly api: boolean;
@@ -136,6 +137,8 @@ export interface RowStateInput {
   readonly failed: boolean;
   /** The text is in an on-demand tier. */
   readonly onDemand: boolean;
+  /** The on-demand run is asking the rows for the text (CompareTable, after "Tokenize now"). */
+  readonly queued: boolean;
 }
 
 /** The state of a row (see `RowState`); its chips come from `result` in the `current` and `stale` states only. */
@@ -143,7 +146,7 @@ export function rowState(input: RowStateInput): RowState {
   if (input.api) return 'api';
   if (input.result?.input.text === input.text) return 'current';
   if (input.failed) return 'error';
-  if (input.onDemand) return 'onDemand';
+  if (input.onDemand) return input.queued ? (input.loading ? 'loading' : 'queued') : 'onDemand';
   if (input.result !== null && input.loaded) return 'stale';
   return input.loading ? 'loading' : 'waiting';
 }

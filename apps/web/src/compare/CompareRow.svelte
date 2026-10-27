@@ -211,7 +211,7 @@
         lab: labName,
         tokenizer: entry === null ? '' : entry.displayName[i18n.current],
       })}
-      data-pending={state === 'stale' ? '' : undefined}
+      data-pending={state === 'stale' || state === 'queued' ? '' : undefined}
       {lang}
     >
       {#each chips as chip (chip.index)}

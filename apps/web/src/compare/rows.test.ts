@@ -95,7 +95,16 @@ describe('CompareRows', () => {
 });
 
 describe('rowState', () => {
-  const base = { api: false, result: null, text: 'b', loaded: false, loading: false, failed: false, onDemand: false };
+  const base = {
+    api: false,
+    result: null,
+    text: 'b',
+    loaded: false,
+    loading: false,
+    failed: false,
+    onDemand: false,
+    queued: false,
+  };
   const result = syntheticResult('a', 'xai-grok2');
 
   it('draws the current result, a loaded tokenizer’s last one while it encodes, else waits', () => {
@@ -110,6 +119,14 @@ describe('rowState', () => {
     expect(rowState({ ...base, failed: true, result, loaded: true })).toBe('error');
     expect(rowState({ ...base, failed: true, onDemand: true })).toBe('error');
     expect(rowState({ ...base, onDemand: true })).toBe('onDemand');
+  });
+
+  it('queues a row the on-demand run has not answered yet ("waiting", muted), never "press Tokenize now"', () => {
+    const run = { ...base, onDemand: true, queued: true };
+    expect(rowState(run)).toBe('queued');
+    expect(rowState({ ...run, loading: true })).toBe('loading');
+    expect(rowState({ ...run, result: syntheticResult('b', 'xai-grok2') })).toBe('current');
+    expect(rowState({ ...run, failed: true })).toBe('error');
   });
 });
 

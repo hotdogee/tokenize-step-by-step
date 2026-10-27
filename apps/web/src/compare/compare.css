@@ -206,9 +206,9 @@
   padding-block: 7px;
 }
 
-/* A loaded tokenizer's last result while it encodes the next text: muted only once the answer has taken 300 ms (one that
-   arrives inside the board's 40 ms debounce never dims the row, so typing does not flicker); back at once, no transition.
-   The delay holds under reduced motion, which zeroes durations only. */
+/* A loaded tokenizer's last result while it encodes the next text, or a row the on-demand run has not reached yet: muted
+   only once the answer has taken 300 ms (one that arrives inside the board's 40 ms debounce never dims the row, so typing
+   does not flicker); back at once, no transition. The delay holds under reduced motion, which zeroes durations only. */
 .cmp-row[data-pending] {
   opacity: 0.55;
   transition: opacity 120ms linear 300ms;

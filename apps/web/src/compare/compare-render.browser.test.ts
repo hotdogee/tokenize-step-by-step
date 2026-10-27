@@ -8,7 +8,7 @@
 import '../theme/base.css';
 import axe from 'axe-core';
 import { flushSync, mount, unmount } from 'svelte';
-import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import type { TokenizationResult, TokenizerId } from '@tsbs/core';
 import { AppState } from '../app/app-state.svelte.ts';
@@ -305,6 +305,60 @@ describe('the zh-TW paragraph (1,245 bytes)', () => {
     scroller(section, 'sbar').scrollLeft = 120;
     await frames(3);
     expect(body.scrollLeft).toBeCloseTo(120, 0);
+  });
+});
+
+describe('the rows of an on-demand run (AD-27)', () => {
+  it('say "waiting" and dim until the run reaches them, and "press Tokenize now" once it has ended', async () => {
+    await page.viewport(1280, 900);
+    const clients = new FakeClients();
+    const long = 'a'.repeat(20_001);
+    const app = new AppState(hubOf(clients.spawn), { text: long });
+    const { section } = await showApp(app);
+    const start = app.start(); // after the first paint: the board's o200k loads
+    const o200k = await vi.waitFor(() => clients.of('openai-o200k_base'));
+    o200k.loads[0]?.finish();
+    await start;
+    await flush();
+    flushSync();
+    const row = (lab: string): HTMLElement | null => section.querySelector<HTMLElement>(`[data-row="${lab}"]`);
+    const status = (lab: string): string => row(lab)?.querySelector('[data-testid="row-status"]')?.textContent ?? '';
+    const dimmed = (lab: string): boolean => row(lab)?.querySelector('.cmp-row')?.hasAttribute('data-pending') ?? false;
+    expect(status('google')).toBe('tokens: press “Tokenize now”');
+    expect(dimmed('google')).toBe(false);
+
+    const run = app.runOnDemand(); // the board's run, then the rows' one after another
+    o200k.encodes.at(-1)?.answer();
+    await run;
+    await flush();
+    await flush();
+    flushSync();
+    expect(row('openai')?.dataset['state']).toBe('current'); // the board's traced result answers the row
+    expect(row('anthropic')?.dataset['state']).toBe('loading'); // its turn: Claude legacy loads
+    for (const lab of ['google', 'meta', 'xai']) {
+      expect(row(lab)?.dataset['state'], lab).toBe('queued');
+      expect(status(lab), lab).toBe('tokens: waiting for the tokenizer');
+      expect(dimmed(lab), lab).toBe(true);
+    }
+
+    for (const id of ['anthropic-claude-legacy', 'google-gemma4', 'meta-llama4-muse', 'xai-grok2'] as const) {
+      await flush();
+      clients.of(id).loads[0]?.finish();
+      await flush();
+      clients.of(id).encodes.at(-1)?.answer();
+      await flush();
+    }
+    flushSync();
+    for (const lab of ['openai', 'anthropic', 'google', 'meta', 'xai']) {
+      expect(row(lab)?.dataset['state'], lab).toBe('current');
+      expect(dimmed(lab), lab).toBe(false);
+    }
+
+    app.setText(`${long}b`); // the run has ended: the rows wait for the next one
+    flushSync();
+    expect(row('google')?.dataset['state']).toBe('onDemand');
+    expect(status('google')).toBe('tokens: press “Tokenize now”');
+    expect(dimmed('google')).toBe(false);
   });
 });
 
