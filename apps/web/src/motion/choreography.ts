@@ -435,7 +435,8 @@ function playStep(
         ],
         { duration: 280, easing: EASE },
       );
-      copy.style.setProperty('grid-row', '1'); // over the merged chip, not auto-placed into a row of its own
+      // Over the merged chip: the tier's cells are pinned to row 1 in board.css, so the ghost overlaps them.
+      copy.style.setProperty('grid-row', '1');
     }
   }
   plan.start();

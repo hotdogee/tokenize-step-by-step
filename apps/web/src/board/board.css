@@ -85,6 +85,12 @@
   align-items: end;
 }
 
+/* Every tier is one row; a step's ghost (choreography.ts) also takes row 1, so it overlaps the merged chip instead of
+   pushing the cells after it into a second row. */
+.bd-tier > .bd-cell {
+  grid-row: 1;
+}
+
 .bd-sources {
   grid-row: source;
 }

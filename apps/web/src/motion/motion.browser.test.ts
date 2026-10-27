@@ -2,14 +2,14 @@
  * Motion in chromium (05 §7): the stop 2→3 morph keeps its First state through the frame that paints the commit (no
  * animation, the boxes' stop-2 geometry) and then FLIPs the char boxes (glyphs counter-scaled) and unfolds the byte
  * cells, and a change before the start restores the board's own geometry; leaving stop 5 fades a copy of the chunk
- * brackets out; a merge step FLIPs the changed chips, slides a copy of the right part into the left one, draws the
- * byte-tier caret and marks the merged part (star, pulse, "merged at this step") with a 1 px ring at the chip's edge on
- * every just-merged cell that stays, whose pulse moves its opacity only and which reduced motion thickens to 2 px for
- * 600 ms; the bottom sheet slides in when it expands; rapid scrubbing cancels the running FLIP (`Animation.cancel()`)
- * and only crossfades, so `document.getAnimations()` drains; the in-app reduced-motion switch leaves zero transform
- * animations, opacity swaps ≤ 150 ms, `scrollIntoView` with `behavior: 'auto'` and the loading bar without a
- * transition; the switch crossfade uses a View Transition when `document.startViewTransition` exists and an opacity
- * fade on the board when it does not.
+ * brackets out; a merge step FLIPs the changed chips, slides a copy of the right part into the left one (over the
+ * merged chip: every chip stays in the tier's one row), draws the byte-tier caret and marks the merged part (star,
+ * pulse, "merged at this step") with a 1 px ring at the chip's edge on every just-merged cell that stays, whose pulse
+ * moves its opacity only and which reduced motion thickens to 2 px for 600 ms; the bottom sheet slides in when it
+ * expands; rapid scrubbing cancels the running FLIP (`Animation.cancel()`) and only crossfades, so
+ * `document.getAnimations()` drains; the in-app reduced-motion switch leaves zero transform animations, opacity swaps
+ * ≤ 150 ms, `scrollIntoView` with `behavior: 'auto'` and the loading bar without a transition; the switch crossfade
+ * uses a View Transition when `document.startViewTransition` exists and an opacity fade on the board when it does not.
  */
 import '../theme/base.css';
 import { flushSync } from 'svelte';
@@ -189,6 +189,32 @@ describe('merge steps (05 §7)', () => {
     expect(board.grid.querySelectorAll('.mo-ghost')).toHaveLength(0);
     await go(board, { step: 5 });
     for (const caret of carets) expect(caret.hasAttribute('data-merge-caret')).toBe(false); // the next step's own
+  });
+
+  it("keeps every chip in the tier's one row while the right part's copy overlaps the merged chip", async () => {
+    const board = await showDefault(5, 4);
+    await sleep(150); // not a fast scrub
+    await go(board, { step: 5 }); // part 5 of 7 forms: a chip before it and one after it
+    await sleep(100); // the middle of the 280 ms move
+    const running = document.getAnimations();
+    for (const animation of running) animation.pause();
+    const ghost = board.grid.querySelector<HTMLElement>('.bd-tier-token > .mo-ghost');
+    const tier = ghost?.parentElement ?? null;
+    if (ghost === null || tier === null) throw new Error('no copy of the right part in the token tier');
+    const cells = [...tier.querySelectorAll<HTMLElement>(':scope > [data-tier="token"]')];
+    const merged = cells.findIndex((cell) => cell.hasAttribute('data-just-merged'));
+    const watched = { previous: cells[merged - 1], merged: cells[merged], next: cells[merged + 1] };
+    const tops = (): Record<string, number | undefined> =>
+      Object.fromEntries(Object.entries(watched).map(([name, cell]) => [name, cell?.getBoundingClientRect().top]));
+    const moving = tops();
+    expect(Object.values(moving).every((top) => top !== undefined)).toBe(true);
+    // One track: the copy takes row 1 with the cells (board.css pins them there), so it never pushes one into a row 2.
+    expect(getComputedStyle(tier).gridTemplateRows.split(' ')).toHaveLength(1);
+    expect(ghost.getBoundingClientRect().top).toBe(moving['merged']);
+    for (const animation of running) animation.play();
+    await drained();
+    expect(board.grid.querySelectorAll('.mo-ghost')).toHaveLength(0);
+    expect(moving).toEqual(tops()); // during the move as settled
   });
 
   it('cancels the running FLIP on a rapid scrub and only crossfades, so the animations drain', async () => {
