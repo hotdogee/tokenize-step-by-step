@@ -248,9 +248,9 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   persist (`tsbs:rows`); the two chip toggles persist (`tsbs:chipText`, `tsbs:chipHatch`). The static first paint
   renders the table (no board variants: one template per locale) from five inlined precomputed wires; the board and rail
   load as a lazy chunk when Advanced opens. Dark theme "cool slate": bg `oklch(0.2 0.012 255)`, surfaces
-  0.24/0.285/0.35,
-  fg 0.94, fg-muted 0.74, border **0.74** (the owner's 0.60 fails AD-35's ≥ 3:1 border contract; 0.74 passes it with
-  margin), accent `oklch(0.8 0.11 200)`, tints L 0.37/0.45 C 0.075; the 05 §11 dark column and AD-35's literals are
+  0.24/0.285/0.35, fg 0.94, fg-muted 0.74, border **0.74** (the owner's 0.60 fails AD-35's ≥ 3:1 border contract; 0.74
+  passes it with margin), accent `oklch(0.8 0.11 200)`, tints L 0.37/0.45 C 0.075; the 05 §11 dark column and AD-35's
+  literals are
   amended to these. Notices: the union of `requiredNotices` across the tokenizers on screen, legal and prominent
   first; the footer's fidelity sentence is dropped on `/`. App name **"What is a token?"** (wordmark `lang="en"` in
   every locale; titles en "What is a token?", zh-TW "What is a token?・什麼是詞元？", ja "What is a token?・トークンとは？");
