@@ -134,6 +134,7 @@ export const ja = {
   'compare.scrollHint': '横にスクロールすると続きが見られます',
   'compare.partial': '文字をまたぐ {n}',
   'compare.claudeLegacy': 'Claude 1/2 レガシー',
+  'compare.oomRow': 'このデバイスでは {name} を読み込むメモリが足りません',
 
   // ---- 詳細設定（PA-19） ----
   'advanced.label': '詳細設定',

@@ -325,11 +325,15 @@ describe('a row whose tokenizer fails to load', () => {
     flushSync();
     const action = (lab: string): HTMLButtonElement | null =>
       section.querySelector<HTMLButtonElement>(`[data-row="${lab}"] [data-testid="row-action"]`);
+    const status = (lab: string): string =>
+      section.querySelector(`[data-row="${lab}"] [data-testid="row-status"]`)?.textContent ?? '';
     expect(action('xai')?.dataset['action']).toBe('reload');
     expect(action('xai')?.textContent).toBe('Reload');
     expect(action('google')?.dataset['action']).toBe('retry');
+    // Out of memory on the lab's primary: nothing to suggest beside Retry (no "try o200k_base").
+    expect(status('google')).toMatch(/^Not enough memory to load Gemma 4\b.* on this device$/u);
     expect(action('meta')?.dataset['action']).toBe('back');
-    expect(section.querySelector('[data-row="meta"] [data-testid="row-status"]')?.textContent).toContain('try Llama 4');
+    expect(status('meta')).toContain('try Llama 4');
     expect(action('openai')).toBeNull(); // still loading
     action('meta')?.click();
     flushSync();
@@ -338,5 +342,11 @@ describe('a row whose tokenizer fails to load', () => {
     action('google')?.click(); // Retry loads again
     await flush();
     expect(clients.of('google-gemma4').loads).toHaveLength(2);
+    // The OpenAI row's o200k never suggests itself.
+    clients.of('openai-o200k_base').loads[0]?.reject(failure('oom'));
+    await flush();
+    flushSync();
+    expect(action('openai')?.dataset['action']).toBe('retry');
+    expect(status('openai')).toMatch(/^Not enough memory to load o200k_base\b.* on this device$/u);
   });
 });

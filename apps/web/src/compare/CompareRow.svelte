@@ -11,7 +11,7 @@
   import type { TokenizerEntry } from '@tsbs/registry';
   import { appState } from '../app/context.ts';
   import { errorView, type ErrorAction } from '../app/errors.ts';
-  import { DEFAULT_TOKENIZER, tokenizerEntry } from '../app/registry.ts';
+  import { tokenizerEntry } from '../app/registry.ts';
   import type { HubEntry } from '../app/result-hub.svelte.ts';
   import { answers } from '../byok/live-state.svelte.ts';
   import { openLiveCheck } from '../byok/drawer.svelte.ts';
@@ -86,15 +86,14 @@
   );
   const source = $derived(state === 'current' ? (hub?.source ?? 'precomputed') : 'pending');
   const onPrimary = $derived(choice === row.primary.id);
-  const error = $derived(
-    state === 'error' && hub?.error !== null && hub?.error !== undefined
-      ? errorView(
-          hub.error,
-          (id) => tokenizerEntry(id).displayName[i18n.current],
-          onPrimary ? DEFAULT_TOKENIZER : row.primary.id,
-        )
-      : null,
-  );
+  const error = $derived.by(() => {
+    if (state !== 'error' || hub?.error === null || hub?.error === undefined) return null;
+    const view = errorView(hub.error, (id) => tokenizerEntry(id).displayName[i18n.current], row.primary.id);
+    // Out of memory on the lab's primary: there is no other tokenizer of the row to suggest, only Retry.
+    return view.key === 'error.oom' && onPrimary
+      ? { ...view, key: 'compare.oomRow' as const, params: { name: view.params['name'] ?? '' } }
+      : view;
+  });
   /** The error's action on this row: back is the lab's primary tokenizer, and on the primary already a retry. */
   const action: ErrorAction | null = $derived(
     error?.action === 'back' && onPrimary ? 'retry' : (error?.action ?? null),

@@ -134,6 +134,7 @@ export const en = {
   'compare.scrollHint': 'scroll sideways for the rest of the text',
   'compare.partial': '{n} partial',
   'compare.claudeLegacy': 'Claude 1/2 legacy',
+  'compare.oomRow': 'Not enough memory to load {name} on this device',
 
   // ---- Advanced disclosure (PA-19) ----
   'advanced.label': 'Advanced',

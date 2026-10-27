@@ -129,6 +129,7 @@ export const zhTW = {
   'compare.scrollHint': '左右捲動可看到其餘的文字',
   'compare.partial': '{n} 個跨字元',
   'compare.claudeLegacy': 'Claude 1/2 舊版',
+  'compare.oomRow': '這台裝置的記憶體不足以載入 {name}',
 
   // ---- 進階（PA-19） ----
   'advanced.label': '進階',
