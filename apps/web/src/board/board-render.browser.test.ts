@@ -251,25 +251,54 @@ describe('row tracks by breakpoint (05 §3.3)', () => {
   const rectIn = (board: MountedBoard, selector: string): DOMRect | undefined =>
     board.grid.querySelector('.bd-row')?.querySelector(selector)?.getBoundingClientRect();
 
-  for (const [width, height, gap] of [
-    [600, 132, 18],
-    [800, 148, 22],
-    [1440, 169, 21],
+  /** From a row's last byte row to its chips, and from its chips to the next row's characters, in px. */
+  const gapsAround = (board: MountedBoard): { bytes: number; next: number; token: DOMRect; row: DOMRect } => {
+    const first = board.grid.querySelector('[data-row="0"]');
+    const row = first?.getBoundingClientRect() ?? new DOMRect();
+    const token = first?.querySelector('.bd-cell-token')?.getBoundingClientRect() ?? new DOMRect();
+    const bytes = Math.max(
+      ...[...(first?.querySelectorAll('.bd-cell-byte') ?? [])].map((b) => b.getBoundingClientRect().bottom),
+    );
+    const next = board.grid.querySelector('[data-row="1"] .bd-cell-char')?.getBoundingClientRect().top ?? 0;
+    return { bytes: token.top - bytes, next: next - token.bottom, token, row };
+  };
+
+  for (const [width, height, byteView, bytes, next] of [
+    [600, 132, 'hex', 14, 18],
+    [800, 148, 'hex', 18, 22],
+    [1440, 169, 'hex', 16, 46],
+    [1440, 169, 'both', 16, 21],
   ] as const) {
-    it(`ends the ${String(height)} px row with a 12 px gap under the token tier at ${String(width)} px (PA-17)`, async () => {
+    it(`ends the ${String(height)} px row with the gap track at ${String(width)} px, ${byteView} bytes: ${String(bytes)} / ${String(next)} px (PA-17)`, async () => {
       await page.viewport(width, 900);
-      const board = await show(fixtureResult('openai-o200k_base', 'ja-paragraph'));
+      const board = await show(fixtureResult('openai-o200k_base', 'ja-paragraph'), { byteView });
       expect(board.target.querySelector('.bd-ids, .bd-idl')).toBeNull();
-      const first = board.grid.querySelector('[data-row="0"]');
-      const row = first?.getBoundingClientRect();
+      expect(board.grid.querySelectorAll('[data-row="0"] .bd-tier-dec')).toHaveLength(byteView === 'both' ? 1 : 0);
       const rowHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--row-h'));
       expect(rowHeight).toBe(height);
-      expect(row?.height).toBe(rowHeight);
-      const token = first?.querySelector('.bd-cell-token')?.getBoundingClientRect();
-      expect((token?.bottom ?? Number.POSITIVE_INFINITY) + 12).toBeLessThanOrEqual(row?.bottom ?? 0);
-      // No id track (ids sit inside the chips); the gap keeps the chips clear of the next row's characters.
-      const next = board.grid.querySelector('[data-row="1"] .bd-cell-char')?.getBoundingClientRect();
-      expect((next?.top ?? 0) - (token?.bottom ?? 0)).toBeCloseTo(gap, 0);
+      const gaps = gapsAround(board);
+      expect(gaps.row.height).toBe(rowHeight);
+      expect(gaps.token.bottom + 12).toBeLessThanOrEqual(gaps.row.bottom);
+      // No id track (ids sit inside the chips): the gap track takes the room the row does not use, so the chips sit
+      // farther from the next row's characters than from their own bytes.
+      expect(gaps.bytes).toBeCloseTo(bytes, 0);
+      expect(gaps.next).toBeCloseTo(next, 0);
+      expect(gaps.next).toBeGreaterThan(gaps.bytes);
+    });
+  }
+
+  for (const byteView of ['hex', 'both'] as const) {
+    it(`gives the free room to the gap track at 2560 px, ${byteView} bytes (dec row cell / 2 + 8 px when shown)`, async () => {
+      await page.viewport(2560, 1440);
+      const board = await show(fixtureResult('openai-o200k_base', 'ja-paragraph'), { byteView });
+      const cell = cellPx();
+      const gaps = gapsAround(board);
+      expect(gaps.row.height).toBeCloseTo(cell * 3.5 + 56, 0);
+      // bytes → chips: the chunk track (cell / 4 + 6) and the 1 px the token cell leaves in its track.
+      expect(gaps.bytes).toBeCloseTo(cell / 4 + 7, 0);
+      // chips → next row: the gap (cell + 8 less the dec row) and the next row's 6 px bracket and 1 px above its chars.
+      expect(gaps.next).toBeCloseTo(byteView === 'hex' ? cell + 15 : cell / 2 + 7, 0);
+      expect(gaps.next).toBeGreaterThan(gaps.bytes);
     });
   }
 

@@ -45,8 +45,10 @@
 }
 
 /* 480–767: the 132 px --row-h holds U+ labels and chunk brackets (05 §3.3), so the tiers sit flush. Token ids sit inside
-   their chips at every width (PA-17); from 480 px the last track, an empty 12 px gap, keeps the chips farther from the
-   next row's characters than from their own bytes (18 / 22 / 21 px against 14 / 18 / 41 at 600 / 800 / 1440). */
+   their chips at every width (PA-17); from 480 px the row ends with a gap track that takes the space the row does not
+   use (12 px at 480–1023; from 1024 the empty dec track's 25 px join it when only one byte row shows), so a row's chips
+   sit farther from the next row's characters than from their own bytes at every width (14 / 18 → 18 / 22 → 16 / 46 px
+   at 600 / 800 / 1440; 16 / 21 with both byte rows). */
 @media (min-width: 480px) {
   .bd-row {
     grid-template-rows:
@@ -66,8 +68,8 @@
 @media (min-width: 1024px) {
   .bd-row {
     grid-template-rows:
-      [source] var(--src-h) [bracket] 6px [char] 55px [bytes1] 25px [bytes2] 25px [chunk] 15px
-      [token] 29px [extra] var(--extra-h) [gap] 12px;
+      [source] var(--src-h) [bracket] 6px [char] 55px [bytes1] 25px [bytes2] auto [chunk] 15px
+      [token] 29px [extra] var(--extra-h) [gap] 1fr;
   }
 }
 
@@ -95,8 +97,10 @@
 .bd-track-bytes1 {
   grid-row: bytes1;
 }
+/* The dec row under the hex one (both byte rows, from 1024 px): its `auto` track is as tall as this tier, 0 without it. */
 .bd-track-bytes2 {
   grid-row: bytes2;
+  height: 25px;
 }
 .bd-tier-chunk {
   grid-row: chunk;
@@ -688,8 +692,12 @@
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] calc(var(--cell) + 22px) [bytes1] calc(var(--cell) / 2 + 8px)
-      [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px)
-      [extra] var(--extra-h) [gap] 12px;
+      [bytes2] auto [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px) [extra] var(--extra-h)
+      [gap] 1fr;
+  }
+
+  .bd-track-bytes2 {
+    height: calc(var(--cell) / 2 + 8px);
   }
 
   .bd-grid.extra {
