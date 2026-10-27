@@ -6,7 +6,7 @@
  * the scrollbar at the bottom of the viewport while the page scrolls; the Advanced disclosure opens from a link with
  * `s=` and from the `5` key; 320 px reflow (the table and, with Advanced open, the board are the only exempt regions);
  * axe on the long table in three locales × two themes; a focused chip is never under the header or the pinned box
- * (WCAG 2.4.11).
+ * (WCAG 2.4.11); typing at 8 characters a second never dims a live row.
  */
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
@@ -17,6 +17,7 @@ const table = (page: Page) => page.getByTestId('compare');
 const row = (page: Page, lab: string) => page.locator(`[data-testid="compare"] [data-row="${lab}"]`);
 const chips = (page: Page, lab: string) => row(page, lab).locator('[role="gridcell"][data-index]');
 const params = (page: Page): URLSearchParams => new URL(page.url()).searchParams;
+const LABS = ['openai', 'anthropic', 'google', 'meta', 'xai'] as const;
 
 interface Rect {
   readonly top: number;
@@ -78,6 +79,36 @@ test('the default rows of 台灣台南 show the oracle counts, and a row switch 
   await row(page, 'anthropic').getByTestId('row-live-check').click();
   await expect(page.getByTestId('live-check-toggle')).toHaveAttribute('aria-expanded', 'true');
   await expect.poll(() => params(page).get('r')).toBe('openai-cl100k_base,anthropic-api');
+});
+
+test('typing at 8 characters a second never dims a live row: each answer arrives inside the debounce', async ({
+  page,
+}) => {
+  await openShell(page, 'en');
+  await page.locator('#text-input').fill('Hello world');
+  for (const lab of LABS)
+    await expect(rowSource(page, lab)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
+  // The lowest opacity any row shows, sampled every frame while typing.
+  await page.evaluate(() => {
+    const probe = window as unknown as { tsbsMinOpacity: number; tsbsStop: boolean };
+    probe.tsbsMinOpacity = 1;
+    probe.tsbsStop = false;
+    const sample = (): void => {
+      for (const element of document.querySelectorAll('#compare .cmp-row'))
+        probe.tsbsMinOpacity = Math.min(probe.tsbsMinOpacity, Number(getComputedStyle(element).opacity));
+      if (!probe.tsbsStop) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.locator('#text-input').press('End');
+  await page.keyboard.type(' and more', { delay: 125 });
+  for (const lab of LABS) await expect(row(page, lab)).toHaveAttribute('data-state', 'current');
+  const lowest = await page.evaluate(() => {
+    const probe = window as unknown as { tsbsMinOpacity: number; tsbsStop: boolean };
+    probe.tsbsStop = true;
+    return probe.tsbsMinOpacity;
+  });
+  expect(lowest).toBe(1);
 });
 
 test('the captions stay at the left edge while the rows scroll sideways, the header box in step', async ({ page }) => {

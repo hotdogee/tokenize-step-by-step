@@ -117,11 +117,11 @@ export class CompareRows {
 }
 
 /**
- * What a row draws: `current` (its result answers the analysed text), `stale` (the last result, kept muted while a loaded
- * tokenizer encodes the new text: one render per keystroke, as the board does), `loading` (its tokenizer loads; the
- * caption says how far), `waiting` (no result yet, nothing loading), `onDemand` (an on-demand tier waits for "Tokenize
- * now", AD-27), `error` (the caption shows it with its action, in an on-demand tier too) or `api` (the Anthropic API-key
- * mode).
+ * What a row draws: `current` (its result answers the analysed text), `stale` (the last result, kept while a loaded
+ * tokenizer encodes the new text and muted only after 300 ms, compare.css, so a keystroke renders once, as on the board),
+ * `loading` (its tokenizer loads; the caption says how far), `waiting` (no result yet, nothing loading), `onDemand` (an
+ * on-demand tier waits for "Tokenize now", AD-27), `error` (the caption shows it with its action, in an on-demand tier
+ * too) or `api` (the Anthropic API-key mode).
  */
 export type RowState = 'current' | 'stale' | 'loading' | 'waiting' | 'onDemand' | 'error' | 'api';
 
