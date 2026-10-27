@@ -219,9 +219,11 @@
     viewportWidth = tbody.clientWidth;
     pitch = probe?.getBoundingClientRect().width ?? 0;
     overflow = tbody.scrollWidth > tbody.clientWidth + 1;
-    // The pinned boxes' heights, for the scroll margins that keep a focused control clear of them (compare.css).
+    // The pinned boxes' heights, for the scroll margins that keep a focused control clear of them, and the scroller's
+    // width, which the captions never outgrow (a classic page scrollbar makes it narrower than 100vw; compare.css).
     section?.style.setProperty('--cmp-head-h', `${String(thead?.offsetHeight ?? 0)}px`);
     section?.style.setProperty('--cmp-foot-h', `${String(sbar?.offsetHeight ?? 0)}px`);
+    section?.style.setProperty('--cmp-view', `${String(viewportWidth)}px`);
   }
 
   /** Scrolls the table sideways just enough for columns `[col, col + span)` to be on screen (the window follows). */

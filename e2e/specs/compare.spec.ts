@@ -12,7 +12,15 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { chooseExample } from './board-helpers.ts';
-import { LOCALES, LIVE_READY_TIMEOUT_MS, openShell, rowSource, THEMES, useTheme } from './shell-helpers.ts';
+import {
+  LOCALES,
+  LIVE_READY_TIMEOUT_MS,
+  openAdvanced,
+  openShell,
+  rowSource,
+  THEMES,
+  useTheme,
+} from './shell-helpers.ts';
 
 const table = (page: Page) => page.getByTestId('compare');
 const row = (page: Page, lab: string) => page.locator(`[data-testid="compare"] [data-row="${lab}"]`);
@@ -258,6 +266,31 @@ for (const [width, height] of [
       await expectClear('Tab onto the Google select');
     });
   });
+
+test.describe('on a phone with Advanced open', () => {
+  test.use({ viewport: { width: 360, height: 780 } });
+
+  test('the pinned scrollbar sits above the board’s bottom sheet, never under it', async ({ page }) => {
+    await openShell(page, 'en');
+    await chooseExample(page, 'zh-tw-paragraph');
+    await openAdvanced(page);
+    // The table runs past the viewport's bottom: its scrollbar pins there, above the sheet (`--sheet-height`).
+    await page.evaluate(() => {
+      const top = (document.getElementById('compare')?.getBoundingClientRect().top ?? 0) + window.scrollY;
+      window.scrollTo(0, top - 250);
+    });
+    const hit = await page.evaluate(() => {
+      const bar = document.querySelector('.cmp-sbar')?.getBoundingClientRect();
+      const sheet = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-height'));
+      if (bar === undefined) return null;
+      const element = document.elementFromPoint(100, bar.top + bar.height / 2);
+      return { onBar: element?.closest('.cmp-sbar') !== null, bottom: bar.bottom, limit: window.innerHeight - sheet };
+    });
+    expect(hit?.onBar).toBe(true);
+    expect(hit?.bottom ?? 0).toBeLessThanOrEqual((hit?.limit ?? 0) + 0.5);
+    expect(hit?.limit ?? 780).toBeLessThan(780); // the sheet is up
+  });
+});
 
 test('Advanced opens from a link with s= and from the 5 key', async ({ page }) => {
   await page.goto('/?lang=en&s=5.2');
