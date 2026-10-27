@@ -1,5 +1,6 @@
 import type { Progress, TokenizerId } from '@tsbs/core';
 import { toExamplesWire } from '@tsbs/core/fixture/examples-wire';
+import { checkInvariants } from '@tsbs/core/model/invariants';
 import { DEFAULT_OPTIONS } from '@tsbs/core/model/result';
 import { describe, expect, it } from 'vitest';
 import { cachedTokenizers } from '../shell/cache-probe.ts';
@@ -67,6 +68,16 @@ describe('ExamplesClient (precomputed examples over MockTokenizerClient)', () =>
     expect([...tainan.tokens.id]).toEqual(fixtureCase('openai-cl100k_base', 'zh-tw-tainan').ids);
     expect(tainan.stats.partialTokens).toBe(2); // 灣 = E7 81 + A3 (05 §4.1)
     await expect(client.encode('not an example ✓', DEFAULT_OPTIONS)).rejects.toSatisfy(isNoPrecomputedResult);
+  });
+
+  it('answers the empty text with an empty result on every tokenizer (the rows say "0 tokens" under ?mock=1)', async () => {
+    const client = createExamplesClient(fixtureFetch());
+    await client.load('google-gemma4');
+    const empty = await client.encode('', DEFAULT_OPTIONS);
+    expect(checkInvariants(empty)).toEqual([]);
+    expect(empty).toMatchObject({ tokenizer: 'google-gemma4', text: '', timeline: null });
+    expect(empty.stats).toMatchObject({ bytes: 0, tokens: 0, partialTokens: 0 });
+    await expect(client.encode(' ', DEFAULT_OPTIONS)).rejects.toSatisfy(isNoPrecomputedResult);
   });
 
   it('lets a newer load supersede one that is still fetching (one resident)', async () => {
