@@ -17,7 +17,7 @@
  * | stop 2→3 | char boxes FLIP (translate + scaleX; glyphs and U+ labels counter-scaled, so they only translate), byte cells unfold (translateY(−8px) + opacity, stagger 8 ms, cap 180), 350 ms | 120 ms opacity |
  * | stop 3→4 | chunk brackets `clip-path` reveal, marker chips scale in, parts fade in, 240 ms | 120 ms opacity |
  * | stop 5→6 / 6→5 | ids fade in, chips crossfade, chunk brackets fade out (a detached copy of the leaving chunk row), 200 ms | 120 ms opacity |
- * | merge step | chips FLIP keyed by byte span (the merged chip grows out of its left part) while a copy of the right part slides the 2 px gap to abut it and fades into the merged chip, 280 ms; pulse on the merged part (600 ms; on a 1-column cell it settles to a 1 px ring) | discrete swap, 600 ms static outline (a 1-column cell then keeps the ring) |
+ * | merge step | chips FLIP keyed by byte span (the merged chip grows out of its left part) while a copy of the right part slides the 2 px gap to abut it and fades into the merged chip, 280 ms; pulse: the 1 px ring fades in, dips and settles, 600 ms | discrete swap; the ring at 2 px for 600 ms, then 1 px |
  * | split step (spm byte fallback) | the byte chips FLIP out of the parent's span, 280 ms | discrete swap |
  * | fast scrub (> 1 step / 100 ms) | changed chips crossfade, 80 ms opacity | same |
  * | bottom sheet expands / collapses | slides up from its collapsed height + fades in, 200 ms / fades, 200 ms | 120 ms opacity |
@@ -441,23 +441,15 @@ function playStep(
   plan.start();
 }
 
-/** The pulse of a cell with the star: the outline fades in and out. */
-const PULSE: Keyframe[] = [{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }];
-
 /**
- * The pulse of a 1-column cell (`s1`, no star): the 2 px outline fades in and thins to the 1 px ring at the chip's edge
- * that motion.css then holds (no fill). Outline width and offset repaint those few cells for 600 ms.
+ * The pulse: the 1 px ring on the cell's `::before` (motion.css) fades in, dips and settles at the opacity the CSS holds
+ * (no fill). Opacity only, so the ring's geometry never moves (05 §7).
  */
-const RING: Keyframe[] = [
-  { opacity: 0, outlineWidth: '2px', outlineOffset: '1px' },
-  { opacity: 1, outlineWidth: '2px', outlineOffset: '1px', offset: 0.5 },
-  { opacity: 1, outlineWidth: '1px', outlineOffset: '0px' },
-];
+const PULSE: Keyframe[] = [{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 0.2, offset: 0.65 }, { opacity: 1 }];
 
-/** The merged part's 600 ms pulse on the cell's `::before` outline (reduced motion: the director's static outline
- *  instead, no animation). */
+/** The merged part's 600 ms pulse on the cells' ring (reduced motion: the director's 2 px ring instead, no animation). */
 export function pulse(cells: Iterable<HTMLElement>): void {
-  pseudo(cells, (cell) => (cell.classList.contains('s1') ? RING : PULSE), 600);
+  pseudo(cells, PULSE, 600);
 }
 
 /** The byte-tier caret under the junction of a merge (05 §7, `data-merge-caret`, motion.css): fades in with the move. */
@@ -465,17 +457,9 @@ export function revealCaret(cells: Iterable<HTMLElement>): void {
   pseudo(cells, [{ opacity: 0 }, { opacity: 1 }], 280);
 }
 
-function pseudo(
-  cells: Iterable<HTMLElement>,
-  keyframes: Keyframe[] | ((cell: HTMLElement) => Keyframe[]),
-  duration: number,
-): void {
+function pseudo(cells: Iterable<HTMLElement>, keyframes: Keyframe[], duration: number): void {
   const plan = new Plan();
-  for (const cell of cells)
-    plan.add(cell, typeof keyframes === 'function' ? keyframes(cell) : keyframes, {
-      duration,
-      pseudoElement: '::before',
-    });
+  for (const cell of cells) plan.add(cell, keyframes, { duration, pseudoElement: '::before' });
   try {
     plan.start();
   } catch {

@@ -3,12 +3,13 @@
  * animation, the boxes' stop-2 geometry) and then FLIPs the char boxes (glyphs counter-scaled) and unfolds the byte
  * cells, and a change before the start restores the board's own geometry; leaving stop 5 fades a copy of the chunk
  * brackets out; a merge step FLIPs the changed chips, slides a copy of the right part into the left one, draws the
- * byte-tier caret and marks the merged part (star, pulse, "merged at this step"), and a 1-column cell's pulse, or its
- * reduced-motion outline, settles to a 1 px ring at the chip's edge that stays; the bottom sheet slides in when it
- * expands; rapid scrubbing cancels the running FLIP (`Animation.cancel()`) and only crossfades, so
- * `document.getAnimations()` drains; the in-app reduced-motion switch leaves zero transform animations, opacity swaps ≤
- * 150 ms, `scrollIntoView` with `behavior: 'auto'` and the loading bar without a transition; the switch crossfade uses
- * a View Transition when `document.startViewTransition` exists and an opacity fade on the board when it does not.
+ * byte-tier caret and marks the merged part (star, pulse, "merged at this step") with a 1 px ring at the chip's edge on
+ * every just-merged cell that stays, whose pulse moves its opacity only and which reduced motion thickens to 2 px for
+ * 600 ms; the bottom sheet slides in when it expands; rapid scrubbing cancels the running FLIP (`Animation.cancel()`)
+ * and only crossfades, so `document.getAnimations()` drains; the in-app reduced-motion switch leaves zero transform
+ * animations, opacity swaps ≤ 150 ms, `scrollIntoView` with `behavior: 'auto'` and the loading bar without a
+ * transition; the switch crossfade uses a View Transition when `document.startViewTransition` exists and an opacity
+ * fade on the board when it does not.
  */
 import '../theme/base.css';
 import { flushSync } from 'svelte';
@@ -208,78 +209,125 @@ describe('merge steps (05 §7)', () => {
   });
 });
 
-describe('the 1-column just-merged ring (PA-17)', () => {
+describe('the just-merged ring (PA-17)', () => {
   afterEach(async () => {
     document.documentElement.dataset['cellSize'] = 'M';
     await page.viewport(1440, 900);
   });
 
-  /** The cell's `::before` outline as computed, its animation included. */
-  const outline = (cell: Element): { opacity: string; width: string; offset: string } => {
+  /** The cell's `::before` ring as computed, its animation included. */
+  const ring = (cell: Element): { opacity: string; width: string; offset: string; style: string } => {
     const style = getComputedStyle(cell, '::before');
-    return { opacity: style.opacity, width: style.outlineWidth, offset: style.outlineOffset };
+    return {
+      opacity: style.opacity,
+      width: style.outlineWidth,
+      offset: style.outlineOffset,
+      style: style.outlineStyle,
+    };
   };
+  const RING = { opacity: '1', width: '1px', offset: '0px', style: 'solid' };
   const px = (value: string): number => Number.parseFloat(value);
+  /** Resolves once `performance.now()` has reached `at`. */
+  const until = (at: number): Promise<void> => sleep(Math.max(0, at - performance.now()));
+
+  /** The keyframes of the cell's own `::before` animation (the pulse), if one runs. */
+  const pulseOf = (cell: Element): ComputedKeyframe[] | undefined =>
+    cell
+      .getAnimations({ subtree: true })
+      .map((animation) => animation.effect)
+      .find(
+        (effect): effect is KeyframeEffect =>
+          effect instanceof KeyframeEffect && effect.target === cell && effect.pseudoElement === '::before',
+      )
+      ?.getKeyframes();
+
+  /** The ring lies on the chip's border box: the cell's `::before` is inset 0 1px, as the chip is. */
+  const expectOnChip = (cell: Element, what: string): void => {
+    const before = getComputedStyle(cell, '::before');
+    const box = cell.getBoundingClientRect();
+    const chip = (cell.querySelector('.bd-chip') ?? cell).getBoundingClientRect();
+    expect(box.left + px(before.left), `${what}: left`).toBeCloseTo(chip.left, 2);
+    expect(box.top + px(before.top), `${what}: top`).toBeCloseTo(chip.top, 2);
+    expect(px(before.width), `${what}: width`).toBeCloseTo(chip.width, 2);
+    expect(px(before.height), `${what}: height`).toBeCloseTo(chip.height, 2);
+  };
 
   for (const [width, size, cellSize] of [
     [1280, 'S', 27],
     [600, 'M', 36],
   ] as const) {
     for (const reduced of [false, true]) {
-      it(`settles a 1-column cell's pulse to a 1 px ring at the chip's edge, ${reduced ? 'reduced' : 'full'} motion, ${String(cellSize)} px cell`, async () => {
+      it(`rings every just-merged cell at the chip's edge and pulses its opacity only, ${reduced ? 'reduced' : 'full'} motion, ${String(cellSize)} px cell`, async () => {
         await page.viewport(width, 900);
         document.documentElement.dataset['cellSize'] = size;
         expect(cellPx()).toBe(cellSize);
         motionPrefs.override = reduced ? 'reduce' : 'full';
-        // A 3-byte part the row end cuts 1 | 2, formed by the second of two merge steps (the board's K first).
-        mounted = await mountRail(appWith(rowEndSplit(8, [], 654321, 2), { stage: 5, step: 1 }));
+        // A 4-byte part: step 2 forms its last three bytes in one row (a plain merge), step 3 joins its first byte, which
+        // the row end cuts off (1 | 3). The board's K first.
+        mounted = await mountRail(appWith(rowEndSplit(8, [], 654321, 3), { stage: 5, step: 1 }));
         const k = Number(mounted.grid.getAttribute('aria-colcount'));
         mounted.destroy();
-        const board = await mountRail(appWith(rowEndSplit(k, [], 654321, 2), { stage: 5, step: 1 }));
+        const board = await mountRail(appWith(rowEndSplit(k, [], 654321, 3), { stage: 5, step: 1 }));
         mounted = board;
         await drained();
-        await sleep(150); // not a fast scrub
-        await go(board, { step: 2 });
-        const merged = [...board.grid.querySelectorAll<HTMLElement>('[data-tier="token"][data-just-merged]')];
-        expect(merged.map((cell) => cell.getAttribute('aria-colspan'))).toEqual(['1', '2']);
-        const [narrow, wide] = merged;
-        if (narrow === undefined || wide === undefined) throw new Error('no part cut 1 | 2');
-        if (!reduced) {
-          // The WAAPI pulse: the 1-column cell's ends at the ring, the wider one's at opacity 0.
-          const last = (cell: Element): Keyframe | undefined =>
-            cell
-              .getAnimations({ subtree: true })
-              .map((animation) => animation.effect)
-              .find(
-                (effect): effect is KeyframeEffect =>
-                  effect instanceof KeyframeEffect && effect.pseudoElement === '::before',
-              )
-              ?.getKeyframes()
-              .at(-1);
-          expect(last(narrow)).toMatchObject({ opacity: '1', outlineWidth: '1px', outlineOffset: '0px' });
-          expect(last(wide)).toMatchObject({ opacity: '0' });
-          expect(last(wide)).not.toHaveProperty('outlineWidth');
-        } else expect(narrow.hasAttribute('data-merge-outline')).toBe(true);
-        await sleep(150);
-        expect(outline(narrow)).toMatchObject({ width: '2px', offset: '1px' }); // the pulse's 2 px geometry
-        if (reduced) expect(outline(narrow).opacity).toBe('1');
-        await sleep(850); // 1 s after the step
-        expect(outline(narrow)).toEqual({ opacity: '1', width: '1px', offset: '0px' });
-        expect(outline(wide).opacity).toBe('0');
-        expect(getComputedStyle(wide.querySelector('.bd-chip') ?? wide, '::after').content).not.toBe('none'); // star
-        // The ring lies on the chip's border box: the cell's `::before` is inset 0 1px, as the chip is.
-        const before = getComputedStyle(narrow, '::before');
-        const box = narrow.getBoundingClientRect();
-        const chip = (narrow.querySelector('.bd-chip') ?? narrow).getBoundingClientRect();
-        expect(box.left + px(before.left)).toBeCloseTo(chip.left, 2);
-        expect(box.top + px(before.top)).toBeCloseTo(chip.top, 2);
-        expect(px(before.width)).toBeCloseTo(chip.width, 2);
-        expect(px(before.height)).toBeCloseTo(chip.height, 2);
-        // Reached by scrubbing (no pulse), the cell carries the ring at once.
+        for (const [step, spans] of [
+          [2, ['3']],
+          [3, ['1', '3']],
+        ] as const) {
+          await sleep(150); // not a fast scrub
+          const start = performance.now();
+          await go(board, { step });
+          const merged = [...board.grid.querySelectorAll<HTMLElement>('[data-tier="token"][data-just-merged]')];
+          expect(
+            merged.map((cell) => cell.getAttribute('aria-colspan')),
+            `step ${String(step)}`,
+          ).toEqual(spans);
+          for (const cell of merged) {
+            const what = `step ${String(step)}, ${String(cell.getAttribute('aria-colspan'))} columns`;
+            if (!reduced) {
+              // The WAAPI pulse animates the ring's opacity alone: it fades in, dips and settles at the CSS's 1.
+              const frames = pulseOf(cell);
+              expect(
+                frames?.map((frame) => [frame.computedOffset, frame.opacity]),
+                what,
+              ).toEqual([
+                [0, '0'],
+                [0.3, '1'],
+                [0.65, '0.2'],
+                [1, '1'],
+              ]);
+              const animated = new Set(frames?.flatMap((frame) => Object.keys(frame)));
+              for (const key of ['offset', 'computedOffset', 'easing', 'composite']) animated.delete(key);
+              expect([...animated], what).toEqual(['opacity']);
+            } else expect(cell.hasAttribute('data-merge-outline'), what).toBe(true);
+          }
+          if (!reduced) {
+            await until(start + 450);
+            for (const cell of merged) expect(ring(cell)).toMatchObject({ width: '1px', offset: '0px' });
+          } else {
+            await until(start + 300);
+            for (const cell of merged) {
+              // The 2 px ring: the outer edge steps out, the inner edge stays on the chip's.
+              expect(cell.hasAttribute('data-merge-outline')).toBe(true);
+              expect(ring(cell)).toMatchObject({ opacity: '1', width: '2px', offset: '0px' });
+            }
+          }
+          await until(start + 1000);
+          for (const cell of merged) {
+            const what = `step ${String(step)}, ${String(cell.getAttribute('aria-colspan'))} columns, 1 s after`;
+            expect(ring(cell), what).toEqual(RING);
+            expectOnChip(cell, what);
+            // The star is the extra mark of a chip of two or more columns.
+            const star = getComputedStyle(cell.querySelector('.bd-chip') ?? cell, '::after').content;
+            expect(star === 'none', `${what}: star`).toBe(cell.classList.contains('s1'));
+          }
+        }
+        // Reached by scrubbing (no pulse), every cell carries the ring at once.
         await go(board, { step: 1 });
-        await go(board, { step: 2 });
-        const scrubbed = board.grid.querySelector('[data-tier="token"][data-just-merged].s1') ?? board.grid;
-        expect(outline(scrubbed)).toEqual({ opacity: '1', width: '1px', offset: '0px' });
+        await go(board, { step: 3 });
+        const scrubbed = [...board.grid.querySelectorAll('[data-tier="token"][data-just-merged]')];
+        expect(scrubbed).toHaveLength(2);
+        for (const cell of scrubbed) expect(ring(cell)).toEqual(RING);
       });
     }
   }

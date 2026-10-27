@@ -1,18 +1,21 @@
 /**
- * Motion on the real page (05 §7), chromium (the stop 2→3 morph's frame budget is pipeline-trace.spec.ts):
+ * Motion on the real page (05 §7), chromium unless noted (the stop 2→3 morph's frame budget is pipeline-trace.spec.ts):
  *
+ * - every engine: a step opened by URL rings every just-merged cell (1 px, at the chip's edge, PA-17), a split step's
+ *   byte-fallback pieces included, and a just-merged chip of two or more columns also carries the star;
  * - fast scrubbing cancels the running FLIP and only crossfades, so `document.getAnimations()` drains;
  * - with `prefers-reduced-motion: reduce` no animation touches `transform`, opacity swaps stay ≤ 150 ms, every
  *   programmatic scroll uses `behavior: 'auto'` and the picker's loading bar has no transition;
  * - a byte-view switch is a View Transition where the engine has `document.startViewTransition`, and an opacity fade of
  *   the board under a Firefox 143 user agent without it (Firefox < 144 has no View Transitions).
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { chooseExample, grid } from './board-helpers.ts';
 import { motionReady, scrubber } from './pipeline-helpers.ts';
-import { openShell, pickTokenizer } from './shell-helpers.ts';
+import { LIVE_READY_TIMEOUT_MS, openShell, pickTokenizer } from './shell-helpers.ts';
 
-test.skip(({ browserName }) => browserName !== 'chromium', 'chromium: tracing, CDP and the View Transition stand-in');
+/** Why every test but the just-merged ring's skips the other engines. */
+const CHROMIUM_ONLY = 'chromium: tracing, CDP and the View Transition stand-in';
 
 interface LoggedAnimation {
   readonly target: string;
@@ -69,7 +72,11 @@ async function drained(page: Page): Promise<void> {
   await expect.poll(() => page.evaluate(() => document.getAnimations().length), { timeout: 5000 }).toBe(0);
 }
 
-test('fast scrubbing cancels the running FLIP and only crossfades; the animations drain', async ({ page }) => {
+test('fast scrubbing cancels the running FLIP and only crossfades; the animations drain', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', CHROMIUM_ONLY);
   await openShell(page, 'en');
   await chooseExample(page, 'ja-text'); // 18 merges over at most 3 rows, so the merged chips are on screen
   await expect(page.locator('[data-source="live"]')).toBeVisible();
@@ -109,7 +116,9 @@ test('fast scrubbing cancels the running FLIP and only crossfades; the animation
 
 test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls with behavior "auto", no bar transition', async ({
   page,
+  browserName,
 }) => {
+  test.skip(browserName !== 'chromium', CHROMIUM_ONLY);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await instrument(page);
   await openShell(page, 'en');
@@ -148,7 +157,8 @@ test('reduced motion: no transform animations, opacity swaps ≤ 150 ms, scrolls
   expect(await bar.evaluate((el) => getComputedStyle(el).transitionDuration)).toBe('0s');
 });
 
-test('a byte-view switch is a View Transition when the engine has one', async ({ page }) => {
+test('a byte-view switch is a View Transition when the engine has one', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', CHROMIUM_ONLY);
   await page.addInitScript(() => {
     const store = window as unknown as Record<string, number>;
     store['__tsbsTransitions'] = 0;
@@ -170,6 +180,7 @@ test('a byte-view switch is a View Transition when the engine has one', async ({
 });
 
 test.describe('Firefox 143 (no View Transitions)', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', CHROMIUM_ONLY);
   test.use({ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:143.0) Gecko/20100101 Firefox/143.0' });
 
   test('a byte-view switch falls back to an opacity fade of the board', async ({ page }) => {
@@ -192,4 +203,38 @@ test.describe('Firefox 143 (no View Transitions)', () => {
     expect(fades[0]).toMatchObject({ props: ['opacity'], duration: 220 });
     expect(errors).toEqual([]);
   });
+});
+
+/** Each just-merged cell's span, its `::before` ring as computed and whether its chip draws the star (`::after`). */
+const rings = (cells: Locator) =>
+  cells.evaluateAll((elements) =>
+    elements.map((cell) => {
+      const before = getComputedStyle(cell, '::before');
+      return {
+        span: Number(cell.getAttribute('aria-colspan')),
+        ring: [before.opacity, before.outlineWidth, before.outlineOffset].join(' '),
+        star: getComputedStyle(cell.querySelector('.bd-chip') ?? cell, '::after').content !== 'none',
+      };
+    }),
+  );
+
+test('a step opened by URL rings every just-merged cell, and a wide chip also draws the star (every engine)', async ({
+  page,
+}) => {
+  const merged = grid(page).locator('[data-tier="token"][data-just-merged]');
+  // Grok-1's first step splits 灣 into its three byte-fallback pieces <0xE7> <0x81> <0xA3>, one column each.
+  await page.goto(`/?${new URLSearchParams({ t: 'xai-grok1', q: '台灣台南', s: '5.1', lang: 'en' }).toString()}`);
+  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(merged).toHaveCount(3);
+  await expect(merged.locator('.bd-piece')).toHaveText(['<0xE7>', '<0x81>', '<0xA3>']);
+  expect(await rings(merged)).toEqual(Array.from({ length: 3 }, () => ({ span: 1, ring: '1 1px 0px', star: false })));
+  // o200k's first step forms a part of two or more columns: the ring and the star.
+  await page.goto(
+    `/?${new URLSearchParams({ t: 'openai-o200k_base', q: '台灣台南', s: '5.1', lang: 'en' }).toString()}`,
+  );
+  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: LIVE_READY_TIMEOUT_MS });
+  await expect(merged).not.toHaveCount(0);
+  const wide = await rings(merged);
+  expect(wide.some((cell) => cell.span >= 2)).toBe(true);
+  for (const cell of wide) expect(cell).toEqual({ span: cell.span, ring: '1 1px 0px', star: cell.span >= 2 });
 });
