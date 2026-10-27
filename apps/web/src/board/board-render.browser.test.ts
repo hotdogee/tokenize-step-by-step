@@ -646,6 +646,25 @@ describe('token ids inside every chip (PA-17)', () => {
     });
   }
 
+  it('shrinks a lock beside a 1-column part’s hex, never the hex (Grok-1 digits at stop 4, the 27 px cell)', async () => {
+    await page.viewport(1280, 800);
+    document.documentElement.dataset['cellSize'] = 'S';
+    expect(cellPx()).toBe(27);
+    const board = await showAt(appWith(fixtureResult('xai-grok1', 'zh-date'), { stage: 4 }), 'S');
+    await digitsLoaded();
+    const locked = cells(board, '[data-tier="token"][data-variant="part"].s1 .bd-chip.has-lock');
+    expect(locked.length).toBeGreaterThan(0);
+    for (const vis of locked) {
+      const text = vis.querySelector('.bd-chip-line > .bd-part-text') ?? vis;
+      const lock = vis.querySelector('.bd-chip-line > svg.bd-icon')?.getBoundingClientRect();
+      expect(text.scrollWidth).toBeLessThanOrEqual(text.clientWidth);
+      expectWithin(glyphRun(text), paddingBox(vis), `hex ${text.textContent}`);
+      // 21 px of line: the 13 px hex, the 2 px gap and what is left of the 11 px lock.
+      expect(lock?.width ?? 0).toBeGreaterThan(4);
+      expect(lock?.width ?? 11).toBeLessThan(11);
+    }
+  });
+
   it('draws the stop-5 star only on a just-merged part’s fragments of two or more columns, clear of the id (o200k, 360 px, L)', async () => {
     await page.viewport(360, 780);
     const result = fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
