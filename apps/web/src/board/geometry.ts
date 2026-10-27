@@ -7,7 +7,7 @@ import type { Stage, Tier } from '../app/app-state.svelte.ts';
 
 /** `--gutter` (05 §3.3): the board container's inline padding on each side. */
 export const GUTTER = 16;
-/** K = clamp(MIN_COLUMNS, …, MAX_COLUMNS) (05 §3.3); MAX_COLUMNS equals the generated `.c64`/`.s64` classes. */
+/** K = clamp(MIN_COLUMNS, …, MAX_COLUMNS) (05 §3.3); MAX_COLUMNS equals the generated `.k64` class (placement classes go to 128 for the table, PA-19). */
 export const MIN_COLUMNS = 8;
 export const MAX_COLUMNS = 64;
 

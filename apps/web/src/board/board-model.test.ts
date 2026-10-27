@@ -31,7 +31,7 @@ describe('K = clamp(8, floor((boardWidth − 2·gutter) / cell), 64) (05 §3.3)'
 
   it('clamps to the generated placement classes and keeps a column for sub-pixel widths', () => {
     expect(MIN_COLUMNS).toBe(8);
-    expect(MAX_COLUMNS).toBe(64); // = the generated .c64/.s64 classes (plugins/grid-classes.test.ts)
+    expect(MAX_COLUMNS).toBe(64); // = the generated .k64 class; placement classes go to .c128/.s128 (plugins/grid-classes.test.ts)
     expect(GUTTER).toBe(16);
     expect(columnsFor(100, 36)).toBe(8);
     expect(columnsFor(100_000, 30)).toBe(64);
