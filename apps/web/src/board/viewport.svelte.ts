@@ -1,8 +1,8 @@
 /**
  * The viewport facts the board depends on (05 §3.3, §5, §9; AD-34), as reactive `matchMedia` state: the inspector
  * surface by **width only** (≥ 1024 side rail, 768–1023 anchored panel, < 768 bottom sheet — pointer type never selects
- * it), the 480 px breakpoint that moves U+ labels, chunk brackets and narrow-chip ids on/off the board, hex **and** dec rows at
- * ≥ 1024 px. Reduced motion for `scrollIntoView` comes from motion/motion-prefs.svelte.ts (the system setting and the
+ * it), the 480 px breakpoint that moves U+ labels and chunk brackets on/off the board (token ids sit inside their chips at
+ * every width, PA-17), hex **and** dec rows at ≥ 1024 px. Reduced motion for `scrollIntoView` comes from motion/motion-prefs.svelte.ts (the system setting and the
  * in-app switch together). Server rendering (tests) gets the desktop defaults.
  *
  * A hydrated static first paint (PA-15, app/first-paint.ts) starts from the facts its board variant was rendered with, so
@@ -17,7 +17,7 @@ export class BoardViewport {
   wide = $state(true);
   /** ≥ 768 px: no bottom sheet. */
   medium = $state(true);
-  /** ≥ 480 px: U+ labels, chunk brackets and the ids of narrow chips on the board (05 §3.3). */
+  /** ≥ 480 px: U+ labels and chunk brackets on the board (05 §3.3). */
   small = $state(true);
   readonly #stops: Array<() => void> = [];
   #watching = false;

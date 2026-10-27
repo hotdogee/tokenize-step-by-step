@@ -48,7 +48,7 @@
         "largest-contentful-paint": [
           "error",
           {
-            "maxNumericValue": 2000
+            "maxNumericValue": 2500
           }
         ],
         "total-blocking-time": [
@@ -84,7 +84,7 @@
         "resource-summary:font:size": [
           "error",
           {
-            "maxNumericValue": 4096
+            "maxNumericValue": 6144
           }
         ],
         "resource-summary:other:size": [

@@ -1,11 +1,11 @@
 /**
- * Test-only helpers for the board: results from the golden fixtures (`fromFixtureCase`) and synthetic long results, an
- * AppState over a client that never answers (the board shows exactly the result it is given), and mounting the board in
- * a browser-mode test. Never imported by app code.
+ * Test-only helpers for the board: results from the golden fixtures (`fromFixtureCase`), synthetic long results and a
+ * part cut by the row end (`rowEndSplit`), an AppState over a client that never answers (the board shows exactly the
+ * result it is given), and mounting the board in a browser-mode test. Never imported by app code.
  */
 import type { Fixture, TokenizationResult, TokenizerClientLike, TokenizerId } from '@tsbs/core';
 import { buildResult } from '@tsbs/core/model/build-result';
-import { ChunkKind, TokenKind } from '@tsbs/core/model/result';
+import { ALIVE, ChunkKind, StepKind, TokenKind } from '@tsbs/core/model/result';
 import { fromFixtureCase, type FromFixtureOptions } from '@tsbs/core/fixture/from-fixture-case';
 import { analyzeText } from '@tsbs/core/text/analyze';
 import { flushSync, mount, unmount } from 'svelte';
@@ -154,5 +154,47 @@ export function syntheticResult(text: string, tokenizer: TokenizerId = 'openai-o
     chunks: { byteStart: utf8.length > 0 ? [0, utf8.length] : [0], kind: utf8.length > 0 ? [ChunkKind.Regex] : [] },
     tokens: { id: ids, byteStart: starts, kind: ids.map(() => TokenKind.Normal) },
     timeline: null,
+  });
+}
+
+/**
+ * K + `tail` ASCII bytes in one-byte tokens (`ids`, then filler ids) but the last, a token of 1 + `tail` bytes (`last`)
+ * that the row end cuts into a 1-column fragment and a `tail`-column one, each with a continuation mark under its id.
+ * Its merges join its tail bytes left to right (ids 300, 301, …), then its first byte to them, so at stop 5 the last
+ * step (`tail`) forms it: a live part cut 1 | `tail` by the row end (1 | 1 by default, one merge step).
+ */
+export function rowEndSplit(k: number, ids: readonly number[], last: number, tail = 1): TokenizationResult {
+  const single = Array.from({ length: k - 1 }, (_, i) => ids[i] ?? 10 + i);
+  const end = k + tail;
+  const died = new Int32Array(end + 1).fill(ALIVE);
+  for (let j = 1; j < tail; j++) died[k + j] = j; // step j joins byte k + j to the tail
+  died[k] = tail; // the row end's boundary inside the last token, removed by the last step
+  const steps = Array.from({ length: tail }, (_, j) =>
+    j < tail - 1 ? { left: k, mid: k + j + 1, end: k + j + 2, id: 300 + j } : { left: k - 1, mid: k, end, id: last },
+  );
+  return buildResult({
+    tokenizer: 'openai-o200k_base',
+    family: 'bytelevel-bpe',
+    analysis: analyzeText('a'.repeat(end)),
+    chunks: { byteStart: [0, end], kind: [ChunkKind.Regex] },
+    tokens: {
+      id: [...single, last],
+      byteStart: [...single.map((_, i) => i), k - 1, end],
+      kind: Array.from({ length: k }, () => TokenKind.Normal),
+    },
+    timeline: {
+      stepCount: tail,
+      leadingZeroWidthPart: false,
+      boundaryBorn: new Int32Array(end + 1),
+      boundaryDied: died,
+      stepKind: Uint8Array.from(steps, () => StepKind.Merge),
+      stepLeft: Uint32Array.from(steps, (step) => step.left),
+      stepMid: Uint32Array.from(steps, (step) => step.mid),
+      stepEnd: Uint32Array.from(steps, (step) => step.end),
+      stepRank: Float32Array.from(steps, (step) => step.id),
+      stepResultId: Int32Array.from(steps, (step) => step.id),
+      stepChunk: new Uint32Array(tail),
+      truncated: false,
+    },
   });
 }

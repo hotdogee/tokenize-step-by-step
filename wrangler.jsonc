@@ -12,5 +12,8 @@
   // Zone › DNS › Edit and Zone › Zone › Read on hanlin.uk. workers.dev stays on for the PR preview URLs.
   "routes": [{ "pattern": "tokens.hanlin.uk", "custom_domain": true }],
   "workers_dev": true,
-  "preview_urls": true
+  "preview_urls": true,
+  // The `preview` job's `wrangler preview --name pr-<n>` (06 §3) needs this block, even empty; assets, compatibility
+  // settings and routes stay at the top level.
+  "previews": {}
 }

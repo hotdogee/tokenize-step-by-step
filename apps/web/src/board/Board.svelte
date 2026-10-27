@@ -116,7 +116,6 @@
     stage,
     pending,
     uLabels: stage >= 2 && viewport.small,
-    idLine: viewport.small,
     brackets: app.graphemes,
     fusedDummy,
     lang,
@@ -791,9 +790,15 @@
     height: calc(var(--row-h) + 16px);
   }
 
-  /* The extra tier's track (board.css .bd-grid.extra --extra-h). */
+  /* The extra tier's track (board.css .bd-grid.extra --extra-h: 32 px, from 2560 px the token cells' height + 4 px). */
   .main.extra .probe {
     height: calc(var(--row-h) + 32px);
+  }
+
+  @media (min-width: 2560px) {
+    .main.extra .probe {
+      height: calc(var(--row-h) + var(--cell) * 0.75 + 9px);
+    }
   }
 
   /* An open IME composition: the text-only board is provisional, shown muted (05 §6). */

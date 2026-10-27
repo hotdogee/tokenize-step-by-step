@@ -58,6 +58,9 @@ export const aboutJa = {
     'Gemma 4、Muse Glimmer、Grok-1 の語彙は Apache License 2.0 で配布されています。全文は上の各ライセンス欄にあります。レガシー Claude のパッケージも package.json で Apache-2.0 を宣言しているため、そのライセンス欄にも Apache-2.0 の全文を掲載しています。',
   'about.notices.mitBody':
     'OpenAI の rank ファイルには、上に掲載した MIT ライセンスが適用されます。レガシー Claude のパッケージ（@anthropic-ai/tokenizer 0.0.4）は、LICENSE ファイルで MIT、package.json で Apache-2.0 と二つのライセンスを宣言しているため、そのライセンス欄に両方の全文を掲載し、両方の条件を満たしています。',
+  'about.notices.fonts': 'フォント',
+  'about.notices.fontsBody':
+    '対応表のトークン ID には、Noto Sans（© 2022 The Noto Project Authors）を SIL Open Font License 1.1 に基づいて数字だけに絞ったサブセットを使っています（10 個の数字のみ、幅の軸を残し、等幅数字を組み込み済み）。',
   'about.engine.heading': 'エンジン',
   'about.engine.unicode':
     '事前トークン化のパターンは、参照トークナイザーと同じ Unicode {version} のテーブルを使います。',

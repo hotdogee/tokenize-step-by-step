@@ -2,9 +2,10 @@
   /**
    * One packed row (05 §3.1, §8): fixed height per breakpoint; one ARIA `row` per shown tier (`aria-rowindex` =
    * packedRow × tiers + tier + 1), each a K-column grid of gridcells with `aria-colindex`/`aria-colspan` of the fragment;
-   * the grapheme brackets, the NFKC source runs and the id line are decorative layers; the visually hidden `frag-…`
-   * descriptions of fragmented spans live in a hidden container referenced by `aria-describedby`. An extra tier
-   * (extra-tier.svelte.ts: WP10's live token tier) is one more decorative, `aria-hidden` layer under the id line.
+   * the grapheme brackets and the NFKC source runs are decorative layers (token ids sit inside their chips, PA-17); the
+   * visually hidden `frag-…` descriptions of fragmented spans live in a hidden container referenced by
+   * `aria-describedby`. An extra tier (extra-tier.svelte.ts: WP10's live token tier) is one more decorative,
+   * `aria-hidden` layer under the token tier.
    * `keep` (the row holds the focused, pinned or just-merged cell) sets `data-keep`, which opts the row out of
    * `content-visibility: auto` (board.css) so `scrollIntoView` reaches it in WebKit even before it has been rendered.
    */
@@ -130,13 +131,6 @@
     </div>
   {/each}
 
-  {#if cells.ids.length > 0}
-    <div class="bd-ids" aria-hidden="true">
-      {#each cells.ids as id (id.index)}
-        <span class={`bd-idl mono ${placeClass(id.col, id.span)}`} class:odd={id.odd}>{id.text}</span>
-      {/each}
-    </div>
-  {/if}
   {#if extra !== null}
     <div class="bd-extra" aria-hidden="true" data-testid="extra-tier">
       <extra.component {row} result={ctx.result} />

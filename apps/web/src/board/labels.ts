@@ -244,7 +244,8 @@ export function byteLabel(result: TokenizationResult, byte: number, t: Translate
  * `aria-label` of final token `index` (markers included): "token 2 of 5, id 66285, 2 bytes, partial: first 2 of 3 bytes of
  * 灣". `visible` is the spoken form of the text the chip shows after its id (`chipText(…).spoken`: the piece with each
  * stand-in glyph followed by its name), so the name contains the visible label in the same order (WCAG 2.5.3): id,
- * visible text, SPECIAL badge.
+ * visible text, SPECIAL badge. A byte-fallback chip shows `<0xE7>` under its id and a BOS marker `BOS` under its id
+ * (PA-17), so their names say the piece right after the id too.
  */
 export function tokenLabel(
   result: TokenizationResult,
@@ -262,16 +263,17 @@ export function tokenLabel(
   if (start === end) {
     if (kind === TokenKind.DummyPrefix)
       return joinParts([t('a11y.marker.zeroWidthDummy'), t('a11y.cell.id', { id })], t);
-    return joinParts([t('board.bos'), t('a11y.marker.zeroWidthBos'), t('a11y.cell.id', { id })], t);
+    return joinParts([t('a11y.marker.zeroWidthBos'), t('a11y.cell.id', { id }), t('board.bos')], t);
   }
   const spoken = (i: number): string => spokenGlyph(result, i, t);
+  const piece = kind === TokenKind.Byte ? bytePiece(utf8[start] ?? 0) : null;
   return joinParts(
     [
       t('a11y.cell.token', { index: index + 1, count: tokens.count, id }),
-      visible,
+      piece ?? visible,
       (flags & TokenFlag.Special) !== 0 && `${t('board.special')} ${t('a11y.marker.special')}`,
       t('counts.bytes', { n: end - start }),
-      kind === TokenKind.Byte && t('a11y.marker.byteFallback', { hex: bytePiece(utf8[start] ?? 0) }),
+      piece !== null && t('a11y.cell.byteFallback'),
       kind === TokenKind.UserDefined && t('a11y.marker.userDefined'),
       fusedDummy && index === firstSpanToken(result) && t('inspector.fusedDummy'),
       (flags & TokenFlag.Partial) !== 0 &&
@@ -289,7 +291,12 @@ export function firstSpanToken(result: TokenizationResult): number {
   return -1;
 }
 
-/** `aria-label` of live part `index` (stops 4–5). */
+/**
+ * `aria-label` of live part `index` (stops 4–5). The id comes before the hex — a byte-fallback part's `piece` (`<0xF0>`)
+ * instead — in the order the chip shows them, so the visible label is part of the name (WCAG 2.5.3; PA-17 put the id
+ * inside the chip). A `userDefined` part (a USER_DEFINED symbol, which the chip marks with the aria-hidden lock alone)
+ * also says "pre-matched symbol, never merges", as `tokenLabel` does (AD-36).
+ */
 export function partLabel(
   result: TokenizationResult,
   index: number,
@@ -298,6 +305,8 @@ export function partLabel(
   end: number,
   id: number,
   t: Translate,
+  piece: string | null = null,
+  userDefined = false,
 ): string {
   if (start === end) return joinParts([t('a11y.marker.zeroWidthDummy'), id >= 0 && t('a11y.cell.id', { id })], t);
   const spoken = (i: number): string => spokenGlyph(result, i, t);
@@ -306,9 +315,10 @@ export function partLabel(
   return joinParts(
     [
       t('a11y.cell.part', { index: index + 1, count }),
-      hex.join(' '),
-      t('counts.bytes', { n: end - start }),
       id >= 0 && t('a11y.cell.id', { id }),
+      piece ?? hex.join(' '),
+      t('counts.bytes', { n: end - start }),
+      userDefined && t('a11y.marker.userDefined'),
       cutsChar(result, start, end) && t('a11y.cell.partial', { list: coverageList(result, start, end, t, spoken) }),
     ],
     t,

@@ -98,6 +98,12 @@ export function toLicences(json: LicencesJson): LicencesGenerated {
 
 export const LICENCES: LicencesGenerated = toLicences(generated as unknown as LicencesJson);
 
+/**
+ * The SIL OFL 1.1 of the token-id digits font (PA-17): a static copy of packages/ui-tokens/fonts/NotoSans-OFL.txt in
+ * public/licenses/ (the font is no registry asset, so it has no `/licenses/<assetId>/` directory).
+ */
+export const FONT_LICENCE_URL = '/licenses/noto-sans-OFL.txt';
+
 /** URL of a served licence text. */
 export function licenceTextUrl(assetId: string, file: string): string {
   return `/licenses/${encodeURIComponent(assetId)}/${file.split('/').map(encodeURIComponent).join('/')}`;

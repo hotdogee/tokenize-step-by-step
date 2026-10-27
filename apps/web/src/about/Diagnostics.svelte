@@ -163,7 +163,7 @@
       : at('about.diagnostics.unicode', { pinned: PRETOKENIZER_UNICODE, version: browserUnicode })}
   </p>
   <p class="prose" data-testid="diagnostics-build">
-    {at('about.diagnostics.build', { sha: BUILD_SHA.slice(0, 7), date: BUILD_DATE })}
+    {at('about.diagnostics.build', { sha: BUILD_SHA, date: BUILD_DATE })}
   </p>
 </div>
 

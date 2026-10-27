@@ -152,6 +152,7 @@ describe('glossary (05 §10)', () => {
       ['fidelity.legacy', '舊版', 'レガシー'],
       ['a11y.marker.zeroWidthDummy', '位元組', 'バイト'],
       ['a11y.marker.byteFallback', '位元組回退', 'バイトフォールバック'],
+      ['a11y.cell.byteFallback', '位元組回退', 'バイトフォールバック'],
     ];
     for (const [key, zhTerm, jaTerm] of pairs) {
       expect(zh(key), key).toContain(zhTerm);

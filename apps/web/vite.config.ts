@@ -107,7 +107,7 @@ export default defineConfig({
   // but esbuild 0.27/0.28 (Vite 7) has no such feature key and rejects it, and esbuild never introduces modifiers itself.
   // The guard is therefore the ESLint rule on regex literals (eslint.config.js) plus WP02's pattern-expansion tests.
   define: {
-    __BUILD_SHA__: JSON.stringify(process.env['GITHUB_SHA'] ?? 'dev'),
+    __BUILD_SHA__: JSON.stringify((process.env['GITHUB_SHA'] ?? 'dev').slice(0, 7)),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
   },
 });

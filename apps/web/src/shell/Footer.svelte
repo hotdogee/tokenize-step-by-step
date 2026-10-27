@@ -38,7 +38,7 @@
     </nav>
     <p class="meta prose">
       {i18n.t('footer.privacy')}
-      <span class="build mono">{i18n.t('footer.build', { sha: BUILD_SHA.slice(0, 7), date: BUILD_DATE })}</span>
+      <span class="build mono">{i18n.t('footer.build', { sha: BUILD_SHA, date: BUILD_DATE })}</span>
     </p>
   </div>
 </footer>

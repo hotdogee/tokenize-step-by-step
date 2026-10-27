@@ -17,7 +17,7 @@
  * | stop 2→3 | char boxes FLIP (translate + scaleX; glyphs and U+ labels counter-scaled, so they only translate), byte cells unfold (translateY(−8px) + opacity, stagger 8 ms, cap 180), 350 ms | 120 ms opacity |
  * | stop 3→4 | chunk brackets `clip-path` reveal, marker chips scale in, parts fade in, 240 ms | 120 ms opacity |
  * | stop 5→6 / 6→5 | ids fade in, chips crossfade, chunk brackets fade out (a detached copy of the leaving chunk row), 200 ms | 120 ms opacity |
- * | merge step | chips FLIP keyed by byte span (the merged chip grows out of its left part) while a copy of the right part slides the 2 px gap to abut it and fades into the merged chip, 280 ms; pulse on the merged part (600 ms) | discrete swap, 600 ms static outline |
+ * | merge step | chips FLIP keyed by byte span (the merged chip grows out of its left part) while a copy of the right part slides the 2 px gap to abut it and fades into the merged chip, 280 ms; pulse: the 1 px ring fades in, dips and settles, 600 ms | discrete swap; the ring at 2 px for 600 ms, then 1 px |
  * | split step (spm byte fallback) | the byte chips FLIP out of the parent's span, 280 ms | discrete swap |
  * | fast scrub (> 1 step / 100 ms) | changed chips crossfade, 80 ms opacity | same |
  * | bottom sheet expands / collapses | slides up from its collapsed height + fades in, 200 ms / fades, 200 ms | 120 ms opacity |
@@ -294,7 +294,7 @@ export function prepare(grid: HTMLElement, change: Change, reduced: boolean): Pr
     bytes: snapshot(scope(take.bytes), BYTE_ROWS, byteRowKey),
     chunks: snapshot(scope(take.chunks), '.bd-cell-chunk > .bd-vis', cellKey),
     chips: snapshot(scope(take.chips), CHIP, (el, row) => `${cellKey(el, row) ?? row}:${variantOf(el)}`),
-    ids: snapshot(scope(take.chips), '.bd-id, .bd-idl', (el, row) => `${row}:${el.textContent}:${String(column(el))}`),
+    ids: snapshot(scope(take.chips), '.bd-id', (el, row) => `${row}:${el.textContent}:${String(column(el))}`),
   };
   const leaving = chunked(change.from) && !chunked(change.to) ? chunkRows(rows) : [];
   return {
@@ -414,7 +414,7 @@ function playStep(
   const moved = pairs.filter((pair) => !unchanged(pair));
   if (moved.length + added.length > MAX_FLIP_CELLS) crossfadeRows(plan, rows, 80);
   else if (!reduced) {
-    // (reduced motion: a discrete swap; the director draws the static outline)
+    // (reduced motion: a discrete swap; the director draws the ring at 2 px for 600 ms, data-merge-outline)
     for (const pair of moved) {
       if (fast) fade(plan, pair.el, 80);
       else {
@@ -435,16 +435,22 @@ function playStep(
         ],
         { duration: 280, easing: EASE },
       );
-      copy.style.setProperty('grid-row', '1'); // over the merged chip, not auto-placed into a row of its own
+      // Over the merged chip: the tier's cells are pinned to row 1 in board.css, so the ghost overlaps them.
+      copy.style.setProperty('grid-row', '1');
     }
   }
   plan.start();
 }
 
-/** The merged part's 600 ms pulse: an opacity keyframe on the cell's `::before` outline (reduced motion: the director's
- *  static outline instead, no animation). */
+/**
+ * The pulse: the 1 px ring on the cell's `::before` (motion.css) fades in, dips and settles at the opacity the CSS holds
+ * (no fill). Opacity only, so the ring's geometry never moves (05 §7).
+ */
+const PULSE: Keyframe[] = [{ opacity: 0 }, { opacity: 1, offset: 0.3 }, { opacity: 0.2, offset: 0.65 }, { opacity: 1 }];
+
+/** The merged part's 600 ms pulse on the cells' ring (reduced motion: the director's 2 px ring instead, no animation). */
 export function pulse(cells: Iterable<HTMLElement>): void {
-  pseudo(cells, [{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], 600);
+  pseudo(cells, PULSE, 600);
 }
 
 /** The byte-tier caret under the junction of a merge (05 §7, `data-merge-caret`, motion.css): fades in with the move. */

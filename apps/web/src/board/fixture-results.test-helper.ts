@@ -58,7 +58,6 @@ export function boardContext(result: TokenizationResult, options: ContextOptions
     stage,
     pending: false,
     uLabels: stage >= 2,
-    idLine: true,
     brackets: true,
     fusedDummy: options.fusedDummy ?? false,
     lang: 'und',

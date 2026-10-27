@@ -5,6 +5,7 @@ import {
   attr,
   BOARD_VARIANTS,
   cutBoard,
+  DIGITS_FONT,
   injectFirstPaint,
   pageTemplate,
   unstyledScopes,
@@ -92,6 +93,7 @@ describe('injectFirstPaint', () => {
     ['<template id="fp-en">E</template>', '<template id="fp-ja">J</template>'],
     'a=1&b=2',
     '/assets/first-paint-0123abcd.js',
+    '/assets/tsbs-digits-Ab1.woff2',
   );
 
   it('writes the templates, then #app with the page state, the clone script and the entry module, in that order', () => {
@@ -113,9 +115,22 @@ describe('injectFirstPaint', () => {
     expect(out).toContain('<link rel="stylesheet" crossorigin href="/assets/main-y.css">');
   });
 
-  it('refuses a page without #app or without exactly one entry module', () => {
-    expect(() => injectFirstPaint('<body></body>', [], '', '/c.js')).toThrow(/#app|app/);
-    expect(() => injectFirstPaint(`<body>${APP_ELEMENT}</body>`, [], '', '/c.js')).toThrow(/one entry module/);
+  it('preloads the digits font once, right after the stylesheet in <head> (PA-17)', () => {
+    const preload = '<link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/tsbs-digits-Ab1.woff2">';
+    expect(out.split(preload)).toHaveLength(2);
+    expect(out).toContain(`<link rel="stylesheet" crossorigin href="/assets/main-y.css">\n    ${preload}`);
+    expect(out.indexOf(preload)).toBeLessThan(out.indexOf('</head>'));
+    expect(DIGITS_FONT.test('assets/tsbs-digits-Ab1.woff2')).toBe(true);
+    expect(DIGITS_FONT.test('assets/tsbs-standins-Ab1.woff2')).toBe(false);
+  });
+
+  it('refuses a page without #app, without exactly one entry module or without a stylesheet in <head>', () => {
+    expect(() => injectFirstPaint('<body></body>', [], '', '/c.js', '/f.woff2')).toThrow(/#app|app/);
+    expect(() => injectFirstPaint(`<body>${APP_ELEMENT}</body>`, [], '', '/c.js', '/f.woff2')).toThrow(
+      /one entry module/,
+    );
+    const noCss = html.replace(/\s*<link rel="stylesheet"[^>]*>/, '');
+    expect(() => injectFirstPaint(noCss, [], '', '/c.js', '/f.woff2')).toThrow(/stylesheet link in <head>/);
   });
 });
 

@@ -12,7 +12,7 @@
 export interface FirstPaintView {
   /** Board columns the variant's rows were packed for (05 §3.3: 8–64). */
   readonly k: number;
-  /** BoardViewport facts: ≥ 1024 px (side rail), ≥ 768 px (no bottom sheet), ≥ 480 px (U+ labels, id line). */
+  /** BoardViewport facts: ≥ 1024 px (side rail), ≥ 768 px (no bottom sheet), ≥ 480 px (U+ labels, chunk brackets). */
   readonly wide: boolean;
   readonly medium: boolean;
   readonly small: boolean;

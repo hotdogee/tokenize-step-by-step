@@ -2,8 +2,8 @@
   "name": "@tsbs/ui-tokens",
   "version": "0.0.0",
   "private": true,
-  "description": "Design tokens (CSS custom properties) for light and dark themes, the stand-in subset font and the contrast check (docs/design/05-ui-ux.md §10, §11).",
-  "license": "MIT",
+  "description": "Design tokens (CSS custom properties) for light and dark themes, the stand-in and token-id digits subset fonts and the contrast check (docs/design/05-ui-ux.md §10, §11).",
+  "license": "MIT AND OFL-1.1",
   "type": "module",
   "sideEffects": [
     "*.css"
@@ -15,6 +15,8 @@
   },
   "scripts": {
     "check": "node scripts/check-contrast.mjs",
-    "font:build": "uv run --no-project --with fonttools==4.60.1 --with brotli==1.1.0 python fonts/build_standins.py"
+    "font:build": "pnpm font:build:standins && pnpm font:build:digits",
+    "font:build:standins": "uv run --no-project --with fonttools==4.60.1 --with brotli==1.1.0 python fonts/build_standins.py",
+    "font:build:digits": "uv run --no-project --with fonttools==4.60.1 --with brotli==1.1.0 python fonts/build_digits.py"
   }
 }

@@ -10,7 +10,7 @@ import { i18n } from '../i18n/locale.svelte.ts';
 import { LOCALES } from '../i18n/types.ts';
 import About from './About.svelte';
 import { GEMMA4_CROSS_CHECK } from './cross-check.ts';
-import { LICENCES, licenceTextUrl } from './licences.ts';
+import { FONT_LICENCE_URL, LICENCES, licenceTextUrl } from './licences.ts';
 import { detectUnicodeVersion } from './unicode.ts';
 
 /** How Svelte's server renderer escapes text content. */
@@ -113,6 +113,26 @@ describe('About page (server-rendered)', () => {
     expect(start).toBeGreaterThan(-1);
     for (const file of [...mit, ...apache])
       expect(block).toContain(`href="${licenceTextUrl('anthropic-claude-legacy', file)}"`);
+  });
+
+  it('credits the Noto Sans digits of the token ids and links the OFL it is served with (PA-17)', () => {
+    const texts = import.meta.glob<string>(
+      ['../../public/licenses/noto-sans-OFL.txt', '../../../../packages/ui-tokens/fonts/NotoSans-OFL.txt'],
+      { query: '?raw', import: 'default', eager: true },
+    );
+    const [served, source] = Object.values(texts);
+    expect(FONT_LICENCE_URL).toBe('/licenses/noto-sans-OFL.txt');
+    expect(served).toBeDefined();
+    expect(served).toBe(source);
+    for (const locale of LOCALES) {
+      i18n.current = locale;
+      const body = render(About).body;
+      expect(body).toMatch(
+        new RegExp(`<h3 id="notice-fonts"[^>]*>${translateAbout(locale, 'about.notices.fonts')}</h3>`),
+      );
+      expect(body).toContain('© 2022 The Noto Project Authors');
+      expect(body).toContain(`href="${FONT_LICENCE_URL}"`);
+    }
   });
 
   it('has the fidelity table and the keyboard setting', () => {

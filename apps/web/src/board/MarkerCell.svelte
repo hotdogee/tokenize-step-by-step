@@ -1,11 +1,13 @@
 <script lang="ts">
   /**
    * A zero-width token (AD-25): BOS or Grok-1's bare dummy `▁` occupies a real full-width column — never `--cell/2` — as a
-   * focusable chip with a dotted border, the SVG zero-width mark and `▁`/`BOS`; its `aria-label` says "dummy prefix,
-   * 0 bytes, id 130089" / "beginning-of-sequence token, 0 bytes, id …" (≥ 36 × 28 on coarse pointers).
+   * focusable chip with a dotted border (the zero-width cue) and its id over `▁`/`BOS` (PA-17: the 2 px border is the
+   * chip's `--border-width`, so the id's room counts it; the dummy prefix sets an id of ≥ 5 digits on two lines over a
+   * 2 px bar, the shape `▁` draws); its `aria-label` says "dummy prefix, 0 bytes, id 130089" /
+   * "beginning-of-sequence token, 0 bytes, id …" (≥ 36 × 28 on coarse pointers).
    */
-  import BoardIcon from './BoardIcon.svelte';
   import type { TokenCellModel } from './cells.ts';
+  import ChipId from './ChipId.svelte';
   import { placeClass, type CellState } from './cell-state.ts';
 
   interface Props {
@@ -32,7 +34,7 @@
   data-slice={state.slice ? '' : undefined}
 >
   <div class="bd-vis bd-chip marker" aria-hidden="true">
-    <BoardIcon name="zeroWidth" size={11} />
+    {#if cell.id !== null}<ChipId id={cell.id} digits={cell.digits} lines={cell.idLines} />{/if}
     <span class="bd-marker-text mono">{cell.markerText}</span>
   </div>
 </div>

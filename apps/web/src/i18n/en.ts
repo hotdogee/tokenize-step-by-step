@@ -169,6 +169,7 @@ export const en = {
   'a11y.cell.inToken': 'in token {index} of {count} (id {id})',
   'a11y.cell.inTokenPartial': 'in token {index} of {count} (id {id}, partial)',
   'a11y.cell.partial': 'partial: {list}',
+  'a11y.cell.byteFallback': 'byte-fallback piece',
   'a11y.cell.empty': 'empty',
   'a11y.byteRole.single': 'the single byte of {glyph}',
   'a11y.byteRole.first': 'first byte of {glyph}',

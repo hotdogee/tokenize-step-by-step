@@ -34,17 +34,17 @@
 | Metric | Budget | Enforced by |
 |---|---|---|
 | `dist/index.html` | ≤ 14 KB brotli | `size-limit`; LHCI `document ≤ 14` |
-| Main JS (Svelte runtime + app shell + board + inspector + rail + motion ≤ 66; i18n chunk ≤ 9 (PA-10); inlined default example ≤ 4; manifest summary ≤ 1 — PA-7; the wave 1 shell alone measured 55.92 KB) | ≤ 80 KB brotli | `size-limit` |
+| Main JS (Svelte runtime + app shell + board + inspector + rail + motion ≤ 67; i18n chunk ≤ 9 (PA-10); inlined default example ≤ 4; manifest summary ≤ 1 — PA-7; the wave 1 shell alone measured 55.92 KB) | ≤ 81 KB brotli (PA-17 amends PA-7's 80: the token ids' rendering) | `size-limit` |
 | Worker core (loader + protocol + host) | ≤ 12 KB brotli | `size-limit` |
 | Engine chunks (lazy inside the Worker; the bytelevel chunk **is** fetched during the Lighthouse trace because o200k starts loading after LCP) | bytelevel ≤ 16 KB br (incl. 5.7 KB Unicode tables); spm ≤ 10 KB br — each measured together with the shared `assets/engine-core-[hash].js` chunk that loads with the first engine (PA-8 addendum) | `size-limit` |
-| CSS (incl. the ≤ 4 KB stand-in WOFF2 as a separate `font` budget) | ≤ 20 KB brotli; font ≤ 4 KB | `size-limit`; LHCI `stylesheet ≤ 20`, `font ≤ 4` |
+| CSS (incl. the stand-in + digits WOFF2 subsets as a separate `font` budget: 908 + 2,360 B, PA-17) | ≤ 20 KB brotli; font ≤ 4 KB of file bytes | `size-limit`; LHCI `stylesheet ≤ 20`, `font ≤ 6` as served (transfer size with response headers: the two WOFF2 responses measured 4,976–4,988 B on PR #1's preview) |
 | `boot-[hash].js` | ≤ 0.5 KB | `size-limit` |
 | `first-paint-[hash].js` (the static first paint's clone script, `/` only, classic, right after `#app`; PA-15) | ≤ 0.5 KB | `size-limit` |
-| **Script total in the trace** (main 80 + worker 12 + bytelevel engine 16 + boot 0.5 + slack; PA-7) | ≤ 110 KB brotli-11 (engineering); LHCI asserts ≤ 143 KB as served by the edge (zstd / fast brotli, PA-14) | `size-limit` sums; LHCI `budgets.json` `script ≤ 143` |
+| **Script total in the trace** (main 81 + worker 12 + bytelevel engine 16 + boot 0.5 + slack; PA-7) | ≤ 110 KB brotli-11 (engineering); LHCI asserts ≤ 143 KB as served by the edge (zstd / fast brotli, PA-14) | `size-limit` sums; LHCI `budgets.json` `script ≤ 143` |
 | **Total excluding the vocabulary** (document 14 + script 110 + stylesheet 20 + font 4; PA-7) | ≤ 148 KB brotli-11; LHCI `total ≤ 1,300` as served (PA-14) | LHCI `total ≤ 1,300` with `other ≤ 1,100` (the o200k `.bin` lands in `other`; Lighthouse cannot exclude paths) and a Playwright network assertion that non-`/tok/*` initial transfer ≤ 148 KB |
 | Lazy `examples/<tok>.json` | ≤ 16 KB gzip each (ceiling). Measured 2026-10-25 (zlib gzip-9, as `check:dist` computes it): o200k 6.4, cl100k 7.8, claude-legacy 7.9, gemma4 5.7, gemma2 5.6, llama4-muse 6.1, llama3 6.5, grok2 6.3, grok1 9.7 KB (largest) | `check:dist` |
 | Default vocab (o200k) | 1,025 KB gzip (`other` bucket); **load trigger**: the client posts `load` after `document.fonts.ready` and two `requestAnimationFrame`s following `DOMContentLoaded`, so the Worker script, engine chunk and `.bin` never compete with the main bundle before LCP | `check:dist` (per-asset gzip ≤ 1.7 MB unless whitelisted); E2E asserts the `/tok/*` request starts after the LCP entry |
-| FCP / LCP (LHCI mobile preset: Moto G Power class, 4× CPU, **Lighthouse "Slow 4G"** 1.6 Mbps / 150 ms RTT) | ≤ 1.5 s / ≤ 2.0 s | LHCI assertions against the deployed preview |
+| FCP / LCP (LHCI mobile preset: Moto G Power class, 4× CPU, **Lighthouse "Slow 4G"** 1.6 Mbps / 150 ms RTT) | ≤ 1.5 s / ≤ 2.5 s (PA-18: 2.0 s until PR #1; the simulated LCP of the examples paragraph sits 0.5–0.8 s after FCP while the observed LCP equals the observed FCP) | LHCI assertions against the deployed preview |
 | TBT / INP / CLS | ≤ 150 ms / ≤ 200 ms / ≤ 0.02 | LHCI + Playwright trace |
 | Lighthouse scores (mobile) | Performance ≥ 95, Accessibility 100 (plus the manual checklist in §1 — axe/Lighthouse do not detect 2.1.4/2.4.11/2.5.7/2.5.8), Best Practices 100 | LHCI |
 | Vocab init in the Worker (o200k / Gemma 4) — **single source**; 03 C.2 and the WP rows quote these | ≤ 25 ms / ≤ 40 ms in Node (bench) ⇒ ≤ 100 ms / ≤ 160 ms on the phone | `vitest bench` ×4 margin |
@@ -73,7 +73,7 @@ ci.yml  (push to main, pull_request; concurrency group cancels superseded PR run
   e2e        needs build · matrix [chromium, firefox, webkit] × 3 shards (+ Pixel 5, iPhone 12, 320/360/2560 projects) · playwright install --with-deps
              e2e (functional, vite preview + headersMiddleware) + axe + parity harness + visual · upload traces on failure
   e2e-headers needs build · wrangler dev --assets apps/web/dist (workerd applies _headers / html_handling / not_found_handling) · pnpm e2e:headers
-  preview    needs build (pull_request only) · wrangler preview --name pr-<n> · comment the URL · run e2e:headers against the preview URL
+  preview    needs build (pull_request only) · wrangler preview --name pr-<n> · comment the URL · run e2e:headers (E2E_PREVIEW=1) and deploy:smoke --preview against the preview URL
   lighthouse needs preview · lhci autorun --url <preview url> (lighthouserc.json budgets; real edge compression, _headers and HTTP/3)
   fuzz-smoke (only when packages/core/src/{engines,agenda,unicode}/** changed) · test:fuzz --seed fixed --n 2000
 preview.yml  folded into ci.yml above (preview + lighthouse are ci jobs on pull_request); preview deleted on PR close by a `pull_request: closed` job
@@ -102,11 +102,12 @@ Caching: pnpm store (`pnpm-lock.yaml`), Playwright browsers (`~/.cache/ms-playwr
   },
   "routes": [{ "pattern": "tokens.hanlin.uk", "custom_domain": true }],
   "workers_dev": true,
-  "preview_urls": true
+  "preview_urls": true,
+  "previews": {}
 }
 ```
 
-Custom domain (owner decision 2026-10-26, WP13b): `tokens.hanlin.uk` on the `hanlin.uk` zone of the same account (research §6.2). CI's `wrangler deploy` creates the DNS record and certificate and binds it, which needs the zone permissions of §4's token; `workers_dev` stays `true` for the PR preview URLs and as the fallback. `PRODUCTION_URL` moves to `https://tokens.hanlin.uk` once a CI deploy has attached it (docs/release.md § Custom domain). `.assetsignore`: `*.map`, `.vite/`, `.DS_Store`, `Thumbs.db`.
+Custom domain (owner decision 2026-10-26, WP13b): `tokens.hanlin.uk` on the `hanlin.uk` zone of the same account (research §6.2). CI's `wrangler deploy` creates the DNS record and certificate and binds it, which needs the zone permissions of §4's token; `workers_dev` stays `true` for the PR preview URLs and as the fallback. `PRODUCTION_URL` moves to `https://tokens.hanlin.uk` once a CI deploy has attached it (docs/release.md § Custom domain). `.assetsignore`: `*.map`, `.vite/`, `.DS_Store`, `Thumbs.db`. `previews: {}` is what wrangler 4.15x requires before `wrangler preview --name pr-<n>` (the `preview` job) will publish a Preview; the block stays empty, since assets, compatibility settings and routes are read from the top level (found by PR #1, the first pull request).
 
 ## 6. `_headers` (`apps/web/public/_headers`; 5 path blocks / 12 header lines, limit 100 rules)
 
@@ -148,7 +149,7 @@ The `/tok/*` block removes any `Content-Type` the asset server derived from `.bi
 **Deploy verification** (curl against the production URL: `https://tokens.hanlin.uk` once attached, the workers.dev URL before):
 6. `curl -sI -H 'Accept-Encoding: zstd, br, gzip' <largest /tok/*.bin>` → `200`, **no** `Content-Encoding`, `Content-Length` = `bytesCompressed`, `Content-Type` **exactly** `application/octet-stream` (one value, §6), `Cache-Control: … immutable`, `X-Content-Type-Options: nosniff` (research §6.5 item 7; record transferred bytes and the loader's `layer`/`contentEncoding` diagnostics in `docs/perf-log.md`).
 7. `/assets/*.js` and `/examples/*.json` → `Content-Encoding` present (zstd/br/gzip), strong or weak ETag, `304` on `If-None-Match`.
-8. `/` → CSP header exactly as §6; `/index.html` → 307 to `/`; `/nope` → `404.html` with status 404; no dotfile reachable (`/.env` → 404).
+8. `/` → CSP header exactly as §6; `/index.html` → 307 to `/`; `/nope` → `404.html` with status 404; no dotfile reachable (`/.env` → 404). A Workers Preview (`wrangler preview`) answers `/nope` with a platform "Not found" and status 404 — `not_found_handling` is not applied to Previews (observed on PR #1, 2026-10-27) — so the preview job's `e2e:headers` (`E2E_PREVIEW=1`) and `deploy:smoke --preview` check the status and content type only; production compares the body.
 9. Lighthouse on the production URL meets §3; Safari 16.4 / iOS 16.4 smoke on BrowserStack (Playwright WebKit is newer than the floor); one mid-range Android Chrome run timed and recorded; a manual macOS Safari morph check (Web Inspector › Timelines, the stop 2→3 morph at 600 cells = 150 ideographs, longest frame and dropped frames recorded in `docs/perf-log.md`), since the §3 morph bound is measured per main-thread task in chromium only.
 
 **Legal and content**:

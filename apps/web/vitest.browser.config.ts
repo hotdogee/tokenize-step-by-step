@@ -54,6 +54,11 @@ const renderFirstPaint: BrowserCommand<[locale: string, view: BoardView], string
   return prerender.renderFirstPaint(locale, view);
 };
 
+/** `emulateContrast(contrast)`: `prefers-contrast` for the test page and its frames (null: the browser's own again). */
+const emulateContrast: BrowserCommand<[contrast: 'more' | null], void> = async (context, contrast) => {
+  await context.page.emulateMedia({ contrast });
+};
+
 export default defineConfig({
   // `pnpm test:browser` runs from the repository root; the app directory is the Vite root (svelte.config.js, src/).
   root: fileURLToPath(new URL('.', import.meta.url)),
@@ -72,6 +77,7 @@ export default defineConfig({
       commands: {
         renderFirstPaint,
         firstPaintVariants: () => BOARD_VARIANTS,
+        emulateContrast,
         // The clone script as the build emits it (first-paint-script.browser.test.ts runs it against a test DOM).
         compileFirstPaintScript: () =>
           compileBoot(fileURLToPath(new URL('src/app/first-paint-script.ts', import.meta.url))),

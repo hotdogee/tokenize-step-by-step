@@ -113,7 +113,7 @@
       </li>
       <li>{at('about.engine.nfkc')}</li>
       <li>{at('about.engine.cl100k')}</li>
-      <li>{at('about.engine.build', { sha: BUILD_SHA.slice(0, 7), date: BUILD_DATE })}</li>
+      <li>{at('about.engine.build', { sha: BUILD_SHA, date: BUILD_DATE })}</li>
     </ul>
   </section>
 

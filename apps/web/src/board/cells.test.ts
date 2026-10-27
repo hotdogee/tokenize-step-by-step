@@ -2,14 +2,17 @@
  * Render descriptors for the 05 §4.1 hard cases, from fixture results (and a synthetic special-token match): sliced char
  * backgrounds and hatched cuts, a partial token crossing a char boundary, full-column marker cells, the fused dummy
  * prefix, byte-fallback chips, USER_DEFINED locks, the SPECIAL badge, direct hits, grapheme brackets, stand-ins,
- * combining marks, the NFKC source row and the `aria-label` templates in all three locales.
+ * combining marks, the NFKC source row, the ids inside every chip (PA-17: two lines for a bare 1-column id of ≥ 5
+ * digits and the dummy prefix's, markers and byte-fallback chips included) and the `aria-label` templates in all three
+ * locales.
  */
 import { buildResult } from '@tsbs/core/model/build-result';
 import { ChunkKind, TokenKind } from '@tsbs/core/model/result';
 import { analyzeText } from '@tsbs/core/text/analyze';
+import { TokenizationView } from '@tsbs/core/model/view';
 import { describe, expect, it } from 'vitest';
 import { LOCALES } from '../i18n/types.ts';
-import { rowCells, type RowCells } from './cells.ts';
+import { idLines, rowCells, type RowCells } from './cells.ts';
 import { boardContext, caseResult, type ContextOptions } from './fixture-results.test-helper.ts';
 import type { TokenizationResult } from '@tsbs/core';
 
@@ -33,21 +36,16 @@ describe('partial-character token (cl100k 灣 = E7 81 + A3)', () => {
     expect(row?.bytes[5]?.label).toContain('token boundary inside this character');
   });
 
-  it('hatches the cut edges of both chips and labels them partial', () => {
+  it('hatches the cut edges of both chips, labels them partial and counts their id digits (PA-17)', () => {
     const [, first, second] = row?.tokens ?? [];
-    expect(first).toMatchObject({
-      id: 66285,
-      hatchStart: false,
-      hatchEnd: true,
-      partial: true,
-      span: 2,
-      idInside: false,
-    });
-    expect(second).toMatchObject({ id: 96, hatchStart: true, hatchEnd: false, partial: true, span: 1 });
+    expect(first).toMatchObject({ id: 66285, digits: 5, hatchStart: false, hatchEnd: true, partial: true, span: 2 });
+    expect(second).toMatchObject({ id: 96, digits: 2, hatchStart: true, hatchEnd: false, partial: true, span: 1 });
     expect(first?.label).toBe(
       'token 2 of 5, id 66285, 2 bytes, partial: first 2 of 3 bytes of 灣, splits a character on this tokenizer',
     );
-    expect(row?.ids.map((id) => id.text)).toEqual(['66285', '96']);
+    // Every id sits inside its chip: the row has no id line (PA-17).
+    expect(row).not.toHaveProperty('ids');
+    expect(row?.tokens.map((cell) => cell.digits)).toEqual([5, 5, 2, 5, 5]);
   });
 
   it('labels the byte cells (05 §8 example)', () => {
@@ -62,7 +60,7 @@ describe('partial token crossing a char boundary (Grok-2 4242 = ー + 2 bytes of
 
   it('is one chip over five columns with only its right edge hatched', () => {
     const chip = rows[0]?.tokens.find((cell) => cell.id === 4242);
-    expect(chip).toMatchObject({ span: 5, hatchStart: false, hatchEnd: true, partial: true, idInside: true });
+    expect(chip).toMatchObject({ span: 5, hatchStart: false, hatchEnd: true, partial: true, digits: 4 });
     expect(chip?.label).toContain('partial: ー, first 2 of 3 bytes of メ');
     expect(rows.map((row) => row.chars.length)).toEqual([11, 3]);
   });
@@ -83,7 +81,8 @@ describe('zero-width tokens get full marker columns (AD-25)', () => {
       ['bos', 0],
       ['dummy', 1],
     ]);
-    expect(row?.tokens[0]?.label).toBe('BOS, beginning-of-sequence token, 0 bytes, id 1');
+    // The chip shows its id over BOS (PA-17): the name says them in that order (WCAG 2.5.3).
+    expect(row?.tokens[0]?.label).toBe('beginning-of-sequence token, 0 bytes, id 1, BOS');
   });
 
   it('Llama 3 + addBos on empty text: a trailing marker and an empty char tier', () => {
@@ -108,7 +107,9 @@ describe('spm specifics', () => {
     expect(row?.tokens.map((cell) => cell.bytePiece)).toEqual(['<0xF0>', '<0xB0>', '<0xBB>', '<0x9D>']);
     expect(row?.tokens.every((cell) => cell.variant === 'part' && !cell.hatchStart && !cell.hatchEnd)).toBe(true);
     const [final] = cellsOf(caseResult('google-gemma2', 'cjk-ext-g-biang'), { K: 9 });
-    expect(final?.tokens[0]?.label).toContain('byte-fallback piece <0xF0>');
+    // The chip shows its id over <0xF0> (PA-17): the name says the piece right after the id (WCAG 2.5.3).
+    expect(final?.tokens[0]?.label).toMatch(/^token 1 of \d+, id \d+, <0xF0>, 1 byte, byte-fallback piece, /);
+    expect(row?.tokens[0]?.label).toMatch(/^part 1 of 4, id \d+, <0xF0>, 1 byte, partial: /);
   });
 
   it('USER_DEFINED symbols are locked (Grok-1 digits, Gemma 2 <start_of_turn>)', () => {
@@ -118,6 +119,18 @@ describe('spm specifics', () => {
     expect(row?.tokens[1]?.label).toContain('pre-matched symbol, never merges');
     const [gemma] = cellsOf(caseResult('google-gemma2', 'special-start-of-turn'), { K: 34 });
     expect(gemma?.tokens[0]).toMatchObject({ userDefined: true, id: 106 });
+  });
+
+  it('a locked live part says so too: its aria-hidden lock is its only visual cue (stop 4, Grok-1 digits)', () => {
+    const [row] = cellsOf(caseResult('xai-grok1', 'zh-date'), { K: 34, stage: 4 });
+    const parts = row?.tokens.filter((cell) => cell.variant === 'part') ?? [];
+    const locked = parts.filter((cell) => cell.userDefined);
+    expect(locked.map((cell) => cell.id)).toEqual([16, 14, 16, 18, 15, 14]);
+    expect(locked[0]?.label).toBe('part 2 of 9, id 16, 32, 1 byte, pre-matched symbol, never merges');
+    for (const cell of locked) expect(cell.label).toContain(', 1 byte, pre-matched symbol, never merges');
+    const unlocked = parts.filter((cell) => !cell.userDefined);
+    expect(unlocked.length).toBeGreaterThan(0);
+    for (const cell of unlocked) expect(cell.label).not.toContain('pre-matched symbol');
   });
 });
 
@@ -247,6 +260,82 @@ describe('fragments of a span over rows (05 §8)', () => {
       [0, 3, 'U+53F0'],
       [0, 3, 'U+5357'],
     ]);
+  });
+});
+
+describe('token ids inside every chip (PA-17)', () => {
+  it('sets a bare 1-column id of ≥ 5 digits on two lines, split thousands-style', () => {
+    expect(idLines(236778, 6, 1, true)).toEqual(['236', '778']);
+    expect(idLines(23677, 5, 1, true)).toEqual(['23', '677']);
+    expect(idLines(1234567, 7, 1, true)).toEqual(['1234', '567']);
+    expect(idLines(4321, 4, 1, true)).toBeNull();
+    expect(idLines(236778, 6, 2, true)).toBeNull();
+    expect(idLines(236778, 6, 1, false)).toBeNull();
+    expect(idLines(null, 0, 1, true)).toBeNull();
+    const [gemma] = cellsOf(caseResult('google-gemma4', 'en-contraction-code'), { K: 30 });
+    expect(gemma?.tokens.slice(0, 3).map((cell) => [cell.span, cell.idLines])).toEqual([
+      [1, ['236', '777']],
+      [1, ['236', '789']],
+      [1, ['236', '757']],
+    ]);
+  });
+
+  it('keeps one line when anything shares the 1-column chip: a continuation mark, a partial token’s hatch', () => {
+    // o200k “ 台” (50922) straddles the first two rows at K = 8: its 1-column first fragment carries the continues mark.
+    const rows = cellsOf(caseResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo'), { K: 8 });
+    const fragment = rows[0]?.tokens.find((cell) => cell.id === 50922);
+    expect(fragment).toMatchObject({ span: 1, first: true, last: false, digits: 5, idLines: null });
+    // Byte-level vocabularies give single bytes ids < 256: a 1-column partial token with a 6-digit id is synthetic.
+    const result = buildResult({
+      tokenizer: 'openai-o200k_base',
+      family: 'bytelevel-bpe',
+      analysis: analyzeText('台'),
+      chunks: { byteStart: [0, 3], kind: [ChunkKind.Regex] },
+      tokens: { id: [123456, 654321], byteStart: [0, 1, 3], kind: [TokenKind.Normal, TokenKind.Normal] },
+      timeline: null,
+    });
+    const [row] = cellsOf(result, { K: 9 });
+    expect(row?.tokens[0]).toMatchObject({ span: 1, partial: true, digits: 6, idLines: null });
+  });
+
+  it('gives zero-width markers and byte-fallback chips their ids (Grok-1 台灣台南)', () => {
+    const [row] = cellsOf(caseResult('xai-grok1', 'zh-tw-tainan'), { K: 34 });
+    expect(row?.tokens[0]).toMatchObject({ variant: 'marker', id: 130089, digits: 6, idLines: ['130', '089'] });
+    const pieces = row?.tokens.filter((cell) => cell.bytePiece !== null);
+    expect(pieces?.map((cell) => [cell.bytePiece, cell.id, cell.digits, cell.idLines])).toEqual([
+      ['<0xE7>', 300, 3, null],
+      ['<0x81>', 198, 3, null],
+      ['<0xA3>', 232, 3, null],
+    ]);
+  });
+
+  it('sets the dummy prefix’s id of ≥ 5 digits on two lines over its bar; BOS ids and shorter ones keep one line', () => {
+    // Stop 6 and the live parts of stops 4–5 (the dummy prefix is a zero-width part there).
+    for (const options of [{ K: 9 }, { K: 9, stage: 5 as const, step: 1 }, { K: 9, stage: 4 as const }]) {
+      const [row] = cellsOf(caseResult('xai-grok1', 'zh-tw-tainan', { addBos: true }), options);
+      const markers = row?.tokens.filter((cell) => cell.variant === 'marker') ?? [];
+      expect(markers.find((cell) => cell.marker === 'dummy')).toMatchObject({ id: 130089, idLines: ['130', '089'] });
+      for (const bos of markers.filter((cell) => cell.marker === 'bos')) expect(bos.idLines).toBeNull();
+    }
+    // A BOS id of 6 digits keeps its single narrowed line: the chip's second line says BOS.
+    const [llama] = cellsOf(caseResult('meta-llama3', 'empty', { addBos: true }), { K: 9 });
+    expect(llama?.tokens).toMatchObject([{ variant: 'marker', marker: 'bos', id: 128000, digits: 6, idLines: null }]);
+    // A dummy prefix of 4 digits keeps its `▁`.
+    const short = caseResult('xai-grok1', 'zh-tw-tainan');
+    short.tokens.id[0] = 1234;
+    const [row] = cellsOf(short, { K: 9 });
+    expect(row?.tokens[0]).toMatchObject({ marker: 'dummy', id: 1234, digits: 4, idLines: null, markerText: '▁' });
+  });
+
+  it('always gives a live part its hex, so the stop-5 star never sits beside an id alone (motion.css)', () => {
+    const result = caseResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
+    const steps = new TokenizationView(result).stepCount;
+    expect(steps).toBeGreaterThan(0);
+    for (let step = 0; step <= steps; step++)
+      for (const row of cellsOf(result, { K: 8, stage: 5, step }))
+        for (const cell of row.tokens)
+          if (cell.variant === 'part')
+            expect(cell.text, `step ${String(step)}, part ${String(cell.index)}`).not.toBeNull();
   });
 });
 

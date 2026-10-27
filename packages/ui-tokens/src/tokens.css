@@ -38,7 +38,10 @@
   --hatch-tint: var(--tok-h0);
   --hatch: repeating-linear-gradient(45deg, var(--fg) 0 1.5px, var(--hatch-tint) 1.5px 3px);
 
-  /* Font stacks (05 §10): system fonts only; the stand-in subset (fonts.css) is listed first for stand-in cells. */
+  /*
+   * Font stacks (05 §10): system fonts, plus two bundled subsets (fonts.css) listed first where they apply: the stand-ins
+   * for stand-in cells and the width-variable digits for token ids (PA-17).
+   */
   --font-latin: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
   --font-zh:
     'PingFang TC', 'Noto Sans TC', 'Noto Sans CJK TC', 'Microsoft JhengHei', 'Source Han Sans TC', system-ui, sans-serif;
@@ -49,6 +52,7 @@
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, 'Noto Sans Mono', monospace;
   --font-emoji: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
   --font-standin: 'TSBS Stand-ins', var(--font-mono);
+  --font-digits: 'TSBS Digits', var(--font-mono);
 
   /*
    * Layout (05 §3.3, AD-18). --cell-s/-m/-l are the breakpoint's cell sizes for the S / M / L setting; --cell is the active
@@ -131,7 +135,7 @@
 
 @media (min-width: 480px) {
   :root {
-    --row-h: 136px;
+    --row-h: 132px;
   }
 }
 
@@ -140,7 +144,7 @@
     --cell-s-base: 29px;
     --cell-m-base: 32px;
     --cell-l-base: 37px;
-    --row-h: 150px;
+    --row-h: 148px;
   }
 }
 
@@ -149,7 +153,7 @@
     --cell-s-base: 27px;
     --cell-m-base: 30px;
     --cell-l-base: 35px;
-    --row-h: 172px;
+    --row-h: 169px;
     --rail-w: 320px;
   }
 }
@@ -168,7 +172,7 @@
     --cell-m-base: clamp(32px, 1.6vw, 44px);
     --cell-s-base: calc(var(--cell-m-base) * 0.9);
     --cell-l-base: calc(var(--cell-m-base) * 1.15);
-    --row-h: calc(var(--cell) * 4 + 44px);
+    --row-h: calc(var(--cell) * 3.5 + 56px);
     --rail-w: 420px;
     --board-max: 2400px;
   }
