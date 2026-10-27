@@ -299,7 +299,8 @@ for (const [width, height] of [
       expect(live?.bottom ?? 0).toBeGreaterThan((bar?.top ?? height) + 4);
       expect(live?.bottom ?? height).toBeLessThan(height);
       const before = await page.evaluate(() => window.scrollY);
-      await page.mouse.move((live?.left ?? 0) + 12, (live?.top ?? 0) + 6);
+      // Just above the scrollbar: a reveal on the press would move the button out from under the release.
+      await page.mouse.move((live?.left ?? 0) + 12, (bar?.top ?? 0) - 4);
       await page.mouse.down();
       await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
       expect(await page.evaluate(() => window.scrollY), 'a press on the Live check button').toBe(before);
