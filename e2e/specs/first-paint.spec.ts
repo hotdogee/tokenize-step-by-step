@@ -210,3 +210,30 @@ test.describe('on the Lighthouse mobile viewport (412 × 823, CPU ×4)', () => {
     expect(cls).toBeLessThanOrEqual(0.02);
   });
 });
+
+test.describe('at 360 px without touch emulation (a shift then counts as CLS)', () => {
+  test.use({ viewport: { width: 360, height: 780 }, isMobile: false, hasTouch: false });
+
+  for (const locale of ['en', 'ja'] as const)
+    test(`the static first paint (${locale}) has no layout shift at all when the app takes over`, async ({
+      page,
+      browserName,
+    }) => {
+      test.skip(browserName !== 'chromium', 'layout-shift entries are a Chromium feature');
+      await page.addInitScript(() => {
+        const w = window as unknown as { __shifts: Array<{ value: number; input: boolean }> };
+        w.__shifts = [];
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as Array<PerformanceEntry & { value: number; hadRecentInput: boolean }>)
+            w.__shifts.push({ value: entry.value, input: entry.hadRecentInput }); // input or not: none is expected
+        }).observe({ type: 'layout-shift', buffered: true });
+      });
+      await page.goto(`/?lang=${locale}`);
+      await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
+      await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
+      // 12 bytes of 36 px do not fit 360 px: the scroll hint shows, on the line the static paint held for it.
+      await expect(page.getByTestId('compare-hint')).toBeVisible();
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)));
+      expect(await page.evaluate(() => (window as unknown as { __shifts: unknown[] }).__shifts)).toEqual([]);
+    });
+});

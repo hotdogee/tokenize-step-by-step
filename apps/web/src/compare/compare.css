@@ -155,8 +155,17 @@
   font-size: 0.75rem;
 }
 
-.cmp-hint {
-  font-style: normal;
+/* A "·" separator and the item after it: one unbreakable piece, so a wrapped caption never ends a line on the "·". */
+.cmp-item {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  white-space: nowrap;
+}
+
+/* The scroll hint keeps its room while the table fits (the static first paint cannot measure, so it always holds it). */
+.cmp-hint.off {
+  visibility: hidden;
 }
 
 /* ---- Rows: CSS grids of the column window ---- */

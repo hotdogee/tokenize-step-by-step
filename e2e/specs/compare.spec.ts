@@ -136,7 +136,8 @@ test('the captions stay at the left edge while the rows scroll sideways, the hea
     expect(select?.x ?? -1, lab).toBeGreaterThanOrEqual(0);
     expect((select?.x ?? 0) + (select?.width ?? Number.POSITIVE_INFINITY), lab).toBeLessThanOrEqual(width);
   }
-  await expect(page.getByTestId('compare-head')).toContainText('scroll sideways for the rest of the text');
+  await expect(page.getByTestId('compare-hint')).toHaveText('·scroll sideways for the rest of the text');
+  await expect(page.getByTestId('compare-hint')).toBeVisible();
 });
 
 test.describe('on a 560 px tall viewport', () => {

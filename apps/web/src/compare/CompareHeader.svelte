@@ -2,7 +2,8 @@
   /**
    * The comparison table's header box (PA-19, 05 §4): the first of the three horizontal scrollers, pinned under the
    * sticky app header (`position: sticky; top: var(--header-h)`) while the page scrolls past the table. A caption (the
-   * text's code points and bytes, and the scroll hint while the table is wider than the screen) above the character row
+   * text's code points and bytes, and the scroll hint, shown while the table is wider than the screen — its line is held
+   * in the static first paint too, so hydration shifts nothing, PA-15) above the character row
    * and the byte row(s) in the chosen byte view (`b=both`: hex and decimal), all on the rows' byte-column axis and in the
    * same column window. Both rows are ARIA rows of the table's grid (`cmp-r-char`, `cmp-r-hex`, `cmp-r-dec`, owned
    * through `aria-owns`) with `columnheader` cells. Above 20,000 code points (AD-27) the caption also says the rows wait
@@ -24,7 +25,7 @@
     marker: number;
     byteViews: ReadonlyArray<'hex' | 'dec'>;
     lang: ResolvedTextLang;
-    /** The table is wider than the screen (the caption says to scroll sideways). */
+    /** The table is wider than the screen (the caption's scroll hint shows; hidden, it keeps its room). */
     overflow: boolean;
     /** Pinned under the app header (its shadow). */
     pinned: boolean;
@@ -42,10 +43,13 @@
       <span class="cmp-cap"
         ><b>{i18n.t('stage.1')}</b><span>{i18n.t('counts.codePoints', { n: source.codePoints })}</span><span
           aria-hidden="true">·</span
-        ><span>{i18n.t('counts.bytes', { n: source.utf8.length })}</span>{#if overflow}<span aria-hidden="true">·</span
-          ><i class="cmp-hint">{i18n.t('compare.scrollHint')}</i>{/if}{#if isOnDemand(app.longInput)}<span
-            aria-hidden="true">·</span
-          ><span>{i18n.t('longInput.banner')}</span><button
+        ><span>{i18n.t('counts.bytes', { n: source.utf8.length })}</span><span
+          class="cmp-item cmp-hint"
+          class:off={!overflow}
+          aria-hidden={overflow ? undefined : 'true'}
+          data-testid="compare-hint"><span aria-hidden="true">·</span><span>{i18n.t('compare.scrollHint')}</span></span
+        >{#if isOnDemand(app.longInput)}<span aria-hidden="true">·</span><span>{i18n.t('longInput.banner')}</span
+          ><button
             type="button"
             class="btn"
             aria-disabled={app.running}
