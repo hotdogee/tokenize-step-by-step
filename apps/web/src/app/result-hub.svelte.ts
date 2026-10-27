@@ -124,7 +124,7 @@ export interface HubEntryState {
   ticket: Ticket | null;
   pending: boolean;
   ownError: UiError | null;
-  /** A failed load answered the request for `wanted`: the next load runs it. */
+  /** A failed load answered the request for `wanted`: the next load runs it (unless a `forget` or release drops it). */
   retry: boolean;
 }
 
@@ -325,13 +325,17 @@ export class ResultHub {
     this.#engine?.hold(entry.lane);
   }
 
-  /** Drops the entry's result now, and the answer of any request issued before (AD-27: never keep what is not shown). */
+  /**
+   * Drops the entry's result now, and the answer of any request issued before — a failed load's request included, which
+   * the next load no longer runs (AD-27: never keep, or compute again, what is not shown).
+   */
   forget(id: TokenizerId, options: TokenOptions = ROW_OPTIONS): void {
     const entry = this.#entries.get(keyOf(id, options));
     if (entry === undefined) return;
     entry.generation++;
     entry.result = null;
     entry.source = null;
+    entry.retry = false;
   }
 
   /** The page has painted (06 §3): loads that requests or `ensureRows` asked for may start now. */
@@ -487,8 +491,9 @@ export class ResultHub {
 
   /**
    * A load of the lane failed: the requests that waited for it are answered — `error` (on the lane: the rows and the
-   * board show it with its action), `none` when the load was cancelled — and run with the next load (`retry`), so no
-   * caller waits for a load that will not come (a row of the on-demand run never holds up the next one).
+   * board show it with its action), `none` when the load was cancelled — and run with the next load (`retry`, unless a
+   * `forget` has dropped them since), so no caller waits for a load that will not come (a row of the on-demand run never
+   * holds up the next one).
    */
   #loadFailed(lane: Lane, error: unknown): void {
     const answer: HubAnswer = isCancelledError(error) ? NONE : { kind: 'error', error };
@@ -498,7 +503,7 @@ export class ResultHub {
       ticket.settled = true;
       entry.ticket = null;
       entry.pending = false;
-      entry.retry = true;
+      entry.retry = ticket.generation === entry.generation;
       ticket.settle(answer);
     }
   }

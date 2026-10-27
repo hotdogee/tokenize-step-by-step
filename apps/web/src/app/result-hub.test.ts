@@ -253,6 +253,41 @@ describe('ResultHub: errors', () => {
     expect(hub.entry(GROK2).result?.input.text).toBe('free');
   });
 
+  it('runs nothing forget() dropped on a retried load: neither a request whose load fails after it nor one that failed before', async () => {
+    // forget() while the load is on its way, then the load fails: the request is answered, and never runs again.
+    const before = setup();
+    before.hub.start();
+    before.hub.retain(GROK2);
+    const request = before.hub.request(GROK2, 'left', ROW_OPTIONS, { trace: false });
+    await flush();
+    before.hub.forget(GROK2);
+    const client = before.clients.of(GROK2);
+    client.loads[0]?.reject(failure('fetch', true));
+    await expect(request).resolves.toMatchObject({ kind: 'error', error: { code: 'fetch' } });
+    const retry = before.hub.load(GROK2);
+    client.loads[1]?.finish();
+    await retry;
+    await flush();
+    expect(client.encodes).toHaveLength(0);
+    expect(before.hub.entry(GROK2)).toMatchObject({ result: null, pending: false, error: null });
+
+    // The load fails first, then forget(): the retried load runs nothing either.
+    const after = setup();
+    after.hub.start();
+    const failed = after.hub.request(GROK2, 'left', ROW_OPTIONS, { trace: false });
+    await flush();
+    const other = after.clients.of(GROK2);
+    other.loads[0]?.reject(failure('fetch', true));
+    await expect(failed).resolves.toMatchObject({ kind: 'error' });
+    after.hub.forget(GROK2);
+    const again = after.hub.load(GROK2);
+    other.loads[1]?.finish();
+    await again;
+    await flush();
+    expect(other.encodes).toHaveLength(0);
+    expect(after.hub.entry(GROK2)).toMatchObject({ result: null, pending: false });
+  });
+
   it('answers a request whose load was cancelled with none, and one whose engine failed to import with the error', async () => {
     const { hub, clients } = setup();
     hub.start();

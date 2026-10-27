@@ -16,6 +16,7 @@ import { ANALYSED_MAX, ON_DEMAND_MAX_STEPS, RELEASE_ABOVE_BYTES, resultBytes } f
 import { NoPrecomputedResultError } from './no-precomputed.ts';
 import type { PrecomputedSource } from './precomputed.ts';
 import { DEFAULT_TOKENIZER, EXAMPLES, tokenizerEntry } from './registry.ts';
+import { ROW_OPTIONS } from './result-hub.svelte.ts';
 import { STORAGE_KEYS } from './storage.ts';
 
 /**
@@ -666,6 +667,42 @@ describe('error recovery (05 §12)', () => {
     expect(error).toMatchObject({ code: 'oom', tokenizer: 'meta-llama3', previous: 'openai-o200k_base' });
     if (error === null) throw new Error('no error');
     expect(errorView(error, name, DEFAULT_TOKENIZER)).toMatchObject({ key: 'error.oom', action: 'back' });
+  });
+
+  it('a row’s Retry runs the on-demand run’s text while it is on screen, and nothing once the text has moved on', async () => {
+    const clients = new FakeClients();
+    const app = await loadedApp(clients);
+    const long = 'l'.repeat(25_000);
+    app.setText(long, true);
+    const run = app.runOnDemand();
+    clients.of('openai-o200k_base').encodes.at(-1)?.answer();
+    await run;
+    expect(app.rowRun?.text).toBe(long);
+    // The table's part of the run (CompareTable): two rows ask for the text, and both loads fail.
+    const rows = (['google-gemma4', 'xai-grok2'] as const).map((id) => {
+      app.hub.retain(id);
+      return app.hub.request(id, long, ROW_OPTIONS, { trace: false });
+    });
+    await flush();
+    for (const id of ['google-gemma4', 'xai-grok2'] as const)
+      clients.of(id).loads[0]?.reject(Object.assign(new Error('offline'), { code: 'fetch', retryable: true }));
+    for (const row of rows) await expect(row).resolves.toMatchObject({ kind: 'error' });
+    // The Google row's Retry while the run's text is still the text: the load runs it.
+    app.retryRow('google');
+    await flush();
+    clients.of('google-gemma4').loads[1]?.finish();
+    await flush();
+    expect(clients.of('google-gemma4').encodes.map((call) => call.text.length)).toEqual([25_000]);
+    // The text moves on inside the on-demand tier (the table asks for nothing until the next run): the xAI row's Retry
+    // loads Grok-2 and encodes nothing — never the whole text the page has left (AD-27).
+    app.setText(`${long}m`);
+    app.retryRow('xai');
+    await flush();
+    clients.of('xai-grok2').loads[1]?.finish();
+    await flush();
+    expect(clients.of('xai-grok2').encodes).toHaveLength(0);
+    expect(app.hub.entry('xai-grok2')).toMatchObject({ result: null, pending: false, error: null });
+    expect(app.hub.loaded('xai-grok2')).toBe(true);
   });
 
   it('runs a run asked for before a failed load once Retry loads the tokenizer', async () => {

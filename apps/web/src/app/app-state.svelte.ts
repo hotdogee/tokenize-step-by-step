@@ -755,12 +755,20 @@ export class AppState {
     void this.#request(this.text, traceFor(this.#codePoints), 'encode');
   }
 
-  /** A row's error action (PA-19): load its tokenizer again, or ask again for its result once it is loaded. */
+  /**
+   * A row's error action (PA-19): load its tokenizer again — which runs the request the failed load answered, unless the
+   * text of an on-demand tier has moved on since the run asked for it (the table asks for nothing then, AD-27: the load
+   * must not encode a whole text the page has left) — or ask again for its result once it is loaded.
+   */
   retryRow(lab: Lab): void {
     const id = this.rows.entryFor(lab)?.id;
     if (id === undefined) return;
-    if (this.hub.loaded(id)) void this.hub.request(id, this.analysed, ROW_OPTIONS, { trace: false });
-    else this.hub.load(id).catch(() => undefined); // the entry's `error` says what failed
+    if (this.hub.loaded(id)) {
+      void this.hub.request(id, this.analysed, ROW_OPTIONS, { trace: false });
+      return;
+    }
+    if (isOnDemand(this.longInput) && this.rowRun?.text !== this.analysed) this.hub.forget(id, ROW_OPTIONS);
+    this.hub.load(id).catch(() => undefined); // the entry's `error` says what failed
   }
 
   /** Opens the Advanced disclosure (the summary, the table's Enter and the board's global keys, PA-19). */
