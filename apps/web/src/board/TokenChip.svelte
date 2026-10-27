@@ -55,6 +55,7 @@
   data-tier="token"
   data-index={cell.index}
   data-first={cell.first ? '' : undefined}
+  data-last={cell.last ? '' : undefined}
   data-variant={cell.variant}
   data-partial={cell.partial ? '' : undefined}
   data-active={state.active ? '' : undefined}

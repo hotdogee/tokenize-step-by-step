@@ -267,15 +267,24 @@ describe('the just-merged ring (PA-17)', () => {
       )
       ?.getKeyframes();
 
-  /** The ring lies on the chip's border box: the cell's `::before` is inset 0 1px, as the chip is. */
+  /**
+   * The ring lies on the chip's border box: the cell's `::before` is inset 0 1px, as the chip is, with the chip's corner
+   * radii (a fragment's chip and ring are squared on its dashed side).
+   */
   const expectOnChip = (cell: Element, what: string): void => {
     const before = getComputedStyle(cell, '::before');
+    const vis = cell.querySelector('.bd-chip') ?? cell;
     const box = cell.getBoundingClientRect();
-    const chip = (cell.querySelector('.bd-chip') ?? cell).getBoundingClientRect();
+    const chip = vis.getBoundingClientRect();
     expect(box.left + px(before.left), `${what}: left`).toBeCloseTo(chip.left, 2);
     expect(box.top + px(before.top), `${what}: top`).toBeCloseTo(chip.top, 2);
     expect(px(before.width), `${what}: width`).toBeCloseTo(chip.width, 2);
     expect(px(before.height), `${what}: height`).toBeCloseTo(chip.height, 2);
+    const chipStyle = getComputedStyle(vis);
+    for (const corner of ['TopLeft', 'TopRight', 'BottomRight', 'BottomLeft'] as const) {
+      const radius = `border${corner}Radius` as const;
+      expect(before[radius], `${what}: ${corner} radius`).toBe(chipStyle[radius]);
+    }
   };
 
   for (const [width, size, cellSize] of [

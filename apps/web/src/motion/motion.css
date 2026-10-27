@@ -92,6 +92,17 @@ html[data-motion='reduced'] [role='progressbar'] {
   pointer-events: none;
 }
 
+/* A fragment's chip is squared on its dashed side (board.css .bd-chip.cont-start / .cont-end): so is its ring. */
+.bd-cell-token[data-just-merged]:not([data-first])::before {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.bd-cell-token[data-just-merged]:not([data-last])::before {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 /* Reduced motion: the director's 600 ms `data-merge-outline` thickens the ring to 2 px; its outer edge steps out once,
    its inner edge never moves. */
 .bd-cell-token[data-just-merged][data-merge-outline]::before {
