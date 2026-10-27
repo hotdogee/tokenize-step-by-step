@@ -42,6 +42,9 @@ describe('the 05 §11 contract on tokens.css', () => {
       expect(mine.filter((check) => check.rule === 'border')).toHaveLength(16 + 4);
       expect(mine.filter((check) => check.rule === 'accent')).toHaveLength(16 + 4);
       expect(mine.some((check) => check.rule === 'accent' && check.bg === '--bg')).toBe(true);
+      expect(mine.filter((check) => check.rule === 'scrollbar').map((check) => [check.fg, check.bg])).toEqual([
+        ['--fg-muted', '--surface-2'],
+      ]);
     }
     expect(checks.filter((check) => check.rule === 'chip-text').every((check) => check.min === 4.5)).toBe(true);
     expect(checks.filter((check) => check.rule !== 'chip-text').every((check) => check.min === 3)).toBe(true);

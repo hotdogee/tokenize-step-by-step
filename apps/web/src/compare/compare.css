@@ -72,7 +72,9 @@
   background: var(--bg);
 }
 
+/* Pinned: a full-strength bottom line, the edge that also shows on the dark background (the shadow alone does not). */
 .cmp-thead.pinned {
+  border-block-end-color: var(--border);
   box-shadow: 0 8px 12px -8px rgb(0 0 0 / 0.3);
 }
 
@@ -85,7 +87,8 @@
   overflow-y: hidden;
   background: var(--bg);
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--fg-muted) 60%, transparent) var(--surface-2);
+  /* An author-styled control: the thumb keeps ≥ 3:1 on its track (WCAG 1.4.11; check-contrast's `scrollbar` pair). */
+  scrollbar-color: var(--fg-muted) var(--surface-2);
 }
 
 .cmp-sbar > .cmp-track {
@@ -141,7 +144,7 @@
   max-width: 100%;
   min-height: 1.5rem;
   padding: 0 0.125rem;
-  border: var(--border-width) solid color-mix(in oklch, var(--border) 60%, transparent);
+  border: var(--border-width) solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--fg);
