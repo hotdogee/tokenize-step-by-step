@@ -120,6 +120,18 @@ describe('spm specifics', () => {
     const [gemma] = cellsOf(caseResult('google-gemma2', 'special-start-of-turn'), { K: 34 });
     expect(gemma?.tokens[0]).toMatchObject({ userDefined: true, id: 106 });
   });
+
+  it('a locked live part says so too: its aria-hidden lock is its only visual cue (stop 4, Grok-1 digits)', () => {
+    const [row] = cellsOf(caseResult('xai-grok1', 'zh-date'), { K: 34, stage: 4 });
+    const parts = row?.tokens.filter((cell) => cell.variant === 'part') ?? [];
+    const locked = parts.filter((cell) => cell.userDefined);
+    expect(locked.map((cell) => cell.id)).toEqual([16, 14, 16, 18, 15, 14]);
+    expect(locked[0]?.label).toBe('part 2 of 9, id 16, 32, 1 byte, pre-matched symbol, never merges');
+    for (const cell of locked) expect(cell.label).toContain(', 1 byte, pre-matched symbol, never merges');
+    const unlocked = parts.filter((cell) => !cell.userDefined);
+    expect(unlocked.length).toBeGreaterThan(0);
+    for (const cell of unlocked) expect(cell.label).not.toContain('pre-matched symbol');
+  });
 });
 
 describe('special-token match, direct hits, graphemes, stand-ins, combining marks', () => {

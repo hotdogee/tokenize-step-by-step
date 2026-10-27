@@ -294,7 +294,8 @@ export function firstSpanToken(result: TokenizationResult): number {
 /**
  * `aria-label` of live part `index` (stops 4–5). The id comes before the hex — a byte-fallback part's `piece` (`<0xF0>`)
  * instead — in the order the chip shows them, so the visible label is part of the name (WCAG 2.5.3; PA-17 put the id
- * inside the chip).
+ * inside the chip). A `userDefined` part (a USER_DEFINED symbol, which the chip marks with the aria-hidden lock alone)
+ * also says "pre-matched symbol, never merges", as `tokenLabel` does (AD-36).
  */
 export function partLabel(
   result: TokenizationResult,
@@ -305,6 +306,7 @@ export function partLabel(
   id: number,
   t: Translate,
   piece: string | null = null,
+  userDefined = false,
 ): string {
   if (start === end) return joinParts([t('a11y.marker.zeroWidthDummy'), id >= 0 && t('a11y.cell.id', { id })], t);
   const spoken = (i: number): string => spokenGlyph(result, i, t);
@@ -316,6 +318,7 @@ export function partLabel(
       id >= 0 && t('a11y.cell.id', { id }),
       piece ?? hex.join(' '),
       t('counts.bytes', { n: end - start }),
+      userDefined && t('a11y.marker.userDefined'),
       cutsChar(result, start, end) && t('a11y.cell.partial', { list: coverageList(result, start, end, t, spoken) }),
     ],
     t,

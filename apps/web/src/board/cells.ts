@@ -606,7 +606,7 @@ function tokenCellsParts(
       span: f.colSpan,
       first: f.first,
       last: f.last,
-      label: partLabel(result, p, count, start, end, partId, t, piece),
+      label: partLabel(result, p, count, start, end, partId, t, piece, kind === TokenKind.UserDefined),
       describedBy: fragment.id,
       variant: 'part',
       tint: token < 0 ? -1 : token % 8,
