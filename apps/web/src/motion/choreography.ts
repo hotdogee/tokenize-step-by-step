@@ -414,7 +414,7 @@ function playStep(
   const moved = pairs.filter((pair) => !unchanged(pair));
   if (moved.length + added.length > MAX_FLIP_CELLS) crossfadeRows(plan, rows, 80);
   else if (!reduced) {
-    // (reduced motion: a discrete swap; the director draws the static outline)
+    // (reduced motion: a discrete swap; the director draws the ring at 2 px for 600 ms, data-merge-outline)
     for (const pair of moved) {
       if (fast) fade(plan, pair.el, 80);
       else {

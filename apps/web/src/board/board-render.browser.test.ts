@@ -771,7 +771,8 @@ describe('token ids inside every chip (PA-17)', () => {
     const narrowLine = narrowVis?.querySelector('.bd-chip-line') ?? null;
     if (vis === null || id === null || line === null || narrowVis === null || narrowLine === null)
       throw new Error('no just-merged part cut into a 1-column and a wider fragment');
-    // The 1-column fragment draws no star and keeps its whole line (its pulse outline stays as a 1 px ring, motion.css).
+    // The 1-column fragment draws no star and keeps its whole line (every fragment carries the 1 px ring; the star is the
+    // wider fragment's extra mark).
     expect(getComputedStyle(narrowVis, '::after').content).toBe('none');
     expect(getComputedStyle(narrowLine).paddingRight).toBe('0px');
     // The wider one carries the star, absolutely placed in the chip's padding box from its right and bottom.

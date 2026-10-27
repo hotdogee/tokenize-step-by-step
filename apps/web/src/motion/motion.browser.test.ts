@@ -455,7 +455,7 @@ describe('reduced motion (in-app switch)', () => {
     await sleep(150);
     await go(board, { step: 3 });
     expect(document.getAnimations().filter(animatesTransform)).toEqual([]);
-    const outlined = board.grid.querySelectorAll('[data-merge-outline]'); // the static 600 ms outline
+    const outlined = board.grid.querySelectorAll('[data-merge-outline]'); // the 2 px ring (data-merge-outline)
     expect(outlined.length).toBeGreaterThan(0);
     expect(scrolls.length).toBeGreaterThan(0);
     for (const options of scrolls) expect(options).toMatchObject({ behavior: 'auto', block: 'nearest' });
