@@ -5,7 +5,7 @@
     "limit": "14 KiB"
   },
   {
-    "name": "Main JS: initial shell of / (Svelte runtime + app + i18n + inlined example + manifest summary; chunks / loads only later are named lazy-*.js by apps/web/plugins/lazy-chunks.ts)",
+    "name": "Main JS: initial shell of / (Svelte runtime + app + comparison table + i18n + inlined default rows + manifest summary; the board, rail, inspector and motion director are the lazy-AdvancedBoard chunk since PA-19; chunks / loads only later are named lazy-*.js by apps/web/plugins/lazy-chunks.ts)",
     "path": [
       "apps/web/dist/assets/*.js",
       "!apps/web/dist/assets/about-*.js",
@@ -21,9 +21,9 @@
     "limit": "81 KiB"
   },
   {
-    "name": "i18n chunk (three catalogs, part of the main JS; PA-10)",
+    "name": "i18n chunk (three catalogs, part of the main JS; PA-10; 10 KiB since PA-19: the table, Advanced and the examples menu)",
     "path": "apps/web/dist/assets/i18n-*.js",
-    "limit": "9 KiB"
+    "limit": "10 KiB"
   },
   {
     "name": "Worker core (loader + protocol + host: entry-*.js, the Worker entry, and the entry-core-*.js it imports; apps/web/vite.config.ts)",

@@ -218,7 +218,7 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
     expect(limits).toEqual({
       'dist/index.html': '14 KiB',
       'Main JS': '81 KiB',
-      'i18n chunk': '9 KiB',
+      'i18n chunk': '10 KiB', // PA-19: 9 → 10 KiB
       'Worker core': '12 KiB',
       'Engine chunk': '10 KiB',
       CSS: '20 KiB',
