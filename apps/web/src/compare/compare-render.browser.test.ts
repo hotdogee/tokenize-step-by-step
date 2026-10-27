@@ -334,6 +334,12 @@ describe('a row whose tokenizer fails to load', () => {
     expect(status('google')).toMatch(/^Not enough memory to load Gemma 4\b.* on this device$/u);
     expect(action('meta')?.dataset['action']).toBe('back');
     expect(status('meta')).toContain('try Llama 4');
+    for (const lab of ['xai', 'google', 'meta']) {
+      // The status says what happened; no hidden "waiting for the tokenizer" badge contradicts it.
+      const caption = section.querySelector<HTMLElement>(`[data-row="${lab}"] .cmp-cap`);
+      expect(caption?.innerText, lab).not.toContain('waiting for the tokenizer');
+      expect(caption?.querySelector('[data-source]'), lab).toBeNull();
+    }
     expect(action('openai')).toBeNull(); // still loading
     action('meta')?.click();
     flushSync();

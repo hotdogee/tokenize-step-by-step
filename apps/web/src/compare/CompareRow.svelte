@@ -3,7 +3,7 @@
    * One lab's row of the comparison table (PA-19, 05 §4): a caption line pinned to the left edge — the lab, the row's
    * tokenizer `<select>` (the lab's tokenizers; Anthropic also "Claude 5.5 · API key"), the token count, the
    * partial-character count (short, "2 partial"; the long form for assistive tech), the fidelity badge when it is not "confirmed", the loading progress or the error with its
-   * action (Retry; Reload; back to the lab's primary tokenizer), and a visually hidden source badge (`span[data-source]`: precomputed · live · pending) — then the chips, an
+   * action (Retry; Reload; back to the lab's primary tokenizer), and a visually hidden source badge (`span[data-source]`: precomputed · live · pending; none on an error) — then the chips, an
    * ARIA row of the table's grid (`cmp-row-<lab>`, owned through `aria-owns`; the caption with its select stays outside
    * the grid). In the API mode there are no chips: a note and the "Live check…" button instead (no boundaries, 05 §13).
    */
@@ -174,11 +174,16 @@
           {/if}
         {/if}
         {#if entry !== null && entry.fidelity !== 'confirmed'}<FidelityBadge fidelity={entry.fidelity} />{/if}
-        <span class="visually-hidden" data-source={source}
-          >{i18n.t(
-            source === 'live' ? 'badge.live' : source === 'precomputed' ? 'badge.precomputed' : 'counts.tokensPending',
-          )}</span
-        >
+        <!-- No source badge on an error: the status says what happened (a "waiting" badge would contradict it). -->
+        {#if state !== 'error'}<span class="visually-hidden" data-source={source}
+            >{i18n.t(
+              source === 'live'
+                ? 'badge.live'
+                : source === 'precomputed'
+                  ? 'badge.precomputed'
+                  : 'counts.tokensPending',
+            )}</span
+          >{/if}
       {/if}
     </span>
   </div>
