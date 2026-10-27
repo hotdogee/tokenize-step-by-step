@@ -288,7 +288,7 @@ describe('the just-merged ring (PA-17)', () => {
               // The WAAPI pulse animates the ring's opacity alone: it fades in, dips and settles at the CSS's 1.
               const frames = pulseOf(cell);
               expect(
-                frames?.map((frame) => [frame.computedOffset, frame.opacity]),
+                frames?.map((frame) => [frame.computedOffset, frame['opacity']]),
                 what,
               ).toEqual([
                 [0, '0'],
