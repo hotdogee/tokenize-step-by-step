@@ -34,13 +34,13 @@
 | Metric | Budget | Enforced by |
 |---|---|---|
 | `dist/index.html` | ≤ 14 KB brotli | `size-limit`; LHCI `document ≤ 14` |
-| Main JS (Svelte runtime + app shell + board + inspector + rail + motion ≤ 66; i18n chunk ≤ 9 (PA-10); inlined default example ≤ 4; manifest summary ≤ 1 — PA-7; the wave 1 shell alone measured 55.92 KB) | ≤ 80 KB brotli | `size-limit` |
+| Main JS (Svelte runtime + app shell + board + inspector + rail + motion ≤ 66; i18n chunk ≤ 9 (PA-10); inlined default example ≤ 4; manifest summary ≤ 1 — PA-7; the wave 1 shell alone measured 55.92 KB) | ≤ 81 KB brotli (PA-17 amends PA-7's 80: the token ids' rendering) | `size-limit` |
 | Worker core (loader + protocol + host) | ≤ 12 KB brotli | `size-limit` |
 | Engine chunks (lazy inside the Worker; the bytelevel chunk **is** fetched during the Lighthouse trace because o200k starts loading after LCP) | bytelevel ≤ 16 KB br (incl. 5.7 KB Unicode tables); spm ≤ 10 KB br — each measured together with the shared `assets/engine-core-[hash].js` chunk that loads with the first engine (PA-8 addendum) | `size-limit` |
 | CSS (incl. the stand-in + digits WOFF2 subsets as a separate `font` budget: 908 + 2,360 B, PA-17) | ≤ 20 KB brotli; font ≤ 4 KB | `size-limit`; LHCI `stylesheet ≤ 20`, `font ≤ 4` |
 | `boot-[hash].js` | ≤ 0.5 KB | `size-limit` |
 | `first-paint-[hash].js` (the static first paint's clone script, `/` only, classic, right after `#app`; PA-15) | ≤ 0.5 KB | `size-limit` |
-| **Script total in the trace** (main 80 + worker 12 + bytelevel engine 16 + boot 0.5 + slack; PA-7) | ≤ 110 KB brotli-11 (engineering); LHCI asserts ≤ 143 KB as served by the edge (zstd / fast brotli, PA-14) | `size-limit` sums; LHCI `budgets.json` `script ≤ 143` |
+| **Script total in the trace** (main 81 + worker 12 + bytelevel engine 16 + boot 0.5 + slack; PA-7) | ≤ 110 KB brotli-11 (engineering); LHCI asserts ≤ 143 KB as served by the edge (zstd / fast brotli, PA-14) | `size-limit` sums; LHCI `budgets.json` `script ≤ 143` |
 | **Total excluding the vocabulary** (document 14 + script 110 + stylesheet 20 + font 4; PA-7) | ≤ 148 KB brotli-11; LHCI `total ≤ 1,300` as served (PA-14) | LHCI `total ≤ 1,300` with `other ≤ 1,100` (the o200k `.bin` lands in `other`; Lighthouse cannot exclude paths) and a Playwright network assertion that non-`/tok/*` initial transfer ≤ 148 KB |
 | Lazy `examples/<tok>.json` | ≤ 16 KB gzip each (ceiling). Measured 2026-10-25 (zlib gzip-9, as `check:dist` computes it): o200k 6.4, cl100k 7.8, claude-legacy 7.9, gemma4 5.7, gemma2 5.6, llama4-muse 6.1, llama3 6.5, grok2 6.3, grok1 9.7 KB (largest) | `check:dist` |
 | Default vocab (o200k) | 1,025 KB gzip (`other` bucket); **load trigger**: the client posts `load` after `document.fonts.ready` and two `requestAnimationFrame`s following `DOMContentLoaded`, so the Worker script, engine chunk and `.bin` never compete with the main bundle before LCP | `check:dist` (per-asset gzip ≤ 1.7 MB unless whitelisted); E2E asserts the `/tok/*` request starts after the LCP entry |

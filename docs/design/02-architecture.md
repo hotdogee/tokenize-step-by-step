@@ -189,7 +189,7 @@ export default defineConfig({
   css: { transformer: 'lightningcss' },
   // PD-5 (no inline (?i:) — Safari < 26): esbuild 0.28 (Vite 7) has no 'regexp-modifiers' feature key (transformWithEsbuild rejects it) and never introduces modifiers itself;
   // the guard is the ESLint regex-literal rule (no-restricted-syntax in eslint.config.js) plus WP02's pattern-expansion tests.
-  define: { __BUILD_SHA__: JSON.stringify(process.env.GITHUB_SHA ?? 'dev'), __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)) },
+  define: { __BUILD_SHA__: JSON.stringify((process.env.GITHUB_SHA ?? 'dev').slice(0, 7)), __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)) },
 });
 ```
 

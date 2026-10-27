@@ -217,7 +217,7 @@ describe('budgets (06 §3) — KB = 1024 B', () => {
     const limits = Object.fromEntries(entries.map((entry) => [entry.name.split(/[:(]/)[0]?.trim() ?? '', entry.limit]));
     expect(limits).toEqual({
       'dist/index.html': '14 KiB',
-      'Main JS': '80 KiB',
+      'Main JS': '81 KiB',
       'i18n chunk': '9 KiB',
       'Worker core': '12 KiB',
       'Engine chunk': '10 KiB',

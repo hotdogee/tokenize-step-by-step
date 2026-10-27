@@ -18,7 +18,7 @@
       "!apps/web/dist/assets/spm-*.js",
       "!apps/web/dist/assets/engine-core-*.js"
     ],
-    "limit": "80 KiB"
+    "limit": "81 KiB"
   },
   {
     "name": "i18n chunk (three catalogs, part of the main JS; PA-10)",
