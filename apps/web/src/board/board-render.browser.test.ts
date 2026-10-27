@@ -324,13 +324,6 @@ describe('token ids inside every chip (PA-17)', () => {
     };
   };
 
-  /** The chip's content box: its padding box less the inline paddings. */
-  const contentBox = (chip: Element): Box => {
-    const pad = paddingBox(chip);
-    const style = getComputedStyle(chip);
-    return { ...pad, left: pad.left + px(style.paddingLeft), right: pad.right - px(style.paddingRight) };
-  };
-
   /**
    * An element's glyph run: across, the extent of its text (a Range over its contents, not the element's box); down, its
    * line box. A text Range is as tall as the font's content area (ascent + descent: 1.362 em in Noto Sans), which pokes
@@ -378,12 +371,16 @@ describe('token ids inside every chip (PA-17)', () => {
 
   /**
    * K + 1 ASCII bytes in one-byte tokens (`ids`, then filler ids) but the last, a 2-byte token (`last`) that the row end
-   * cuts into two 1-column fragments, each with a continuation mark under its id.
+   * cuts into two 1-column fragments, each with a continuation mark under its id. One merge step forms it, so at stop 5
+   * (step 1) it is a live part cut 1 | 1 by the row end.
    */
   async function rowEndSplit(k: number, ids: readonly number[], last: number): Promise<TokenizationResult> {
     const { buildResult } = await import('@tsbs/core/model/build-result');
     const { analyzeText } = await import('@tsbs/core/text/analyze');
+    const { ALIVE, StepKind } = await import('@tsbs/core/model/result');
     const single = Array.from({ length: k - 1 }, (_, i) => ids[i] ?? 10 + i);
+    const died = new Int32Array(k + 2).fill(ALIVE);
+    died[k] = 1; // the boundary inside the last token, removed by the one merge step
     return buildResult({
       tokenizer: 'openai-o200k_base',
       family: 'bytelevel-bpe',
@@ -394,7 +391,20 @@ describe('token ids inside every chip (PA-17)', () => {
         byteStart: [...single.map((_, i) => i), k - 1, k + 1],
         kind: Array.from({ length: k }, () => 0),
       },
-      timeline: null,
+      timeline: {
+        stepCount: 1,
+        leadingZeroWidthPart: false,
+        boundaryBorn: new Int32Array(k + 2),
+        boundaryDied: died,
+        stepKind: Uint8Array.of(StepKind.Merge),
+        stepLeft: Uint32Array.of(k - 1),
+        stepMid: Uint32Array.of(k),
+        stepEnd: Uint32Array.of(k + 1),
+        stepRank: Float32Array.of(last),
+        stepResultId: Int32Array.of(last),
+        stepChunk: Uint32Array.of(0),
+        truncated: false,
+      },
     });
   }
 
@@ -550,39 +560,59 @@ describe('token ids inside every chip (PA-17)', () => {
   });
 
   for (const [width, size, cellSize] of [
+    [1280, 'S', 27],
     [768, 'S', 29],
     [1280, 'M', 30],
+    [600, 'M', 36],
   ] as const) {
-    it(`keeps a 1-column part fragment’s mark and hex on one line under its id at the ${String(cellSize)} px cell`, async () => {
+    it(`keeps a 1-column part fragment’s hex whole, without continuation icons, at the ${String(cellSize)} px cell`, async () => {
       await page.viewport(width, 900);
       document.documentElement.dataset['cellSize'] = size;
       expect(cellPx()).toBe(cellSize);
-      // K = 8: the row end cuts “ 台” (50922) after its space, a 1-column fragment carrying the continues mark.
-      const frame = 2 * 16 + (width >= 1024 ? 320 : 0) + 8 * cellSize;
-      const board = await showAt(
-        appWith(fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo'), { stage: 5 }),
-        size,
-        frame,
-      );
-      await digitsLoaded();
-      expect(board.grid.getAttribute('aria-colcount')).toBe('8');
-      const fragment = cells(board, '[data-tier="token"][data-variant="part"]').find(
-        (part) => part.getAttribute('aria-colspan') === '1' && part.querySelector('.bd-chip.cont-end') !== null,
-      );
-      const vis = fragment?.querySelector('.bd-chip') ?? null;
-      const line = vis?.querySelector('.bd-chip-line') ?? null;
-      if (vis === null || line === null) throw new Error('no 1-column part fragment with a continues mark');
-      expect(vis.querySelector('.bd-id')?.textContent).toBe('50922');
-      expect(line.querySelector('.bd-part-text')?.textContent).toBe('20');
-      expect(line.querySelector('svg.bd-icon')).not.toBeNull();
-      // One line under the id, inside the chip: no third line overflowing the bottom.
-      const lineBox = line.getBoundingClientRect();
-      expectWithin(lineBox, contentBox(vis), 'line');
-      expect(lineBox.top).toBeGreaterThanOrEqual(
-        (vis.querySelector('.bd-id')?.getBoundingClientRect().bottom ?? 0) - 0.02,
-      );
-      for (const child of line.children)
-        expect(child.getBoundingClientRect().bottom).toBeLessThanOrEqual(lineBox.bottom + 0.02);
+      const o200k = fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
+      const cases = [
+        // K = 8: the row end cuts “ 台” (50922) after its space, a 1-column fragment that continues on the next row.
+        {
+          result: o200k,
+          step: o200k.timeline?.stepCount ?? 0,
+          frame: 2 * 16 + (width >= 1024 ? 320 : 0) + 8 * cellSize,
+          id: '50922',
+          hex: ['20'],
+        },
+        // The synthetic row end's 2-byte part, cut 1 | 1: both fragments 1 column, continued and continuing.
+        {
+          result: await rowEndSplit(expectedColumns(width), [], 654321),
+          step: 1,
+          frame: undefined,
+          id: '654321',
+          hex: ['61', '61'],
+        },
+      ];
+      for (const { result, step, frame, id, hex } of cases) {
+        mounted?.destroy();
+        const board = await showAt(appWith(result, { stage: 5, step }), size, frame);
+        await digitsLoaded();
+        const fragments = cells(board, '[data-tier="token"][data-variant="part"]').filter(
+          (part) => part.getAttribute('aria-colspan') === '1' && part.querySelector('.bd-id')?.textContent === id,
+        );
+        expect(fragments.map((part) => part.querySelector('.bd-chip-line > .bd-part-text')?.textContent)).toEqual(hex);
+        for (const justMerged of [false, true]) {
+          if (justMerged) for (const part of fragments) part.dataset['justMerged'] = '';
+          await frames(1);
+          for (const part of fragments) {
+            const vis = part.querySelector('.bd-chip') ?? part;
+            const line = vis.querySelector('.bd-chip-line') ?? vis;
+            const text = line.querySelector('.bd-part-text') ?? line;
+            const what = `${id} at ${String(cellSize)} px${justMerged ? ', just merged' : ''}`;
+            expect(vis.matches('.cont-start, .cont-end'), what).toBe(true);
+            expect(text.scrollWidth, what).toBeLessThanOrEqual(text.clientWidth);
+            expectWithin(glyphRun(text), paddingBox(vis), `${what}: hex`);
+            for (const icon of line.querySelectorAll('svg.bd-icon'))
+              expect(getComputedStyle(icon).display).toBe('none');
+            expect(getComputedStyle(vis, '::after').content, `${what}: star`).toBe('none');
+          }
+        }
+      }
     });
   }
 

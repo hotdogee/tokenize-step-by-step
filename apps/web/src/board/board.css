@@ -504,10 +504,11 @@
 /*
  * Stacked chips (≤ 2 columns, and every live part, whose hex would otherwise run into its id): a column with the id on
  * the first line and, under it, one line (`.bd-chip-line`, left out when empty) holding the marks and a part's hex
- * (12 + 1 + 11 px inside the 26 px chip). The line never wraps: the hex gives way first, clipping its end, and marks that
- * still do not fit clip at both ends. The inline paddings shrink to 1 px (5 px on a hatched edge, whose strip is 4 px) to
- * give the id the room. `safe center` aligns a column that overflows to its start; engines without `safe` keep the
- * `center` before it (or fall back to the normal start): either way the id stays in view.
+ * (12 + 1 + 11 px inside the 26 px chip). The line never wraps: the hex gives way first, clipping its end (never in a
+ * 1-column chip, below), and marks that still do not fit clip at both ends. The inline paddings shrink to 1 px (5 px on
+ * a hatched edge, whose strip is 4 px) to give the id the room. `safe center` aligns a column that overflows to its
+ * start; engines without `safe` keep the `center` before it (or fall back to the normal start): either way the id stays
+ * in view.
  */
 .bd-chip.stacked {
   --pad-s: 1px;
@@ -535,6 +536,23 @@
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+}
+
+/* A 1-column part (`.s1` is the gridcell's) keeps its hex whole (13 px of the 21 px line at the 27 px cell): its dashed
+   edges mark the continuation, so it draws no continuation icons (as the live tier does), and a lock beside the hex
+   shrinks instead of it. 1-column final tokens keep their marks, which clip at both ends when they do not fit. */
+.bd-cell-token.s1 .bd-chip-line > .bd-part-text {
+  flex-shrink: 0;
+}
+
+.bd-cell-token.s1[data-variant='part'] .cont-start > .bd-chip-line > .bd-icon:first-child,
+.bd-cell-token.s1[data-variant='part'] .cont-end > .bd-chip-line > .bd-icon:last-child {
+  display: none;
+}
+
+.bd-cell-token.s1[data-variant='part'] .bd-chip-line > .bd-icon {
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 /*
