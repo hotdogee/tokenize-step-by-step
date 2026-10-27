@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { tokenizerEntry } from '../app/registry.ts';
 import { caseResult, translator } from '../board/fixture-results.test-helper.ts';
 import { LOCALES } from '../i18n/types.ts';
-import { fusesDummy, hasLeadingMarker, headerCells, headerText, rowChips, tokenAtByte } from './compare-cells.ts';
+import { fusesDummy } from '../board/cells.ts';
+import { hasLeadingMarker, headerCells, headerText, rowChips, tokenAtByte } from './compare-cells.ts';
 
 const t = translator('en');
 const TAINAN = headerText('台灣台南');

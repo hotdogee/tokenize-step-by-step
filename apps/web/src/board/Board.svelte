@@ -26,9 +26,8 @@
    */
   import { onMount, tick, untrack } from 'svelte';
   import type { TokenizationResult } from '@tsbs/core';
-  import type { TokenizerEntry } from '@tsbs/registry';
   import { packRows, withParts } from '@tsbs/core/layout/pack-rows';
-  import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
+  import { TokenFlag } from '@tsbs/core/model/result';
   import { hexByte } from '@tsbs/core/text/utf8';
   import { appState } from '../app/context.ts';
   import { tokenizerEntry } from '../app/registry.ts';
@@ -45,7 +44,7 @@
   import { isComposing } from '../shell/shortcuts.ts';
   import { placePanel, type Extent } from './anchor.ts';
   import type { InteractionState } from './cell-state.ts';
-  import { nfkcSource, type BoardContext } from './cells.ts';
+  import { fusesDummy, nfkcSource, type BoardContext } from './cells.ts';
   import { extraTier, extraTierFor } from './extra-tier.svelte.ts';
   import { appTier, columnsFor, GUTTER, MIN_COLUMNS, tiersFor, tokenMode, type BoardTier } from './geometry.ts';
   import { spokenGlyph } from './labels.ts';
@@ -193,13 +192,6 @@
       ? i18n.t('board.pending')
       : i18n.t('board.loading', { percent: formatPercent(progressPercent(app.loading) / 100, i18n.current) }),
   );
-
-  /** The first spm piece fuses the dummy prefix when the engine adds one and no bare `▁` token exists (03 §B.3). */
-  function fusesDummy(r: TokenizationResult, entry: TokenizerEntry): boolean {
-    if (entry.engine.kind !== 'spm-bpe' || !entry.engine.addDummyPrefix || r.tokens.count === 0) return false;
-    for (let t = 0; t < r.tokens.count; t++) if (r.tokens.kind[t] === TokenKind.DummyPrefix) return false;
-    return r.utf8.length > 0;
-  }
 
   /** The navigable unit holding `a` among the shown tiers (navigation.ts `resolveAnchor`). */
   function resolveAnchor(a: Anchor): CellRef | null {

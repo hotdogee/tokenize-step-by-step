@@ -20,7 +20,8 @@
   import FidelityBadge from '../shell/FidelityBadge.svelte';
   import { preferences } from '../shell/preferences.svelte.ts';
   import { progressPercent } from '../shell/progress.ts';
-  import { fusesDummy, rowChips } from './compare-cells.ts';
+  import { fusesDummy } from '../board/cells.ts';
+  import { rowChips } from './compare-cells.ts';
   import CompareChip from './CompareChip.svelte';
   import { placeIn, type ColumnWindow } from './compare-window.ts';
   import { ANTHROPIC_API, type LabRow, type RowChoice, type RowState } from './rows.svelte.ts';

@@ -18,7 +18,6 @@
  *   token's text ("token 3 of 29, id 3236, 下, 3 bytes").
  */
 import type { TokenizationResult } from '@tsbs/core';
-import type { TokenizerEntry } from '@tsbs/registry';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
 import { analyzeText } from '@tsbs/core/text/analyze';
 import { isCombiningMark, standInFor } from '@tsbs/core/text/stand-ins';
@@ -112,13 +111,6 @@ function runOf(starts: ArrayLike<number>, count: number, value: number): number 
 /** The first token is zero-width (the shared marker column, PA-19). */
 export function hasLeadingMarker(result: TokenizationResult): boolean {
   return result.tokens.count > 0 && ((result.tokens.flags[0] ?? 0) & TokenFlag.ZeroWidth) !== 0;
-}
-
-/** The first SentencePiece piece carries the dummy prefix (`▁Hello`, 03 §B.3): the engine adds one and no bare `▁` exists. */
-export function fusesDummy(result: TokenizationResult, entry: TokenizerEntry): boolean {
-  if (entry.engine.kind !== 'spm-bpe' || !entry.engine.addDummyPrefix || result.tokens.count === 0) return false;
-  for (let t = 0; t < result.tokens.count; t++) if (result.tokens.kind[t] === TokenKind.DummyPrefix) return false;
-  return result.utf8.length > 0;
 }
 
 /** The text the header box describes: the string, its UTF-8 (TextEncoder semantics, as every engine) and its code points. */
