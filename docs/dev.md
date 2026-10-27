@@ -81,9 +81,9 @@ imports into `entry-core` and `check:dist` fails on such an import.
 
 Append `?mock=1` to the URL (`http://localhost:5173/?mock=1`, or `/?lang=ja&mock=1`) to use the precomputed-examples
 client instead (one `ExamplesClient` over WP01's `MockTokenizerClient` per tokenizer): no Worker and no vocabulary download; the example
-chips answer from the lazy `examples/<id>.<sha8>.json` files (the oracle's results), and any other text shows "waiting
-for the tokenizer". E2E specs that need deterministic precomputed results open `/?mock=1`
-(`e2e/specs/live-worker.spec.ts` covers both modes); the Worker's generated inputs
+chips answer from the lazy `examples/<id>.<sha8>.json` files (the oracle's results), the empty text answers "0 tokens",
+and any other text shows "waiting for the tokenizer". E2E specs that need deterministic precomputed results open
+`/?mock=1` (`e2e/specs/live-worker.spec.ts` covers both modes); the Worker's generated inputs
 (`packages/worker/src/generated/{vocab-manifest,engine-config}.json`) come from `pnpm generate` or any Vite run.
 
 ## How the page is wired (WP13)
@@ -117,8 +117,9 @@ every view and owns the pool of clients:
 - **Results and Workers** (PA-19). `hub.request(id, text, options, { trace })` answers precomputed while `id` is not
   loaded and live once it is; a view `retain`s the entries it shows. Other tokenizers load on the first free-text edit,
   a row switch (`hub.ensureRows`) or the board's need, and `hub.prefetchIdle` caches more vocabularies 10 s after the
-  load trigger unless Save-Data. Switching the board's tokenizer selects another Worker: nothing is unloaded, and a
-  tokenizer loaded before answers at once.
+  board's tokenizer has loaded, unless Save-Data. A failed load answers the requests that waited for it (the row shows
+  the error with its action) and the next load runs them. Switching the board's tokenizer selects another Worker:
+  nothing is unloaded, and a tokenizer loaded before answers at once.
 - **Requests.** Every encode carries one sequence number: an older answer is dropped, a superseded encode settles as
   `cancelled` (never an error), keystrokes coalesce in the 40 ms debounce, an encode asked for during a load is sent once
   after `loaded`, a paste (`inputType` `insertFromPaste`) skips the debounce, an IME composition sends nothing until it is

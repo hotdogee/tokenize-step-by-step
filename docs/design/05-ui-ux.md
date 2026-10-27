@@ -107,7 +107,9 @@ gap); its rows are 22 px of caption + 7 + **44 px chips** + 7 = 80 px; the heade
 character row (56 px below 768) + a 28 px byte row (+ 2 px and a second 28 px row with `b=both`) + 6 px; from 2560 px the
 chips are `calc(var(--cell) * 1.4)` tall, the characters `calc(var(--cell) + 26px)`, the bytes `calc(var(--cell) / 2 +
 10px)`. U+ labels follow the board's rule (≥ 2 columns, ≥ 480 px; CSS). Coarse pointers: chips 36 × 44, selects 24 px
-tall.
+tall. On overlay-scrollbar platforms (macOS by default, iOS, Android) the pinned scrollbar shows its thumb only while
+the table scrolls, as every native scroller there does; the header caption's scroll hint says the text continues
+sideways (a PA-19 accepted deviation: no custom-drawn thumb).
 
 ### 3.4 Sketches
 
@@ -308,20 +310,28 @@ App
   partial-character mark only with the "Show token text" / "Mark partial-character tokens" toggles, which the board
   follows too. The chip's `aria-label` always names the token's text ("token 3 of 29, id 3236, 下, 3 bytes").
 - **Never wrapped.** Three horizontal scrollers stay in step: the header box (clipped, moved by script; a sideways wheel
-  or touch drag on it is forwarded), the rows (captions pinned to the left edge) and the scrollbar pinned to the bottom of
-  the viewport. Every scroller renders the same **column window** of at most 128 columns (the generated `.c1…c128` /
-  `.s1…s128`, rebased to the window start; 24 columns of overscan; the window moves only when the visible columns leave
-  its inner part). A focus move to a chip off the window scrolls the table there first.
-- **Captions** (22 px, small text, sticky left): lab · tokenizer select (the lab's tokenizers by their short names;
-  Anthropic also "Claude 5.5 · API key") · *N tokens* · *k partial-character tokens* · fidelity badge unless confirmed ·
-  "loading 43 %" / the error with Retry / "waiting for the tokenizer" · the visually hidden source badge.
-- **States.** A row draws its current result; while a loaded tokenizer encodes a new text, its last result muted; no
-  chips while loading, waiting, failed or in an on-demand tier (the header caption then offers "Tokenize now"). Empty
-  text: "0 code points · 0 bytes" and an empty row per lab.
+  or touch drag on it is forwarded), the rows (captions pinned to the left edge) and the scrollbar pinned to the bottom
+  of the viewport (above the board's bottom sheet while Advanced shows one, `--sheet-height`). Every scroller renders
+  the same **column window** of at most 128 columns (the generated `.c1…c128` / `.s1…s128`, rebased to the window start;
+  24 columns of overscan; the window moves only when the visible columns leave its inner part). A focus move to a chip
+  off the window scrolls the table there first.
+- **Captions** (22 px, small text, sticky left, never wider than the rows' scroller): lab · tokenizer select (the lab's
+  tokenizers by their short names, "Claude 1/2 legacy" for the legacy vocabulary; Anthropic also "Claude 5.5 · API key")
+  · *N tokens* · *k partial* (the long "k partial-character tokens" for assistive tech) · fidelity badge unless
+  confirmed · "loading 43 %" / the error with its action (Retry; Reload; Go back to the lab's primary tokenizer, or
+  Retry when the row is on it) / "waiting for the tokenizer" · the visually hidden source badge. Each "·" travels with
+  the item after it, so a wrapped caption never ends a line on it. The header box's caption (code points · bytes ·
+  "scroll sideways for the rest of the text" while the table is wider than the screen) holds the hint's line in the
+  static first paint too (hidden while the table fits), so hydration moves nothing.
+- **States.** A row draws its current result; while a loaded tokenizer encodes a new text, its last result, muted only
+  once the answer has taken 300 ms (an answer inside the 40 ms debounce never dims it, so typing does not flicker); no
+  chips while loading, waiting, failed or in an on-demand tier (the header caption then offers "Tokenize now"; a failed
+  row shows its error there too, and a failed load never holds up the other rows of the run). Empty text: "0 code points
+  · 0 bytes" and an empty row per lab ("0 tokens").
 
 ## 5. Inspector (AD-34)
 
-*PA-19: the inspector lives with the board in the Advanced disclosure; the header is sticky, and `html`'s `scroll-padding-block-start` counts it (plus the table's pinned header box while a table chip has focus), so a focus move never lands under it (WCAG 2.4.11).*
+*PA-19: the inspector lives with the board in the Advanced disclosure; the header is sticky, and `html`'s `scroll-padding-block-start` counts it, so a focus move never lands under it (WCAG 2.4.11). The table's chips, caption selects and buttons add the pinned header box's and scrollbar's heights as their `scroll-margin-block` (`--cmp-head-h` / `--cmp-foot-h`, kept current on `section#compare`), and a Tab or Shift+Tab that lands under either box scrolls the control into view, which the browser does not do for an element it counts as on screen.*
 
 **Surface by viewport width only** (the same rule as §1, §3.3, §3.5, §9): **≥ 1024 px** a panel in the side rail; **768–1023 px** an anchored panel beside the active cell (manual placement with flip; CSS anchor positioning when available — Chrome 125 / Firefox 147 / Safari 26, §7.2; `[popover]`-free); **< 768 px** a bottom sheet (`position: fixed`, collapsed 56 px, expanded 40 vh). Pointer type never changes the surface.
 
@@ -435,7 +445,7 @@ CSS custom properties on `:root` (light), redefined under `@media (prefers-color
 | `--cell`, `--gap` (2 px), `--row-h`, `--radius` (4 px), `--sheet-height` | per breakpoint (§3.3) | | layout; `--sheet-height` feeds `scroll-padding-block-end` (§5) |
 | `--dur-fast` 120 ms, `--dur` 200 ms, `--dur-slow` 350 ms, `--ease` `cubic-bezier(.2,0,0,1)` | | | motion |
 
-`pnpm -F @tsbs/ui-tokens check` (`check-contrast.mjs`, OKLab → sRGB → WCAG relative luminance, run in CI) asserts, in both themes: chip text (`--fg`) vs each of the 8 tints ≥ 4.5:1; `--border` vs each of the 16 tints and the 4 surfaces ≥ 3:1; the `--fg` hatch stripe vs its own tint ≥ 3:1; `--accent` vs each tint and surface ≥ 3:1 and vs `--bg` (the halo) ≥ 3:1; and, informationally (warning, not failure), adjacent tints ≥ 45° hue and ≥ 0.07 L apart. Approximate check with L ≈ ∛Y: light border L 0.50 vs tint L 0.83 → 3.55:1; dark border L 0.74 vs tint L 0.45 → 3.2:1; light accent L 0.50 vs tint L 0.83 → 3.55:1. The script's worst dark pairs (cool slate, PA-19) are all against `--tok-h3`: chip text and hatch 6.01:1, border 3.11:1, accent 4.00:1; `--fg-muted`, which the script does not cover (axe checks it in e2e), measures 4.90:1 on `--surface-3` and 7.86:1 on `--bg`. `prefers-contrast: more` makes borders 2 px `--fg` and keeps the tints; `forced-colors: active` maps to system colours (borders `CanvasText`, hatches `Highlight`).
+`pnpm -F @tsbs/ui-tokens check` (`check-contrast.mjs`, OKLab → sRGB → WCAG relative luminance, run in CI) asserts, in both themes: chip text (`--fg`) vs each of the 8 tints ≥ 4.5:1; `--border` vs each of the 16 tints and the 4 surfaces ≥ 3:1; the `--fg` hatch stripe vs its own tint ≥ 3:1; `--accent` vs each tint and surface ≥ 3:1 and vs `--bg` (the halo) ≥ 3:1; and, informationally (warning, not failure), adjacent tints ≥ 45° hue and ≥ 0.07 L apart. Approximate check with L ≈ ∛Y: light border L 0.50 vs tint L 0.83 → 3.55:1; dark border L 0.74 vs tint L 0.45 → 3.2:1; light accent L 0.50 vs tint L 0.83 → 3.55:1. The script's worst dark pairs (cool slate, PA-19) are all against `--tok-h3`: chip text and hatch 6.01:1, border 3.11:1, accent 4.00:1; `--fg-muted` as text, which the script does not cover (axe checks it in e2e), measures 4.90:1 on `--surface-3` and 7.86:1 on `--bg`. The script also asserts the comparison table's scrollbar thumb, `--fg-muted` on its `--surface-2` track, ≥ 3:1 (an author-styled control, WCAG 1.4.11; PA-19 review): 5.87:1 light, 6.23:1 dark. `prefers-contrast: more` makes borders 2 px `--fg` and keeps the tints; `forced-colors: active` maps to system colours (borders `CanvasText`, hatches `Highlight`).
 
 ## 12. Loading and empty states
 
@@ -471,5 +481,7 @@ PA-19: the strip shows the deduplicated union of the `requiredNotices` of every 
 table's five rows, and the board's tokenizer while Advanced is open — prominent legal notices first, then the other
 legal ones, then the explanatory ones (the first occurrence of a key wins); its label names up to three tokenizers,
 else counts them ("Notices for 5 tokenizers"). "Powered by xAI" is therefore visible by default and absent only when
-the xAI row shows Grok-1 and the board is not on Grok-2 (`shell-notices.spec.ts`). Before PA-19: while tokenizer T is
-selected, every key in `tokenizers.json[T].requiredNotices` renders in the notices strip above the footer, in the UI locale for explanatory text and verbatim for legal strings; the strip is never collapsed below 360 px (it wraps). `registry:check` guarantees each key has strings in all three locales; an E2E test asserts "Powered by xAI" is visible after selecting Grok-2 and absent after selecting o200k.
+the xAI row shows Grok-1 and the board is not on Grok-2 (`shell-notices.spec.ts`). A legal notice is a link of its own
+(the prominent ones heading-sized); an explanatory notice is plain muted text followed by its first link under that
+link's short label ("tiktoken MIT licence", "About and licences"), so the union reads lighter; none is collapsed.
+Before PA-19: while tokenizer T is selected, every key in `tokenizers.json[T].requiredNotices` renders in the notices strip above the footer, in the UI locale for explanatory text and verbatim for legal strings; the strip is never collapsed below 360 px (it wraps). `registry:check` guarantees each key has strings in all three locales; an E2E test asserts "Powered by xAI" is visible after selecting Grok-2 and absent after selecting o200k.

@@ -111,7 +111,7 @@ Each entry: **Decision** / Alternatives rejected / Rationale / Consequences.
 *Rejected:* performance's 26 px cells (contradicts its own ≥ 28×44 coarse-pointer rule); experience's 150/128 px rows (too few rows visible on a 360 px phone); the earlier 22 px byte tier and the `--cell/2` marker column (both below the 24 px minimum on coarse pointers).
 
 ### AD-19 Memory policy: strict one-resident
-**Decision.** Switching tokenizers posts `unload` first (tables nulled), then `load`; the UI keeps the last result on screen until the new engine answers. `RangeError` during build is reported as `error.code = 'oom'` with a retry/back action; a Worker **crash** (hard OOM) is respawned and the `load` replayed **once per tokenizer** — a second crash on the same tokenizer surfaces `oom` with the back action instead of looping. `heapHint` is `null` in browsers (no API without cross-origin isolation) and measured only in the Node bench; WP07's acceptance is "tables nulled before `load` is posted" (test hook) plus the Node heap delta. Idle `prefetch` (download + cache, no build) of the lab's secondary tokenizer runs when `navigator.connection` is **undefined** (Firefox, Safari — otherwise prefetch would never run there) **or** `effectiveType === '4g'`, and never when `saveData` is set. (amended by PA-19: the one-resident rule holds per Worker; the page runs one Worker per tokenizer on screen, at most six, and the idle prefetch of the other default rows starts 10 s after the load trigger unless Save-Data)
+**Decision.** Switching tokenizers posts `unload` first (tables nulled), then `load`; the UI keeps the last result on screen until the new engine answers. `RangeError` during build is reported as `error.code = 'oom'` with a retry/back action; a Worker **crash** (hard OOM) is respawned and the `load` replayed **once per tokenizer** — a second crash on the same tokenizer surfaces `oom` with the back action instead of looping. `heapHint` is `null` in browsers (no API without cross-origin isolation) and measured only in the Node bench; WP07's acceptance is "tables nulled before `load` is posted" (test hook) plus the Node heap delta. Idle `prefetch` (download + cache, no build) of the lab's secondary tokenizer runs when `navigator.connection` is **undefined** (Firefox, Safari — otherwise prefetch would never run there) **or** `effectiveType === '4g'`, and never when `saveData` is set. (amended by PA-19: the one-resident rule holds per Worker; the page runs one Worker per tokenizer on screen, at most six, and the idle prefetch of the other default rows starts 10 s after the board's tokenizer has loaded unless Save-Data)
 *Rejected:* experience's build-before-release (two residents momentarily; OOM risk on 3 GB phones); unbounded respawn.
 
 ### AD-20 Transport of results: struct-of-arrays, transferred
@@ -242,12 +242,13 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   bytes; a zero-width leading token (Grok-1's dummy prefix, BOS) takes one marker column shared by the whole table.
   Loading: o200k after first paint as before; the other rows' vocabularies on the first free-text edit (example texts
   are served from the precomputed files for all nine tokenizers, the default text inlined for the five default rows);
-  idle prefetch 10 s after the load trigger unless Save-Data; the loader's LRU keeps nine entries (03 §C.6 step 9:
-  "≤ 3" → "≤ 9, or ≤ 12 MiB"). Advanced is URL-driven: the writer emits `t` and `s` only while it is open and the page
-  opens it when either is present; row choices travel as `r=<id>,…` (secondary ids and `anthropic-api`) and persist
-  (`tsbs:rows`); the two chip toggles persist (`tsbs:chipText`, `tsbs:chipHatch`). The static first paint renders the
-  table (no board variants: one template per locale) from five inlined precomputed wires; the board and rail load as
-  a lazy chunk when Advanced opens. Dark theme "cool slate": bg `oklch(0.2 0.012 255)`, surfaces 0.24/0.285/0.35,
+  idle prefetch 10 s after the board's tokenizer has loaded (unless Save-Data); the loader's LRU keeps nine entries (03
+  §C.6 step 9: "≤ 3" → "≤ 9, or ≤ 12 MiB"). Advanced is URL-driven: the writer emits `t` and `s` only while it is open
+  and the page opens it when either is present; row choices travel as `r=<id>,…` (secondary ids and `anthropic-api`) and
+  persist (`tsbs:rows`); the two chip toggles persist (`tsbs:chipText`, `tsbs:chipHatch`). The static first paint
+  renders the table (no board variants: one template per locale) from five inlined precomputed wires; the board and rail
+  load as a lazy chunk when Advanced opens. Dark theme "cool slate": bg `oklch(0.2 0.012 255)`, surfaces
+  0.24/0.285/0.35,
   fg 0.94, fg-muted 0.74, border **0.74** (the owner's 0.60 fails AD-35's ≥ 3:1 border contract; 0.74 passes it with
   margin), accent `oklch(0.8 0.11 200)`, tints L 0.37/0.45 C 0.075; the 05 §11 dark column and AD-35's literals are
   amended to these. Notices: the union of `requiredNotices` across the tokenizers on screen, legal and prominent
@@ -260,7 +261,10 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   header is shared; alignment rests on the columns, a deviation from 05 §4's sliced char backgrounds); the table has no
   inspector (Enter opens the board at the same byte); xAI's API path stays in the drawer (no "Grok 4.x · API key" row
   mode); no `og:image` yet; under the ja UI, Han-only text resolves to `ja` (the owner asked for `auto`); the
-  `/__tsbs-index` is advisory across Workers.
+  `/__tsbs-index` is advisory across Workers; on overlay-scrollbar platforms (macOS by default, iOS, Android) the pinned
+  scrollbar shows its thumb only while the table scrolls, as every native scroller there does (the header caption's
+  scroll hint carries the cue; no custom-drawn thumb); a sideways flick that starts on the header box stops on release
+  (the rows and the scrollbar box fling natively).
   *Implemented* (WP1 cac2ee1, WP3 75e2361, WP2 on `pa19/default-view`, 2026-10-27): Main JS **76.40 kB** brotli of
   82.94 kB (81 KiB; 82.83 kB before WP2, 64.51 kB once the board, rail, inspector and motion director became the
   `lazy-AdvancedBoard` chunk and before the table), i18n chunk **9.46 kB** of 10.24 kB, CSS **14.90 kB** of 20.48 kB
@@ -279,13 +283,28 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   (no `column-gap`), so the table's chips and boxes are the board's; the header box clips (`overflow: hidden`) and is
   moved by the scroll controller, a sideways wheel or touch drag on it forwarded (axe `scrollable-region-focusable`); the
   table, not AppState, holds and requests its rows' hub entries (the board's wiring tests stay single-client), and a
-  row's whole-text result that the text has left is released at once; `scroll-padding-block-start` always counts the
-  sticky header (plus the pinned header box while a chip has focus); a row's select shows the short tokenizer name (the
-  display name without its parenthetical; the row's `aria-label` carries the full one); the row selects sit in DOM
-  order with the captions, around the grid's single tab stop; above 20,000 code points the header caption offers
+  row's whole-text result that the text has left is released at once; `scroll-padding-block-start` counts the sticky
+  header, and the table's chips, caption selects and buttons carry `scroll-margin-block` of the pinned header box's
+  and scrollbar's heights (kept current on the section), with a focusin check that scrolls a Tab or Shift+Tab landing
+  under either box into view; a row's select shows the short tokenizer name (the display name without its
+  parenthetical; the row's `aria-label` carries the full one); the row selects sit in DOM order with the captions,
+  around the grid's single tab stop; above 20,000 code points the header caption offers
   "Tokenize now" (the banner sits in the closed Advanced); `.frame` loses its max-width on every page (About's content
   keeps `.page`) and the board keeps its 05 §3.3 cap through `--board-max` on its own layout; the PA-17 two-line id rule
   counts the partial-character mark as sharing the chip only while its toggle is on.
+  *Review round 1* (2026-10-28, fixes on the same branch): a failed row load answers the requests that waited for it
+  (`error`, or `none` when cancelled) and the next load runs them, so the on-demand row run (`runRows`) never stalls on
+  a failed row, and a row error shows its action (Retry; Reload; Go back to the lab's primary); a stale row dims only
+  after 300 ms, so typing on live rows never dims them; the header caption holds the scroll hint's line in the static
+  paint (no layout shift on hydration at 360 px); captions read "k partial" (`compare.partial`, the long form for
+  assistive tech), no line ends on "·", and the legacy option reads "Claude 1/2 legacy"; focus that Tab or Shift+Tab
+  lands under the pinned boxes is scrolled clear (above); the pinned scrollbar sits above the bottom sheet and its thumb
+  is `--fg-muted` (5.87:1 light, 6.23:1 dark: a new `scrollbar` pair in check-contrast); the caption selects' border is
+  `--border`; the pinned header box draws a full `--border` bottom line (its shadow vanished on the dark background);
+  captions cap at the scroller's measured width (`--cmp-view`); explanatory notices read as muted text with a short
+  trailing link; the mock client answers the empty text with "0 tokens". Measured on the round's final build: Main JS
+  **76.85 kB** brotli, i18n chunk **9.51 kB**, CSS **14.91 kB**, `index.html` **8.60 kB** brotli-11 and 12,429 B at
+  zstd-3 (the reserved hint line and the long partial form are in the static paint); every other budget unchanged.
 
 ## D. Owner answers to the open questions (2026-10-25)
 
