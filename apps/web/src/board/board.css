@@ -474,6 +474,21 @@
   gap: 0;
 }
 
+/* The dummy prefix's id of ≥ 5 digits (Grok-1's 130089: `idLines`) on two 10 px lines over a 2 px bar, the shape its `▁`
+   (lower one eighth block) draws: 10 + 10 + 1 + 2 = 23 px inside the 24 px; 3 digits a line fit the 21 px of room at
+   the 27 px cell at full width (17.2 px). A border, not a background: forced colours keep it. */
+.bd-chip.marker .bd-id.two {
+  font-size: min(calc(10em / 12), calc(var(--id-room) / (var(--digits) * 0.429)));
+}
+
+.bd-chip.marker .bd-id.two ~ .bd-marker-text {
+  width: 70%;
+  height: 0;
+  margin-top: 1px;
+  border-top: 2px solid;
+  font-size: 0;
+}
+
 /* Byte-fallback pieces: the id (≤ 3 digits in every shipped vocabulary) over `<0xNN>`, which clips symmetrically in a
    1-column chip as it always has (its hex stays legible). */
 .bd-chip.byte-fallback {

@@ -3,7 +3,8 @@
  * backgrounds and hatched cuts, a partial token crossing a char boundary, full-column marker cells, the fused dummy
  * prefix, byte-fallback chips, USER_DEFINED locks, the SPECIAL badge, direct hits, grapheme brackets, stand-ins,
  * combining marks, the NFKC source row, the ids inside every chip (PA-17: two lines for a bare 1-column id of ≥ 5
- * digits, markers and byte-fallback chips included) and the `aria-label` templates in all three locales.
+ * digits and the dummy prefix's, markers and byte-fallback chips included) and the `aria-label` templates in all three
+ * locales.
  */
 import { buildResult } from '@tsbs/core/model/build-result';
 import { ChunkKind, TokenKind } from '@tsbs/core/model/result';
@@ -287,13 +288,31 @@ describe('token ids inside every chip (PA-17)', () => {
 
   it('gives zero-width markers and byte-fallback chips their ids (Grok-1 台灣台南)', () => {
     const [row] = cellsOf(caseResult('xai-grok1', 'zh-tw-tainan'), { K: 34 });
-    expect(row?.tokens[0]).toMatchObject({ variant: 'marker', id: 130089, digits: 6, idLines: null });
+    expect(row?.tokens[0]).toMatchObject({ variant: 'marker', id: 130089, digits: 6, idLines: ['130', '089'] });
     const pieces = row?.tokens.filter((cell) => cell.bytePiece !== null);
     expect(pieces?.map((cell) => [cell.bytePiece, cell.id, cell.digits, cell.idLines])).toEqual([
       ['<0xE7>', 300, 3, null],
       ['<0x81>', 198, 3, null],
       ['<0xA3>', 232, 3, null],
     ]);
+  });
+
+  it('sets the dummy prefix’s id of ≥ 5 digits on two lines over its bar; BOS ids and shorter ones keep one line', () => {
+    // Stop 6 and the live parts of stops 4–5 (the dummy prefix is a zero-width part there).
+    for (const options of [{ K: 9 }, { K: 9, stage: 5 as const, step: 1 }, { K: 9, stage: 4 as const }]) {
+      const [row] = cellsOf(caseResult('xai-grok1', 'zh-tw-tainan', { addBos: true }), options);
+      const markers = row?.tokens.filter((cell) => cell.variant === 'marker') ?? [];
+      expect(markers.find((cell) => cell.marker === 'dummy')).toMatchObject({ id: 130089, idLines: ['130', '089'] });
+      for (const bos of markers.filter((cell) => cell.marker === 'bos')) expect(bos.idLines).toBeNull();
+    }
+    // A BOS id of 6 digits keeps its single narrowed line: the chip's second line says BOS.
+    const [llama] = cellsOf(caseResult('meta-llama3', 'empty', { addBos: true }), { K: 9 });
+    expect(llama?.tokens).toMatchObject([{ variant: 'marker', marker: 'bos', id: 128000, digits: 6, idLines: null }]);
+    // A dummy prefix of 4 digits keeps its `▁`.
+    const short = caseResult('xai-grok1', 'zh-tw-tainan');
+    short.tokens.id[0] = 1234;
+    const [row] = cellsOf(short, { K: 9 });
+    expect(row?.tokens[0]).toMatchObject({ marker: 'dummy', id: 1234, digits: 4, idLines: null, markerText: '▁' });
   });
 
   it('always gives a live part its hex, so the stop-5 star never sits beside an id alone (motion.css)', () => {

@@ -10,7 +10,8 @@
  * - Chunk and token/part cells: one per fragment; fragments of a span share its index (one logical cell for the keyboard)
  *   and each references a visually hidden `frag-…` description; zero-width tokens are full-column marker cells (AD-25).
  *   Every chip with an id carries it inside, on every fragment and at any width (PA-17: no id line beneath): markers and
- *   byte-fallback chips over their `▁`/`BOS` or `<0xNN>`, and a bare 1-column chip's id of ≥ 5 digits on two lines.
+ *   byte-fallback chips over their `▁`/`BOS` or `<0xNN>`, and a bare 1-column chip's id of ≥ 5 digits on two lines (the
+ *   dummy prefix's too, over a bar).
  */
 import type { PartsAt, ResolvedTextLang, RowModel, TokenizationResult } from '@tsbs/core';
 import { TokenFlag, TokenKind } from '@tsbs/core/model/result';
@@ -241,8 +242,9 @@ export function digitsOf(id: number | null): number {
 
 /**
  * The two lines of a bare 1-column chip's id (PA-17, 05 §4): an id of ≥ 5 digits that has the chip to itself (`bare`:
- * no mark, lock, hatch, badge or text shares it) is split thousands-style, the last three digits on the second line, so
- * each line keeps the full size where one line would shrink to ~8 px; null otherwise. Same rule at every breakpoint.
+ * no mark, lock, hatch, badge or text shares it; the dummy-prefix marker counts as bare, its `▁` drawn as a 2 px bar
+ * under the lines) is split thousands-style, the last three digits on the second line, so each line keeps the full size
+ * where one line would shrink to ~8 px; null otherwise. Same rule at every breakpoint.
  */
 export function idLines(
   id: number | null,
@@ -481,7 +483,7 @@ function tokenCellsFinal(
       tint: -1,
       id,
       digits: digitsOf(id),
-      idLines: null,
+      idLines: idLines(id, digitsOf(id), 1, dummy), // BOS keeps one line: its text line says BOS
       hatchStart: false,
       hatchEnd: false,
       partial: false,
@@ -575,7 +577,7 @@ function tokenCellsParts(
         tint: -1,
         id,
         digits: digitsOf(id),
-        idLines: null,
+        idLines: idLines(id, digitsOf(id), 1, true), // the dummy prefix: its ▁ becomes a bar under two lines
         hatchStart: false,
         hatchEnd: false,
         partial: false,

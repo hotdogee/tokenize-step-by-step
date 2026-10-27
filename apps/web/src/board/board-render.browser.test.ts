@@ -1,10 +1,11 @@
 /**
  * Board component tests in chromium (06 §1 "Component"): the 05 §4.1 hard cases rendered from fixture results with DOM
  * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks
- * (≥ 2560 px scaling from --cell; the 12 px gap under the token tier) with every token id inside its chip (PA-17: narrowed,
- * then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits; markers and byte-fallback chips; the stop-5
- * star clear of the id), the APG grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
- * view mounted while scrolling), CSP-safe styling and axe.
+ * (≥ 2560 px scaling from --cell; the gap track under the token tier taking the room the row does not use) with every
+ * token id inside its chip (PA-17: narrowed, then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits;
+ * markers, the dummy prefix's compact two-line id and byte-fallback chips; a 1-column part's hex whole; the stop-5 star
+ * clear of the id, on chips of two or more columns only), the APG grid's ARIA indices, arithmetic virtualization of a
+ * 60k-byte synthetic result (≤ 15 rows in the DOM, every row in view mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import '../motion/motion.css';
@@ -738,6 +739,74 @@ describe('token ids inside every chip (PA-17)', () => {
         (chip.querySelector('.bd-id')?.getBoundingClientRect().bottom ?? 0) - 0.02,
       );
     }
+  });
+});
+
+describe('the dummy prefix’s compact id (PA-17)', () => {
+  afterEach(() => {
+    document.documentElement.dataset['cellSize'] = 'M';
+  });
+
+  const px = (value: string): number => Number.parseFloat(value);
+
+  for (const [width, size, cellSize] of [
+    [1280, 'S', 27],
+    [1280, 'M', 30],
+    [1440, 'M', 32],
+    [600, 'M', 36],
+  ] as const) {
+    it(`sets Grok-1’s 130089 on two 10 px lines over a 2 px bar inside the marker at the ${String(cellSize)} px cell`, async () => {
+      await page.viewport(width, 900);
+      const app = appWith(fixtureResult('xai-grok1', 'zh-tw-tainan'));
+      document.documentElement.dataset['cellSize'] = size;
+      mounted = await mountBoard(app);
+      await document.fonts.load('12px "TSBS Digits"', '0123456789');
+      await frames(2);
+      expect(cellPx()).toBe(cellSize);
+      const gridcell = cell(mounted, '[data-variant="marker"]');
+      expect(gridcell.getAttribute('aria-label')).toBe('dummy prefix, 0 bytes, id 130089');
+      const marker = gridcell.querySelector('.bd-chip') ?? gridcell;
+      const id = marker.querySelector('.bd-id.two');
+      const bar = marker.querySelector('.bd-marker-text');
+      if (id === null || bar === null) throw new Error('no two-line marker id over its bar');
+      const lines = [...id.children];
+      expect(lines.map((line) => line.textContent)).toEqual(['130', '089']);
+      expect(getComputedStyle(id).fontSize).toBe('10px');
+      expect(getComputedStyle(id).getPropertyValue('font-stretch')).toBe('100%');
+      // Inside the dotted 2 px border: both lines' digits and the bar, stacked in that order.
+      const rect = marker.getBoundingClientRect();
+      const pad = { left: rect.left + 2, right: rect.right - 2, top: rect.top + 2, bottom: rect.bottom - 2 };
+      expect(getComputedStyle(marker).borderTopWidth).toBe('2px');
+      const boxes = [...lines, bar].map((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const box = element.getBoundingClientRect();
+        const text = element === bar ? box : range.getBoundingClientRect();
+        return { left: text.left, right: text.right, top: box.top, bottom: box.bottom };
+      });
+      for (const box of boxes) {
+        expect(box.left).toBeGreaterThanOrEqual(pad.left - 0.02);
+        expect(box.right).toBeLessThanOrEqual(pad.right + 0.02);
+        expect(box.top).toBeGreaterThanOrEqual(pad.top - 0.02);
+        expect(box.bottom).toBeLessThanOrEqual(pad.bottom + 0.02);
+      }
+      const [upper, lower, line] = boxes;
+      expect(lower?.top ?? 0).toBeGreaterThanOrEqual((upper?.bottom ?? 0) - 0.02);
+      expect(line?.top ?? 0).toBeGreaterThanOrEqual((lower?.bottom ?? 0) - 0.02);
+      expect((line?.bottom ?? 0) - (line?.top ?? 0)).toBeCloseTo(2, 1);
+      expect((line?.right ?? 0) - (line?.left ?? 0)).toBeCloseTo(0.7 * (pad.right - pad.left), 0);
+      expect(px(getComputedStyle(bar).borderTopWidth)).toBe(2);
+      expect(px(getComputedStyle(bar).fontSize)).toBe(0);
+    });
+  }
+
+  it('keeps a BOS marker’s id on one line over BOS (Gemma 4 + BOS)', async () => {
+    await page.viewport(1440, 900);
+    mounted = await mountBoard(appWith(fixtureResult('google-gemma4', 'cjk-ext-g-biang', { addBos: true })));
+    const marker = cell(mounted, '[data-marker="bos"] .bd-chip');
+    expect(marker.querySelector('.bd-id.two')).toBeNull();
+    expect(marker.querySelector('.bd-marker-text')?.textContent).toBe('BOS');
+    expect(px(getComputedStyle(marker.querySelector('.bd-marker-text') ?? marker).fontSize)).toBeGreaterThan(0);
   });
 });
 
