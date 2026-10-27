@@ -586,34 +586,43 @@ describe('token ids inside every chip (PA-17)', () => {
     });
   }
 
-  it('keeps the stop-5 star clear of a just-merged 1-column fragment’s id, at the end of its hex line (o200k, 360 px, L)', async () => {
+  it('draws the stop-5 star only on a just-merged part’s fragments of two or more columns, clear of the id (o200k, 360 px, L)', async () => {
     await page.viewport(360, 780);
     const result = fixtureResult('openai-o200k_base', 'mixed-hello-taiwan-tokyo');
     const app = appWith(result, { stage: 5, step: 1 });
     const board = await showAt(app, 'L');
     await digitsLoaded();
     expect(board.grid.getAttribute('aria-colcount')).toBe('8');
-    // Step through the merges to the first whose part the row end cuts into a 1-column fragment, and mark it as the
-    // director does at stop 5 (data-just-merged on every fragment of the merged part).
+    // Step through the merges to the first whose part the row end cuts into a 1-column fragment and a wider one (step 4:
+    // 1 | 3 columns), and mark it as the director does at stop 5 (data-just-merged on every fragment of the merged part).
     const view = new TokenizationView(result);
-    let fragment: HTMLElement | undefined;
-    for (let step = 1; step <= view.stepCount && fragment === undefined; step++) {
+    let merged: HTMLElement[] = [];
+    for (let step = 1; step <= view.stepCount && merged.length === 0; step++) {
       app.step = step;
       flushSync();
       await frames(1);
-      const merged = cells(board, `[data-tier="token"][data-index="${String(view.partsAt(step).justMerged)}"]`);
-      fragment = merged.length > 1 ? merged.find((part) => part.getAttribute('aria-colspan') === '1') : undefined;
-      if (fragment !== undefined) for (const part of merged) part.dataset['justMerged'] = '';
+      const parts = cells(board, `[data-tier="token"][data-index="${String(view.partsAt(step).justMerged)}"]`);
+      const spans = parts.map((part) => Number(part.getAttribute('aria-colspan')));
+      if (spans.includes(1) && spans.some((span) => span >= 2)) merged = parts;
     }
+    for (const part of merged) part.dataset['justMerged'] = '';
     await frames(1);
-    const vis = fragment?.querySelector('.bd-chip') ?? null;
+    const narrow = merged.find((part) => part.getAttribute('aria-colspan') === '1');
+    const wide = merged.find((part) => Number(part.getAttribute('aria-colspan')) >= 2);
+    const vis = wide?.querySelector('.bd-chip') ?? null;
     const id = vis?.querySelector('.bd-id') ?? null;
     const line = vis?.querySelector('.bd-chip-line') ?? null;
-    if (vis === null || id === null || line === null) throw new Error('no just-merged 1-column fragment');
+    const narrowVis = narrow?.querySelector('.bd-chip') ?? null;
+    const narrowLine = narrowVis?.querySelector('.bd-chip-line') ?? null;
+    if (vis === null || id === null || line === null || narrowVis === null || narrowLine === null)
+      throw new Error('no just-merged part cut into a 1-column and a wider fragment');
+    // The 1-column fragment draws no star and keeps its whole line (the pulse outline still marks the cell).
+    expect(getComputedStyle(narrowVis, '::after').content).toBe('none');
+    expect(getComputedStyle(narrowLine).paddingRight).toBe('0px');
+    // The wider one carries the star, absolutely placed in the chip's padding box from its right and bottom.
     const pad = paddingBox(vis);
     const after = getComputedStyle(vis, '::after');
     expect(after.content).not.toBe('none');
-    // The star is absolutely placed in the chip's padding box from its right and bottom.
     const right = pad.right - px(after.right);
     const bottom = pad.bottom - px(after.bottom);
     const star: Box = { left: right - px(after.width), right, top: bottom - px(after.height), bottom };
@@ -623,6 +632,19 @@ describe('token ids inside every chip (PA-17)', () => {
     const lineBox = line.getBoundingClientRect();
     expect(lineBox.right - px(getComputedStyle(line).paddingRight)).toBeLessThanOrEqual(star.left);
     expectWithin(glyphRun(id), pad, 'id');
+  });
+
+  it('draws no star on just-merged byte-fallback pieces, whose <0xNN> fills their one column (Gemma 4 𰻝, stop 4)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('google-gemma4', 'cjk-ext-g-biang'), { stage: 4 });
+    const pieces = cells(board, '[data-tier="token"] .bd-chip.byte-fallback');
+    expect(pieces).toHaveLength(4);
+    for (const piece of pieces) if (piece.parentElement !== null) piece.parentElement.dataset['justMerged'] = '';
+    await frames(1);
+    for (const piece of pieces) {
+      expect(piece.parentElement?.className).toMatch(/\bs1\b/);
+      expect(getComputedStyle(piece, '::after').content).toBe('none');
+    }
   });
 
   it('shows a marker’s id over ▁ and a byte-fallback chip’s over <0xNN>, no icons (Grok-1 台灣台南, 1440 px)', async () => {
