@@ -237,3 +237,44 @@ test.describe('at 360 px without touch emulation (a shift then counts as CLS)', 
       expect(await page.evaluate(() => (window as unknown as { __shifts: unknown[] }).__shifts)).toEqual([]);
     });
 });
+
+test.describe('in a desktop window with a classic page scrollbar', () => {
+  // Playwright hides scrollbars (`--hide-scrollbars`), so the tests above never see a page scrollbar take room. A classic
+  // one (Windows, Linux) makes the table's scrollers narrower than 100vw: the captions' cap (compare.css, `100cqw`) must
+  // see that in the static paint already. The widths and locales where a viewport-based cap shifted on hydration.
+  for (const [width, locale] of [
+    [360, 'en'],
+    [360, 'ja'],
+    [375, 'zh-TW'],
+    [390, 'ja'],
+  ] as const)
+    test(`the static first paint (${locale}, ${String(width)} px) has no layout shift at all when the app takes over`, async ({
+      playwright,
+      baseURL,
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium', 'one run: the test launches its own chromium, scrollbars shown');
+      const browser = await playwright.chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
+      try {
+        const page = await browser.newPage({ baseURL, viewport: { width, height: 780 } });
+        await page.addInitScript(() => {
+          const w = window as unknown as { __shifts: Array<{ value: number; input: boolean }> };
+          w.__shifts = [];
+          new PerformanceObserver((list) => {
+            for (const entry of list.getEntries() as Array<
+              PerformanceEntry & { value: number; hadRecentInput: boolean }
+            >)
+              w.__shifts.push({ value: entry.value, input: entry.hadRecentInput });
+          }).observe({ type: 'layout-shift', buffered: true });
+        });
+        await page.goto(`/?lang=${locale}`);
+        const scrollbar = await page.evaluate(() => innerWidth - document.documentElement.clientWidth);
+        test.skip(scrollbar === 0, 'overlay scrollbars on this platform: no page scrollbar takes room');
+        await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
+        await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)));
+        expect(await page.evaluate(() => (window as unknown as { __shifts: unknown[] }).__shifts)).toEqual([]);
+      } finally {
+        await browser.close();
+      }
+    });
+});

@@ -140,8 +140,8 @@ describe('the default rows (台灣台南)', () => {
     await page.viewport(1280, 900);
     const { section } = await show('zh-tw-tainan');
     // Only what the mounted table measures afterwards, through the CSSOM (the static paint has no style at all:
-    // prerender.test.ts): the pinned boxes' heights for the focus scroll margins and the scroller's width.
-    expect([...section.style].sort()).toEqual(['--cmp-foot-h', '--cmp-head-h', '--cmp-view']);
+    // prerender.test.ts): the pinned boxes' heights for the focus scroll margins.
+    expect([...section.style].sort()).toEqual(['--cmp-foot-h', '--cmp-head-h']);
     expect(section.querySelectorAll('[style]')).toHaveLength(0);
     expect(section.className).toContain('k12');
     expect(['openai', 'anthropic', 'google', 'meta', 'xai'].map((lab) => chipsOf(section, lab).length)).toEqual([

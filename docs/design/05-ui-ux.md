@@ -315,14 +315,15 @@ App
   the same **column window** of at most 128 columns (the generated `.c1…c128` / `.s1…s128`, rebased to the window start;
   24 columns of overscan; the window moves only when the visible columns leave its inner part). A focus move to a chip
   off the window scrolls the table there first.
-- **Captions** (22 px, small text, sticky left, never wider than the rows' scroller): lab · tokenizer select (the lab's
-  tokenizers by their short names, "Claude 1/2 legacy" for the legacy vocabulary; Anthropic also "Claude 5.5 · API key")
-  · *N tokens* · *k partial* (the long "k partial-character tokens" for assistive tech) · fidelity badge unless
-  confirmed · "loading 43 %" / the error with its action (Retry; Reload; Go back to the lab's primary tokenizer, or
-  Retry when the row is on it) / "waiting for the tokenizer" · the visually hidden source badge. Each "·" travels with
-  the item after it, so a wrapped caption never ends a line on it. The header box's caption (code points · bytes ·
-  "scroll sideways for the rest of the text" while the table is wider than the screen) holds the hint's line in the
-  static first paint too (hidden while the table fits), so hydration moves nothing.
+- **Captions** (22 px, small text, sticky left, never wider than the rows' scroller — `100cqw` of the scroller, a size
+  container, so a classic page scrollbar narrows them in the static first paint too and hydration moves nothing): lab ·
+  tokenizer select (the lab's tokenizers by their short names, "Claude 1/2 legacy" for the legacy vocabulary; Anthropic
+  also "Claude 5.5 · API key") · *N tokens* · *k partial* (the long "k partial-character tokens" for assistive tech) ·
+  fidelity badge unless confirmed · "loading 43 %" / the error with its action (Retry; Reload; Go back to the lab's
+  primary tokenizer, or Retry when the row is on it) / "waiting for the tokenizer" · the visually hidden source badge.
+  Each "·" travels with the item after it, so a wrapped caption never ends a line on it. The header box's caption (code
+  points · bytes · "scroll sideways for the rest of the text" while the table is wider than the screen) holds the hint's
+  line in the static first paint too (hidden while the table fits), so hydration moves nothing.
 - **States.** A row draws its current result; while a loaded tokenizer encodes a new text, its last result, muted only
   once the answer has taken 300 ms (an answer inside the 40 ms debounce never dims it, so typing does not flicker); no
   chips while loading, waiting, failed or in an on-demand tier (the header caption then offers "Tokenize now"; a failed

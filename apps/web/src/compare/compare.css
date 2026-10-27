@@ -47,6 +47,14 @@
 
 /* ---- The three scrollers ---- */
 
+/* Both scrollers are inline-size containers: a caption (and the API note) is never wider than its scroller (`100cqw`),
+   which a classic page scrollbar makes narrower than the viewport — in the static first paint too, so hydration moves
+   nothing (PA-15). */
+.cmp-thead,
+.cmp-tbody {
+  container-type: inline-size;
+}
+
 .cmp-tbody {
   overflow-x: auto;
   overflow-y: hidden;
@@ -119,7 +127,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0 0.375rem;
-  max-width: calc(var(--cmp-view, 100vw) - 8px);
+  max-width: calc(100cqw - 8px);
   padding-inline: 6px 8px;
   background: var(--bg);
   color: var(--fg-muted);
@@ -303,7 +311,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.375rem 0.75rem;
-  max-width: calc(var(--cmp-view, 100vw) - 8px);
+  max-width: calc(100cqw - 8px);
   padding-inline: 6px 8px;
   color: var(--fg-muted);
   font-size: 0.875rem;
