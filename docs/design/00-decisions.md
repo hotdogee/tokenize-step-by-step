@@ -325,6 +325,14 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   unchanged; local Lighthouse (3 runs, report only) performance 0.99, accessibility 1, best practices 1, LCP 1,973 /
   1,969 / 1,968 ms, FCP 1,215 / 1,384 / 1,371 ms, TBT 15–16 ms, CLS 0, `other` 1,049,646 B (the o200k `.bin` alone),
   `document` 17,705 B (wrangler dev's gzip-only answer, informational).
+  *CI round* (2026-10-28, PR #2's first matrix run): a press never scrolls the table's focus into view — a mouse press
+  or a tap's compatibility `mousedown` focuses what is under the pointer, and revealing a button half under the pinned
+  scrollbar moved it before the release, so the click landed on the row and the drawer stayed closed (Linux WebKit,
+  iPhone 12: the Anthropic API row's "Live check…"); only Tab and Shift+Tab reveal. A `pointerover` at the position of
+  the mouse's last move (the page scrolling or re-rendering under a resting pointer) is no hover on the board, so a Tab
+  through the inspector at 320 px no longer hands it to the token chip a scroll brought under the pointer, whose
+  re-render dropped the focused copy button. Measured on the round's final build: Main JS **77.36 kB** brotli, i18n
+  chunk **9.54 kB**, CSS **14.93 kB**, `index.html` **8.58 kB** brotli-11; every other budget unchanged.
 
 ## D. Owner answers to the open questions (2026-10-25)
 
