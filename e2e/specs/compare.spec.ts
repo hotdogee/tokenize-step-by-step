@@ -96,10 +96,14 @@ test('the captions stay at the left edge while the rows scroll sideways, the hea
     )
     .toBeCloseTo(480, 0);
   const left = await table(page).evaluate((section) => section.getBoundingClientRect().left);
+  const width = page.viewportSize()?.width ?? 0;
   for (const lab of ['openai', 'anthropic', 'google', 'meta', 'xai']) {
     const caption = await row(page, lab).locator('.cmp-cap').boundingBox();
     expect(caption?.x, lab).toBeCloseTo(left, 0);
-    await expect(row(page, lab).locator('select')).toBeInViewport();
+    // The select stays within the viewport's width (the rows below the fold are off screen vertically, not sideways).
+    const select = await row(page, lab).locator('select').boundingBox();
+    expect(select?.x ?? -1, lab).toBeGreaterThanOrEqual(0);
+    expect((select?.x ?? 0) + (select?.width ?? Number.POSITIVE_INFINITY), lab).toBeLessThanOrEqual(width);
   }
   await expect(page.getByTestId('compare-head')).toContainText('scroll sideways for the rest of the text');
 });

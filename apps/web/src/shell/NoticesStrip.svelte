@@ -85,6 +85,13 @@
     min-width: 0;
   }
 
+  /* A notice is a link of its own, not a link inside running text: ≥ 24 px tall to tap (WCAG 2.5.8; PA-19 puts
+     "Powered by xAI" on the default view). */
+  a {
+    display: inline-block;
+    padding-block: 0.25rem;
+  }
+
   .headline {
     font-size: 1rem;
     font-weight: 700;
