@@ -201,6 +201,9 @@ test('a run asked for while the tokenizer loads is dropped once the text is shor
     else await route.continue();
   });
   await page.goto('/?lang=en');
+  // The vocabulary is held, so the live board never signals readiness: wait for hydration itself before typing, or the
+  // fill races main.ts's hydration task (which rewrites the textarea) and the typed text lands after the default example.
+  await expect(page.locator('#app')).toHaveAttribute('data-boot', /^(hydrated|mounted)$/);
   await setText(page, '台'.repeat(25_000), '25,000');
   await page.getByTestId('long-input-run').click();
   await expect(page.getByTestId('long-input-run')).toHaveAttribute('aria-busy', 'true');
