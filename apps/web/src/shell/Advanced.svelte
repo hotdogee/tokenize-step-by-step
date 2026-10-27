@@ -9,6 +9,9 @@
    *   space meanwhile, so the summary does not move;
    * - the options group: the options row (text language, special tokens, byte values, grapheme brackets, the two chip
    *   toggles), the counts line of the board's tokenizer, the long-input banner (lazy, on-demand tiers only) and Copy link.
+   *
+   * The body renders the first time the disclosure opens and stays (closed again, it is only hidden): a closed
+   * disclosure's controls are no part of the static first paint, whose compressed size the LHCI document budget caps.
    */
   import type AdvancedBoardComponent from '../board/AdvancedBoard.svelte';
   import CopyLink from '../app/CopyLink.svelte';
@@ -28,6 +31,12 @@
   }
   let { onpicker, onstale }: Props = $props();
   const app = appState();
+
+  /** The disclosure has been open: its body is rendered from then on. */
+  let opened = $state(false);
+  $effect.pre(() => {
+    if (app.advancedOpen) opened = true;
+  });
 
   let AdvancedBoard: typeof AdvancedBoardComponent | null = $state.raw(null);
   let boardImport = false;
@@ -73,26 +82,26 @@
     <span class="title">{i18n.t('advanced.label')}</span>
     <span class="sub prose">{i18n.t('advanced.summary')}</span>
   </summary>
-  <div class="body">
-    <section class="group" aria-labelledby="advanced-steps">
-      <h3 id="advanced-steps" class="group-title">{i18n.t('advanced.stepByStep')}</h3>
-      <div class="picker"><PickerButton onopen={onpicker} /></div>
-      {#if AdvancedBoard !== null}
-        <AdvancedBoard />
-      {:else}
-        <p class="loading" data-testid="advanced-loading">
-          {i18n.t('status.loading', { name: i18n.t('advanced.stepByStep') })}
-        </p>
-      {/if}
-    </section>
-    <section class="group" aria-labelledby="advanced-options">
-      <h3 id="advanced-options" class="group-title">{i18n.t('advanced.options')}</h3>
-      <OptionsRow />
-      <CountsLine />
-      {#if LongInputBanner !== null}<LongInputBanner />{/if}
-      <CopyLink />
-    </section>
-  </div>
+  {#if opened || app.advancedOpen}<div class="body">
+      <section class="group" aria-labelledby="advanced-steps">
+        <h3 id="advanced-steps" class="group-title">{i18n.t('advanced.stepByStep')}</h3>
+        <div class="picker"><PickerButton onopen={onpicker} /></div>
+        {#if AdvancedBoard !== null}
+          <AdvancedBoard />
+        {:else}
+          <p class="loading" data-testid="advanced-loading">
+            {i18n.t('status.loading', { name: i18n.t('advanced.stepByStep') })}
+          </p>
+        {/if}
+      </section>
+      <section class="group" aria-labelledby="advanced-options">
+        <h3 id="advanced-options" class="group-title">{i18n.t('advanced.options')}</h3>
+        <OptionsRow />
+        <CountsLine />
+        {#if LongInputBanner !== null}<LongInputBanner />{/if}
+        <CopyLink />
+      </section>
+    </div>{/if}
 </details>
 
 <style>

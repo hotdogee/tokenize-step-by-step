@@ -66,9 +66,11 @@ test('?mock=1 keeps the precomputed-examples client: chips answer, free text wai
   page.on('request', (request) => requests.push(new URL(request.url()).pathname));
   await page.goto('/?lang=en&mock=1');
   await expect(rowSource(page)).toHaveAttribute('data-source', 'live');
-  await expect(page.getByTestId('counts')).toContainText('4 tokens');
+  const openai = page.locator('[data-testid="compare"] [data-row="openai"]');
+  await expect(openai.locator('.cmp-cap')).toContainText('4 tokens');
   expect(requests.some((path) => path.startsWith('/tok/'))).toBe(false);
-  expect(requests.some((path) => /^\/examples\/openai-o200k_base\.[0-9a-f]+\.json$/.test(path))).toBe(true);
   await page.locator('#text-input').fill(TEXT);
-  await expect(page.getByTestId('counts')).toContainText('waiting for the tokenizer');
+  await expect(openai.getByTestId('row-status')).toHaveText('tokens: waiting for the tokenizer');
+  expect(requests.some((path) => /^\/examples\/openai-o200k_base\.[0-9a-f]+\.json$/.test(path))).toBe(true);
+  expect(requests.some((path) => path.startsWith('/tok/'))).toBe(false);
 });
