@@ -10,6 +10,7 @@
 
 .bd-grid {
   --src-h: 0px;
+  --extra-h: 0px;
   position: relative;
   width: calc(var(--k) * var(--cell));
   touch-action: pan-y pinch-zoom;
@@ -30,10 +31,10 @@
   display: grid;
   grid-template-rows:
     [source] var(--src-h) [bracket] 6px [char] 42px [bytes1] 26px [bytes2] 0 [chunk] 0
-    [token] 30px;
-  height: calc(var(--row-h) + var(--src-h));
+    [token] 30px [extra] var(--extra-h);
+  height: calc(var(--row-h) + var(--src-h) + var(--extra-h));
   content-visibility: auto;
-  contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h));
+  contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h) + var(--extra-h));
 }
 
 /* Rows holding the focused, pinned or just-merged cell (Board.svelte sets `data-keep`) always render: WebKit ignores
@@ -50,7 +51,7 @@
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] 48px [bytes1] 24px [bytes2] 0 [chunk] 14px
-      [token] 28px [gap] 12px;
+      [token] 28px [extra] var(--extra-h) [gap] 12px;
   }
 }
 
@@ -58,7 +59,7 @@
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] 56px [bytes1] 26px [bytes2] 0 [chunk] 16px
-      [token] 30px [gap] 12px;
+      [token] 30px [extra] var(--extra-h) [gap] 12px;
   }
 }
 
@@ -66,7 +67,7 @@
   .bd-row {
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] 55px [bytes1] 25px [bytes2] 25px [chunk] 15px
-      [token] 29px [gap] 12px;
+      [token] 29px [extra] var(--extra-h) [gap] 12px;
   }
 }
 
@@ -105,23 +106,16 @@
 }
 
 /*
- * The extra tier (extra-tier.svelte.ts; WP10's live token tier): while it applies, every packed row grows by one 32 px
- * decorative track at its bottom, a K-column grid like the tiers above it (Board.svelte's probe adds the same height).
+ * The extra tier (extra-tier.svelte.ts; WP10's live token tier): while it applies, every packed row grows by one
+ * decorative track right under its token tier, before the gap (`[extra]`: 32 px, from 2560 px the token cells' height
+ * + 9 px), a K-column grid like the tiers above it (Board.svelte's probe adds the same height).
  */
 .bd-grid.extra {
   --extra-h: 32px;
 }
 
-.bd-grid.extra .bd-row {
-  height: calc(var(--row-h) + var(--src-h) + var(--extra-h));
-  contain-intrinsic-size: auto calc(var(--k) * var(--cell)) auto calc(var(--row-h) + var(--src-h) + var(--extra-h));
-}
-
 .bd-extra {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: var(--extra-h);
+  grid-row: extra;
   display: grid;
   grid-template-columns: repeat(var(--k), var(--cell));
   align-items: center;
@@ -695,7 +689,11 @@
     grid-template-rows:
       [source] var(--src-h) [bracket] 6px [char] calc(var(--cell) + 22px) [bytes1] calc(var(--cell) / 2 + 8px)
       [bytes2] calc(var(--cell) / 2 + 8px) [chunk] calc(var(--cell) / 4 + 6px) [token] calc(var(--cell) * 0.75 + 6px)
-      [gap] 12px;
+      [extra] var(--extra-h) [gap] 12px;
+  }
+
+  .bd-grid.extra {
+    --extra-h: calc(var(--cell) * 0.75 + 9px);
   }
 
   .bd-cell-char {
