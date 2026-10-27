@@ -102,11 +102,12 @@ Caching: pnpm store (`pnpm-lock.yaml`), Playwright browsers (`~/.cache/ms-playwr
   },
   "routes": [{ "pattern": "tokens.hanlin.uk", "custom_domain": true }],
   "workers_dev": true,
-  "preview_urls": true
+  "preview_urls": true,
+  "previews": {}
 }
 ```
 
-Custom domain (owner decision 2026-10-26, WP13b): `tokens.hanlin.uk` on the `hanlin.uk` zone of the same account (research §6.2). CI's `wrangler deploy` creates the DNS record and certificate and binds it, which needs the zone permissions of §4's token; `workers_dev` stays `true` for the PR preview URLs and as the fallback. `PRODUCTION_URL` moves to `https://tokens.hanlin.uk` once a CI deploy has attached it (docs/release.md § Custom domain). `.assetsignore`: `*.map`, `.vite/`, `.DS_Store`, `Thumbs.db`.
+Custom domain (owner decision 2026-10-26, WP13b): `tokens.hanlin.uk` on the `hanlin.uk` zone of the same account (research §6.2). CI's `wrangler deploy` creates the DNS record and certificate and binds it, which needs the zone permissions of §4's token; `workers_dev` stays `true` for the PR preview URLs and as the fallback. `PRODUCTION_URL` moves to `https://tokens.hanlin.uk` once a CI deploy has attached it (docs/release.md § Custom domain). `.assetsignore`: `*.map`, `.vite/`, `.DS_Store`, `Thumbs.db`. `previews: {}` is what wrangler 4.15x requires before `wrangler preview --name pr-<n>` (the `preview` job) will publish a Preview; the block stays empty, since assets, compatibility settings and routes are read from the top level (found by PR #1, the first pull request).
 
 ## 6. `_headers` (`apps/web/public/_headers`; 5 path blocks / 12 header lines, limit 100 rules)
 
