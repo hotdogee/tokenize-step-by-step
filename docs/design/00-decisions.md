@@ -267,10 +267,10 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   (20 KiB kept: the 128 placement classes fit), `index.html` **8.36 kB** brotli-11 of 14.34 kB and 11,953 B at zstd-3
   (one template per locale with the five rows; the closed Advanced body renders on first open; before PA-19: 9.13 kB,
   12,862 B at zstd-3, with five board variants). Local Lighthouse (`pnpm lhci-local`, 3 runs, wrangler dev, report
-  only): performance 0.99, accessibility 1, best practices 1, FCP 1,215 / 1,376 / 1,373 ms, LCP 1,972 / 1,965 /
-  1,966 ms (the LCP element is still `p.why`), TBT 11–15 ms, CLS 0; `other` 1,049,646 B (≤ 1,100 KB): the trace holds
+  only): performance 0.99, accessibility 1, best practices 1, FCP 1,216 / 1,368 / 1,212 ms, LCP 1,975 / 1,969 /
+  1,968 ms (the LCP element is still `p.why`), TBT 9–12 ms, CLS 0; `other` 1,049,646 B (≤ 1,100 KB): the trace holds
   the o200k `.bin` alone — the idle prefetch of the other four default rows starts 10.2 s after load in a real browser,
-  after the trace (no 20 s delay needed); `document` 16,941 B there is wrangler dev's gzip-only answer (informational,
+  after the trace (no 20 s delay needed); `document` 17,143 B there is wrangler dev's gzip-only answer (informational,
   as before PA-19). Dark-theme contrast worst pairs (WP3, `check-contrast`):
   border 3.11:1, accent 4.00:1, chip text and hatch 6.01:1, fg-muted 4.90:1 on surface-3 — accent dark 0.75 → 0.80,
   dark border 0.74. WP2's own choices where the spec was silent or the measurements disagreed: the header box analyses
