@@ -264,6 +264,19 @@ for (const [width, height] of [
       await page.keyboard.press('Tab');
       await expect(page.getByTestId('row-select-google')).toBeFocused();
       await expectClear('Tab onto the Google select');
+      // A press on the pinned scrollbar focuses it (tabindex -1): the page must not move under the pointer.
+      await page.evaluate(() => {
+        const top = (document.getElementById('compare')?.getBoundingClientRect().top ?? 0) + window.scrollY;
+        window.scrollTo(0, top - 200);
+      });
+      const { bar } = await rects(page, { bar: '.cmp-sbar' });
+      expect(bar?.bottom ?? 0).toBeCloseTo(height, 0); // pinned to the bottom of the viewport
+      const before = await page.evaluate(() => window.scrollY);
+      await page.mouse.move(width / 2, (bar?.top ?? 0) + 2);
+      await page.mouse.down();
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+      expect(await page.evaluate(() => window.scrollY), 'a press on the pinned scrollbar').toBe(before);
+      await page.mouse.up();
     });
   });
 

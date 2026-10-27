@@ -340,11 +340,20 @@
   /**
    * Focus that lands under the pinned header box or the pinned scrollbar (a Tab, a Shift+Tab, a click at the edge): the
    * browser scrolls nothing it counts as on screen, sticky boxes or not, so the table scrolls it into view itself — its
-   * `scroll-margin-block` then clears both boxes (WCAG 2.4.11). The header box's own controls are never under it.
+   * `scroll-margin-block` then clears both boxes (WCAG 2.4.11). The header box's own controls are never under it, and the
+   * pinned scrollbar (`tabindex="-1"`: a press on it focuses it) is the box itself — scrolling it into view would move
+   * the page under the pointer that grabs it.
    */
   function revealFocused(event: FocusEvent): void {
     const target = event.target;
-    if (!(target instanceof HTMLElement) || thead === undefined || sbar === undefined || thead.contains(target)) return;
+    if (
+      !(target instanceof HTMLElement) ||
+      thead === undefined ||
+      sbar === undefined ||
+      thead.contains(target) ||
+      sbar.contains(target)
+    )
+      return;
     const rect = target.getBoundingClientRect();
     const header = document.querySelector('header')?.getBoundingClientRect().bottom ?? 0;
     if (
