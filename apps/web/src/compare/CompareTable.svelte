@@ -35,7 +35,7 @@
   import CompareHeader from './CompareHeader.svelte';
   import CompareRow from './CompareRow.svelte';
   import { nextWindow, type ColumnWindow } from './compare-window.ts';
-  import { rowState, type RowChoice } from './rows.svelte.ts';
+  import { rowState, runRows, type RowChoice } from './rows.svelte.ts';
   import { syncScroll, type ScrollSync } from './scroll-sync.ts';
   import '../board/grid-classes.css';
   import '../board/board.css';
@@ -119,17 +119,17 @@
     };
   });
 
-  // After the board's on-demand run: the rows on the same text, one after another (AD-27).
+  // After the board's on-demand run: the rows on the same text, one after another (AD-27); a failed row never holds up
+  // the next (its caption shows the error with its action).
   $effect(() => {
     const run = app.rowRun;
     if (run === null) return;
-    const ids = app.rows.visibleTokenizers();
-    void (async () => {
-      for (const id of ids) {
-        if (app.analysed !== run.text) return;
-        await app.hub.request(id, run.text, ROW_OPTIONS, { trace: false });
-      }
-    })();
+    void runRows(
+      app.rows.visibleTokenizers(),
+      run.text,
+      (id, text) => app.hub.request(id, text, ROW_OPTIONS, { trace: false }),
+      () => app.analysed === run.text,
+    );
   });
 
   // A whole-text result that no longer answers the text goes at once (AD-27, the 8 MiB rule per entry): in an on-demand

@@ -8,6 +8,7 @@
 import type { TokenizationResult, TokenizerId } from '@tsbs/core';
 import type { Lab, TokenizerEntry } from '@tsbs/registry';
 import { TOKENIZERS } from '../app/registry.ts';
+import type { HubAnswer } from '../app/result-hub.svelte.ts';
 import { readStored, removeStored, STORAGE_KEYS, writeStored } from '../app/storage.ts';
 
 /** The Anthropic row's API-key mode (05 §13: current Claude models count tokens through the API only). */
@@ -119,7 +120,8 @@ export class CompareRows {
  * What a row draws: `current` (its result answers the analysed text), `stale` (the last result, kept muted while a loaded
  * tokenizer encodes the new text: one render per keystroke, as the board does), `loading` (its tokenizer loads; the
  * caption says how far), `waiting` (no result yet, nothing loading), `onDemand` (an on-demand tier waits for "Tokenize
- * now", AD-27), `error` (the caption shows it with a retry) or `api` (the Anthropic API-key mode).
+ * now", AD-27), `error` (the caption shows it with its action, in an on-demand tier too) or `api` (the Anthropic API-key
+ * mode).
  */
 export type RowState = 'current' | 'stale' | 'loading' | 'waiting' | 'onDemand' | 'error' | 'api';
 
@@ -140,8 +142,25 @@ export interface RowStateInput {
 export function rowState(input: RowStateInput): RowState {
   if (input.api) return 'api';
   if (input.result?.input.text === input.text) return 'current';
-  if (input.onDemand) return 'onDemand';
   if (input.failed) return 'error';
+  if (input.onDemand) return 'onDemand';
   if (input.result !== null && input.loaded) return 'stale';
   return input.loading ? 'loading' : 'waiting';
+}
+
+/**
+ * The rows' part of an on-demand run (AD-27): `request` for each of `ids` on `text`, one after another, so no two rows'
+ * whole-text results arrive at once, while `current()` holds (the text has not moved on). Every hub request settles — a
+ * result, an error (a failed load included) or `none` — so a row that fails never holds up the rows after it.
+ */
+export async function runRows(
+  ids: readonly TokenizerId[],
+  text: string,
+  request: (id: TokenizerId, text: string) => Promise<HubAnswer>,
+  current: () => boolean,
+): Promise<void> {
+  for (const id of ids) {
+    if (!current()) return;
+    await request(id, text);
+  }
 }

@@ -3,14 +3,14 @@
    * One lab's row of the comparison table (PA-19, 05 §4): a caption line pinned to the left edge — the lab, the row's
    * tokenizer `<select>` (the lab's tokenizers; Anthropic also "Claude 5.5 · API key"), the token count, the
    * partial-character count, the fidelity badge when it is not "confirmed", the loading progress or the error with its
-   * retry, and a visually hidden source badge (`span[data-source]`: precomputed · live · pending) — then the chips, an
+   * action (Retry; Reload; back to the lab's primary tokenizer), and a visually hidden source badge (`span[data-source]`: precomputed · live · pending) — then the chips, an
    * ARIA row of the table's grid (`cmp-row-<lab>`, owned through `aria-owns`; the caption with its select stays outside
    * the grid). In the API mode there are no chips: a note and the "Live check…" button instead (no boundaries, 05 §13).
    */
   import type { ResolvedTextLang, TokenizationResult } from '@tsbs/core';
   import type { TokenizerEntry } from '@tsbs/registry';
   import { appState } from '../app/context.ts';
-  import { errorView } from '../app/errors.ts';
+  import { errorView, type ErrorAction } from '../app/errors.ts';
   import { DEFAULT_TOKENIZER, tokenizerEntry } from '../app/registry.ts';
   import type { HubEntry } from '../app/result-hub.svelte.ts';
   import { answers } from '../byok/live-state.svelte.ts';
@@ -84,11 +84,27 @@
         }),
   );
   const source = $derived(state === 'current' ? (hub?.source ?? 'precomputed') : 'pending');
+  const onPrimary = $derived(choice === row.primary.id);
   const error = $derived(
     state === 'error' && hub?.error !== null && hub?.error !== undefined
-      ? errorView(hub.error, (id) => tokenizerEntry(id).displayName[i18n.current], DEFAULT_TOKENIZER)
+      ? errorView(
+          hub.error,
+          (id) => tokenizerEntry(id).displayName[i18n.current],
+          onPrimary ? DEFAULT_TOKENIZER : row.primary.id,
+        )
       : null,
   );
+  /** The error's action on this row: back is the lab's primary tokenizer, and on the primary already a retry. */
+  const action: ErrorAction | null = $derived(
+    error?.action === 'back' && onPrimary ? 'retry' : (error?.action ?? null),
+  );
+  const ACTION_LABEL = { retry: 'action.retry', reload: 'action.reload', back: 'action.back' } as const;
+
+  function act(): void {
+    if (action === 'reload') location.reload();
+    else if (action === 'back') onselect(row.lab, row.primary.id);
+    else app.retryRow(row.lab);
+  }
   const status = $derived.by(() => {
     if (state === 'loading' && hub?.progress !== null && hub?.progress !== undefined)
       return i18n.t('compare.loading', { percent: formatPercent(progressPercent(hub.progress) / 100, i18n.current) });
@@ -137,13 +153,9 @@
             >{/if}
         {:else}
           <span data-testid="row-status">{status}</span>
-          {#if error?.action === 'retry'}
-            <button
-              type="button"
-              class="btn btn-quiet"
-              onclick={() => {
-                app.retryRow(row.lab);
-              }}>{i18n.t('action.retry')}</button
+          {#if action !== null}
+            <button type="button" class="btn btn-quiet" data-testid="row-action" data-action={action} onclick={act}
+              >{i18n.t(ACTION_LABEL[action])}</button
             >
           {/if}
         {/if}

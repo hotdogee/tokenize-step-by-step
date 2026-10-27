@@ -232,22 +232,43 @@ describe('ResultHub: errors', () => {
     expect(hub.entry(O200K).error).toBeNull();
   });
 
-  it('shows a load error on the tokenizer’s entries until a retried load succeeds; the waiting request then runs', async () => {
+  it('answers the requests a failed load held with its error; a retried load still serves the text asked for', async () => {
     const { hub, clients } = setup();
     hub.start();
     const request = hub.request(GROK2, 'free', ROW_OPTIONS, { trace: false });
     await flush();
     const client = clients.of(GROK2);
     client.loads[0]?.reject(failure('fetch', true));
-    await flush();
+    await expect(request).resolves.toMatchObject({ kind: 'error', error: { code: 'fetch' } });
     expect(hub.entry(GROK2).error).toMatchObject({ code: 'fetch', retryable: true, phase: 'load' });
-    expect(hub.entry(GROK2).pending).toBe(true);
+    expect(hub.entry(GROK2).pending).toBe(false);
     const retry = hub.load(GROK2);
     expect(hub.entry(GROK2).error).toBeNull();
     client.loads[1]?.finish();
     await retry;
+    expect(hub.entry(GROK2).pending).toBe(true);
     client.encodes[0]?.answer();
-    expect(resultOf(await request)).toBe('free');
+    await flush();
+    expect(hub.entry(GROK2)).toMatchObject({ source: 'live', pending: false, error: null });
+    expect(hub.entry(GROK2).result?.input.text).toBe('free');
+  });
+
+  it('answers a request whose load was cancelled with none, and one whose engine failed to import with the error', async () => {
+    const { hub, clients } = setup();
+    hub.start();
+    const cancelled = hub.request(GROK2, 'free', ROW_OPTIONS, { trace: false });
+    await flush();
+    clients.of(GROK2).loads[0]?.reject(new CancelledError());
+    await expect(cancelled).resolves.toEqual({ kind: 'none' });
+    expect(hub.entry(GROK2)).toMatchObject({ pending: false, error: null });
+
+    const broken = new ResultHub({ precomputed: null, engine: () => Promise.reject(new Error('chunk 404')) });
+    broken.start();
+    await expect(broken.request(GROK2, 'free', ROW_OPTIONS, { trace: false })).resolves.toMatchObject({
+      kind: 'error',
+      error: { code: 'fetch' },
+    });
+    expect(broken.entry(GROK2)).toMatchObject({ pending: false, error: { code: 'fetch', phase: 'load' } });
   });
 
   it('shows the text alone (no result, no error) when ?mock=1 has no answer for free text', async () => {

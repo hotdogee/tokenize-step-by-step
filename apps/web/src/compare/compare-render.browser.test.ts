@@ -3,7 +3,7 @@
  * safe), the column window of the zh-TW paragraph (rebased placement, cells outside it absent), the three scrollers in
  * step with the captions pinned left, every id inside its chip (PA-17, with Linux's whole-pixel advances), the grid's
  * ARIA (counts, `aria-owns`, axe), the keyboard (↑/↓ by byte, End, Enter opens Advanced on the row's tokenizer, Esc),
- * the chip toggles, the Anthropic API row and the marker column of Grok-1's dummy prefix.
+ * the chip toggles, the Anthropic API row, the marker column of Grok-1's dummy prefix and a failed row's action.
  */
 import '../theme/base.css';
 import axe from 'axe-core';
@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import type { TokenizationResult, TokenizerId } from '@tsbs/core';
 import { AppState } from '../app/app-state.svelte.ts';
-import { hubOf } from '../app/fake-client.test-helper.ts';
+import { FakeClients, flush, hubOf } from '../app/fake-client.test-helper.ts';
 import { fixtureResult, frames, idleClient } from '../board/board.test-helper.ts';
 import { EXAMPLES } from '../app/registry.ts';
 import { preferences } from '../shell/preferences.svelte.ts';
@@ -52,7 +52,11 @@ afterEach(() => {
 async function show(caseName: string): Promise<Mounted> {
   const seeds: TokenizationResult[] = TOKENIZERS.map((id) => fixtureResult(id, caseName));
   const text = EXAMPLES.find((chip) => chip.fixtureCase === caseName)?.text ?? '';
-  const app = new AppState(hubOf(idleClient(), { seeds }), { text });
+  return showApp(new AppState(hubOf(idleClient(), { seeds }), { text }));
+}
+
+/** Mounts the table over `app`. */
+async function showApp(app: AppState): Promise<Mounted> {
   const target = document.createElement('div');
   document.body.append(target);
   const component = mount(CompareHarness, { target, props: { app } });
@@ -297,5 +301,38 @@ describe('the zh-TW paragraph (1,245 bytes)', () => {
     scroller(section, 'sbar').scrollLeft = 120;
     await frames(3);
     expect(body.scrollLeft).toBeCloseTo(120, 0);
+  });
+});
+
+describe('a row whose tokenizer fails to load', () => {
+  const failure = (code: string, retryable = false): Error => Object.assign(new Error(code), { code, retryable });
+
+  it('shows the error with its action: Reload, Retry, or back to the lab’s primary tokenizer', async () => {
+    await page.viewport(1280, 900);
+    const clients = new FakeClients();
+    const { app, section } = await showApp(new AppState(hubOf(clients.spawn), { text: 'free', rows: ['meta-llama3'] }));
+    await new Promise((resolve) => setTimeout(resolve, 60)); // the rows ask after the board's debounce
+    app.hub.start();
+    await flush();
+    clients.of('xai-grok2').loads[0]?.reject(failure('fetch')); // a 404 after a deploy
+    clients.of('google-gemma4').loads[0]?.reject(failure('oom')); // on the primary: nothing to go back to
+    clients.of('meta-llama3').loads[0]?.reject(failure('oom'));
+    await flush();
+    flushSync();
+    const action = (lab: string): HTMLButtonElement | null =>
+      section.querySelector<HTMLButtonElement>(`[data-row="${lab}"] [data-testid="row-action"]`);
+    expect(action('xai')?.dataset['action']).toBe('reload');
+    expect(action('xai')?.textContent).toBe('Reload');
+    expect(action('google')?.dataset['action']).toBe('retry');
+    expect(action('meta')?.dataset['action']).toBe('back');
+    expect(section.querySelector('[data-row="meta"] [data-testid="row-status"]')?.textContent).toContain('try Llama 4');
+    expect(action('openai')).toBeNull(); // still loading
+    action('meta')?.click();
+    flushSync();
+    expect(section.querySelector<HTMLElement>('[data-row="meta"]')?.dataset['tokenizer']).toBe('meta-llama4-muse');
+    expect(app.rows.nonDefault()).toEqual([]);
+    action('google')?.click(); // Retry loads again
+    await flush();
+    expect(clients.of('google-gemma4').loads).toHaveLength(2);
   });
 });

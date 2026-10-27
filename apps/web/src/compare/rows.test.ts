@@ -1,7 +1,14 @@
-/** The comparison table's rows (PA-19): defaults, the stored choices, the `r=` round trip and the visible tokenizers. */
+/**
+ * The comparison table's rows (PA-19): defaults, the stored choices, the `r=` round trip and the visible tokenizers; a
+ * row's state (an error shows in an on-demand tier too); the on-demand run's rows, where a failed row never holds up the
+ * next.
+ */
+import type { TokenizerId } from '@tsbs/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FakeClients, flush, hubOf, syntheticResult } from '../app/fake-client.test-helper.ts';
+import { ROW_OPTIONS } from '../app/result-hub.svelte.ts';
 import { parseUrlState, urlFor, type UrlSnapshot } from '../app/url-state.ts';
-import { ANTHROPIC_API, CompareRows, LAB_ROWS, ROW_CHOICES } from './rows.svelte.ts';
+import { ANTHROPIC_API, CompareRows, LAB_ROWS, ROW_CHOICES, rowState, runRows } from './rows.svelte.ts';
 
 const store = new Map<string, string>();
 beforeEach(() => {
@@ -84,5 +91,87 @@ describe('CompareRows', () => {
     const parsed = parseUrlState(`${url.search},nope,meta-llama3`, ['openai-o200k_base'], ROW_CHOICES);
     expect(parsed.rows).toEqual(['openai-cl100k_base', 'meta-llama3']);
     expect(new CompareRows(parsed.rows).nonDefault()).toEqual(['openai-cl100k_base', 'meta-llama3']);
+  });
+});
+
+describe('rowState', () => {
+  const base = { api: false, result: null, text: 'b', loaded: false, loading: false, failed: false, onDemand: false };
+  const result = syntheticResult('a', 'xai-grok2');
+
+  it('draws the current result, a loaded tokenizer’s last one while it encodes, else waits', () => {
+    expect(rowState({ ...base, result: syntheticResult('b', 'xai-grok2') })).toBe('current');
+    expect(rowState({ ...base, result, loaded: true })).toBe('stale');
+    expect(rowState({ ...base, result, loading: true })).toBe('loading');
+    expect(rowState(base)).toBe('waiting');
+    expect(rowState({ ...base, api: true })).toBe('api');
+  });
+
+  it('shows a failed row’s error with its action, in an on-demand tier too', () => {
+    expect(rowState({ ...base, failed: true, result, loaded: true })).toBe('error');
+    expect(rowState({ ...base, failed: true, onDemand: true })).toBe('error');
+    expect(rowState({ ...base, onDemand: true })).toBe('onDemand');
+  });
+});
+
+describe('runRows (the on-demand run’s rows, AD-27)', () => {
+  const LONG = '長'.repeat(30);
+  const GROK2: TokenizerId = 'xai-grok2';
+  const GEMMA4: TokenizerId = 'google-gemma4';
+  const failure = Object.assign(new Error('network'), { code: 'fetch', retryable: true });
+
+  it('asks for the rows one after another, and a row whose load fails does not hold up the next', async () => {
+    const clients = new FakeClients();
+    const hub = hubOf(clients.spawn);
+    hub.start();
+    const asked: TokenizerId[] = [];
+    let finished = false;
+    void runRows(
+      [GROK2, GEMMA4],
+      LONG,
+      (id, text) => {
+        asked.push(id);
+        return hub.request(id, text, ROW_OPTIONS, { trace: false });
+      },
+      () => true,
+    ).then(() => {
+      finished = true;
+    });
+    await flush();
+    expect(asked).toEqual([GROK2]); // one after another
+    clients.of(GROK2).loads[0]?.reject(failure);
+    await flush();
+    expect(asked).toEqual([GROK2, GEMMA4]);
+    expect(hub.entry(GROK2)).toMatchObject({ pending: false, error: { code: 'fetch', phase: 'load' } });
+    const gemma = clients.of(GEMMA4);
+    gemma.loads[0]?.finish();
+    await flush();
+    gemma.encodes[0]?.answer();
+    await flush();
+    expect(finished).toBe(true);
+    expect(hub.entry(GEMMA4).result?.input.text).toBe(LONG);
+    // The failed row's Retry (a load again) still runs the text the run asked for.
+    const retry = hub.load(GROK2);
+    clients.of(GROK2).loads[1]?.finish();
+    await retry;
+    clients.of(GROK2).encodes[0]?.answer();
+    await flush();
+    expect(hub.entry(GROK2)).toMatchObject({ source: 'live', error: null });
+    expect(hub.entry(GROK2).result?.input.text).toBe(LONG);
+  });
+
+  it('stops once the text has moved on', async () => {
+    const asked: TokenizerId[] = [];
+    let current = true;
+    await runRows(
+      [GROK2, GEMMA4],
+      LONG,
+      (id) => {
+        asked.push(id);
+        current = false;
+        return Promise.resolve({ kind: 'none' });
+      },
+      () => current,
+    );
+    expect(asked).toEqual([GROK2]);
   });
 });

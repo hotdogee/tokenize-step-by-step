@@ -169,7 +169,10 @@ class Engine implements HubEngine {
     return pool;
   }
 
-  /** The tokenizer is resident: requests waiting for it, and precomputed answers of what was asked, go live. */
+  /**
+   * The tokenizer is resident: requests waiting for it, precomputed answers of what was asked, and requests a failed load
+   * answered (`retry`: a retried load serves them) go live.
+   */
   #loaded(lane: HubLane): void {
     if (!lane.resident) return;
     for (const entry of lane.entries) {
@@ -179,7 +182,10 @@ class Engine implements HubEngine {
         continue;
       }
       const wanted = entry.wanted;
-      if (wanted === null || entry.source !== 'precomputed' || entry.result?.input.text !== wanted.text) continue;
+      if (wanted === null) continue;
+      const shown = entry.result?.input.text === wanted.text;
+      if (shown ? entry.source !== 'precomputed' : !entry.retry) continue;
+      entry.retry = false;
       entry.ticket = ticketFor(wanted.text, wanted.trace, entry.generation);
       entry.pending = true;
       this.post(entry);

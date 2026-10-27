@@ -18,8 +18,10 @@
  * - **Loads.** Nothing loads before `start()` (06 §3: after first paint) except an explicit `load(id)` (the board's
  *   tokenizer, AppState). Then a tokenizer loads when a request for it has no precomputed answer (the first free-text
  *   edit), when `ensureRows` asks for it (a row switched to it), or when `load` does; when it is loaded, entries that wait
- *   for it, or show its precomputed result for the text they asked for, are encoded live. `prefetchIdle` downloads more
- *   vocabularies into the Cache API only (no engine) a while after the load trigger, unless Save-Data is on.
+ *   for it, or show its precomputed result for the text they asked for, are encoded live. A failed load answers the
+ *   requests that waited for it (`error`; `none` when it was cancelled) and the next load runs them. `prefetchIdle`
+ *   downloads more vocabularies into the Cache API only (no engine) a while after the load trigger, unless Save-Data is
+ *   on.
  * - **Memory (AD-27).** A view `retain`s the entries it shows and `release`s them; an entry nobody holds drops its result,
  *   and a Worker nobody holds may be evicted. A request whose result may exceed 8 MB releases the entry's previous result
  *   first, and `forget` drops an entry's result (and any answer still on its way) at once.
@@ -37,7 +39,7 @@ import type {
   TokenizationResult,
   TokenizerId,
 } from '@tsbs/core';
-import { toUiError, type UiError } from './errors.ts';
+import { isCancelledError, toUiError, type UiError } from './errors.ts';
 import { estimatedResultBytes, RELEASE_ABOVE_BYTES, utf8ByteLength } from './long-input.ts';
 import type { PrecomputedSource } from './precomputed.ts';
 import { tokenizerEntry } from './registry.ts';
@@ -122,6 +124,8 @@ export interface HubEntryState {
   ticket: Ticket | null;
   pending: boolean;
   ownError: UiError | null;
+  /** A failed load answered the request for `wanted`: the next load runs it. */
+  retry: boolean;
 }
 
 /** What the engine calls back. */
@@ -215,6 +219,7 @@ class Entry implements HubEntry, HubEntryState {
   ticket: Ticket | null = null;
   /** The text and trace last asked for (a precomputed answer of it is encoded live once the tokenizer loads). */
   wanted: { readonly text: string; readonly trace: Trace } | null = null;
+  retry = false;
 
   constructor(lane: Lane, options: TokenOptions) {
     this.id = lane.id;
@@ -315,6 +320,7 @@ export class ResultHub {
       entry.pending = false;
       entry.traced = false;
       entry.ownError = null;
+      entry.retry = false;
     }
     this.#engine?.hold(entry.lane);
   }
@@ -335,18 +341,27 @@ export class ResultHub {
     this.#deferred.clear();
   }
 
-  /** Loads `id` in its own Worker (shared with a load in flight); rejects with the client's error (also `progress`/`error`). */
+  /**
+   * Loads `id` in its own Worker (shared with a load in flight); rejects with the client's error (also `progress`/`error`),
+   * after answering the requests that waited for it.
+   */
   load(id: TokenizerId, onProgress?: (progress: Progress) => void): Promise<LoadedInfo> {
     const lane = this.#laneOf(id);
     const engine = this.#engineNow();
-    if (!(engine instanceof Promise)) return engine.load(lane, onProgress);
-    return engine.then(
-      (installed) => installed.load(lane, onProgress),
-      (error: unknown) => {
-        lane.error = toUiError(error, id, null, 'load');
-        throw error;
-      },
-    );
+    const loading =
+      engine instanceof Promise
+        ? engine.then(
+            (installed) => installed.load(lane, onProgress),
+            (error: unknown) => {
+              lane.error = toUiError(error, id, null, 'load');
+              throw error;
+            },
+          )
+        : engine.load(lane, onProgress);
+    loading.catch((error: unknown) => {
+      this.#loadFailed(lane, error);
+    });
+    return loading;
   }
 
   /** Loads the rows' tokenizers now (a row switched to them, PA-19), or once the hub is started. */
@@ -385,6 +400,7 @@ export class ResultHub {
     entry.wanted = { text, trace };
     const current = entry.ticket;
     if (current !== null && current.text === text && covers(current.trace, trace)) return current.promise;
+    entry.retry = false;
     const shown = entry.result;
     if (
       shown?.input.text === text &&
@@ -467,6 +483,24 @@ export class ResultHub {
     if (ticket === null || ticket.settled) return;
     ticket.settled = true;
     ticket.settle(NONE);
+  }
+
+  /**
+   * A load of the lane failed: the requests that waited for it are answered — `error` (on the lane: the rows and the
+   * board show it with its action), `none` when the load was cancelled — and run with the next load (`retry`), so no
+   * caller waits for a load that will not come (a row of the on-demand run never holds up the next one).
+   */
+  #loadFailed(lane: Lane, error: unknown): void {
+    const answer: HubAnswer = isCancelledError(error) ? NONE : { kind: 'error', error };
+    for (const entry of lane.entries) {
+      const ticket = entry.ticket;
+      if (ticket === null || ticket.settled || !ticket.waiting) continue;
+      ticket.settled = true;
+      entry.ticket = null;
+      entry.pending = false;
+      entry.retry = true;
+      ticket.settle(answer);
+    }
   }
 
   #post(entry: Entry): void {
