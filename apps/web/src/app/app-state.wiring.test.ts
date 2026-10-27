@@ -652,6 +652,22 @@ describe('error recovery (05 §12)', () => {
     expect(app.tokenizer).toBe(DEFAULT_TOKENIZER);
   });
 
+  it('reports a failed load as a load error (with its back action) while a free-text request waits for it', async () => {
+    const clients = new FakeClients();
+    const app = await loadedApp(clients);
+    app.setText('free text', true);
+    await flush();
+    const select = app.selectTokenizer('meta-llama3'); // free text: the board's request waits for the load
+    await flush();
+    clients.of('meta-llama3').loads[0]?.reject(failure('oom'));
+    await select;
+    await flush();
+    const error = app.error;
+    expect(error).toMatchObject({ code: 'oom', tokenizer: 'meta-llama3', previous: 'openai-o200k_base' });
+    if (error === null) throw new Error('no error');
+    expect(errorView(error, name, DEFAULT_TOKENIZER)).toMatchObject({ key: 'error.oom', action: 'back' });
+  });
+
   it('runs a run asked for before a failed load once Retry loads the tokenizer', async () => {
     const client = new FakeClient();
     const app = new AppState(hubOf(client, { seeds: [defaultResults()[DEFAULT_TOKENIZER]!] }));

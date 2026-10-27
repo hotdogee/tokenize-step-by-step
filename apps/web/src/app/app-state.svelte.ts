@@ -366,7 +366,8 @@ export class AppState {
 
   /**
    * Asks the hub for the board's result of `text` (its precomputed answer while the tokenizer loads, else the engine's)
-   * and shows the answer when it is still the latest request's.
+   * and shows the answer when it is still the latest request's. An error answer that is the tokenizer's failed load (the
+   * hub's entry holds it as a `load` error) is left to `#load`, which reports it with the tokenizer to go back to.
    */
   #request(text: string, trace: EncodeOptions['trace'], phase: ErrorPhase, onDemand = false): Promise<void> {
     this.#hold();
@@ -374,7 +375,8 @@ export class AppState {
     return this.hub.request(this.tokenizer, text, this.options, { trace }).then((answer: HubAnswer) => {
       if (seq !== this.#seq) return;
       if (answer.kind === 'result') this.#accept(answer.result, answer.source, seq, onDemand);
-      else if (answer.kind === 'error') this.#encodeFailed(answer.error, seq, phase);
+      else if (answer.kind === 'error' && this.hub.entry(this.tokenizer, this.options).error?.phase !== 'load')
+        this.#encodeFailed(answer.error, seq, phase);
     });
   }
 
