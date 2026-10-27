@@ -552,19 +552,21 @@
   overflow: hidden;
 }
 
-/* A 1-column part (`.s1` is the gridcell's) keeps its hex whole (13 px of the 21 px line at the 27 px cell): its dashed
-   edges mark the continuation, so it draws no continuation icons (as the live tier does), and a lock beside the hex
-   shrinks instead of it. 1-column final tokens keep their marks, which clip at both ends when they do not fit. */
-.bd-cell-token.s1 .bd-chip-line > .bd-part-text {
+/* A live part keeps its hex whole: its hex never shrinks, it draws no continuation icons (its dashed edges mark the
+   continuation, as on the live tier) and a lock beside the hex hides on parts of ≤ 2 columns (`.s1`/`.s2` are the
+   gridcell's span classes) and shrinks on wider ones (1.33 px at most: a 3-column just-merged lock at the 27 px cell;
+   3.33 px under prefers-contrast: more). Final tokens keep their marks, which clip at both ends when they do not fit. */
+.bd-cell-token[data-variant='part'] .bd-chip-line > .bd-part-text {
   flex-shrink: 0;
 }
 
-.bd-cell-token.s1[data-variant='part'] .cont-start > .bd-chip-line > .bd-icon:first-child,
-.bd-cell-token.s1[data-variant='part'] .cont-end > .bd-chip-line > .bd-icon:last-child {
+.bd-cell-token[data-variant='part'] .cont-start > .bd-chip-line > .bd-icon:first-child,
+.bd-cell-token[data-variant='part'] .cont-end > .bd-chip-line > .bd-icon:last-child,
+.bd-cell-token:is(.s1, .s2)[data-variant='part'] .has-lock > .bd-chip-line > .bd-icon {
   display: none;
 }
 
-.bd-cell-token.s1[data-variant='part'] .bd-chip-line > .bd-icon {
+.bd-cell-token[data-variant='part'] .bd-chip-line > .bd-icon {
   flex-shrink: 1;
   min-width: 0;
 }
@@ -624,7 +626,7 @@
   --digits: 7;
 }
 
-/* Chip text yields to the id beside it, a part's hex to the marks on its line: each clips its end when there is no room. */
+/* Chip text yields to the id beside it and clips its end when there is no room (a live part's hex never does, above). */
 .bd-chip-text,
 .bd-part-text {
   min-width: 0;

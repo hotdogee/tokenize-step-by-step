@@ -3,9 +3,10 @@
  * assertions, K from the 05 §3.3 formula at 360/768/1024/1440/3840 px (never literals), the per-breakpoint tracks
  * (≥ 2560 px scaling from --cell; the gap track under the token tier taking the room the row does not use) with every
  * token id inside its chip (PA-17: narrowed, then shrunk, never clipped; two lines for a bare 1-column id of ≥ 5 digits;
- * markers, the dummy prefix's compact two-line id and byte-fallback chips; a 1-column part's hex whole; the stop-5 star
- * clear of the id, on chips of two or more columns only), the APG grid's ARIA indices, arithmetic virtualization of a
- * 60k-byte synthetic result (≤ 15 rows in the DOM, every row in view mounted while scrolling), CSP-safe styling and axe.
+ * markers, the dummy prefix's compact two-line id and byte-fallback chips; a live part's hex whole, without continuation
+ * icons, its lock hidden on 1 and 2 columns; the stop-5 star clear of the id, on chips of two or more columns only), the
+ * APG grid's ARIA indices, arithmetic virtualization of a 60k-byte synthetic result (≤ 15 rows in the DOM, every row in
+ * view mounted while scrolling), CSP-safe styling and axe.
  */
 import '../theme/base.css';
 import '../motion/motion.css';
@@ -400,39 +401,45 @@ describe('token ids inside every chip (PA-17)', () => {
   }
 
   /**
-   * K + 1 ASCII bytes in one-byte tokens (`ids`, then filler ids) but the last, a 2-byte token (`last`) that the row end
-   * cuts into two 1-column fragments, each with a continuation mark under its id. One merge step forms it, so at stop 5
-   * (step 1) it is a live part cut 1 | 1 by the row end.
+   * K + `tail` ASCII bytes in one-byte tokens (`ids`, then filler ids) but the last, a token of 1 + `tail` bytes (`last`)
+   * that the row end cuts into a 1-column fragment and a `tail`-column one, each with a continuation mark under its id.
+   * Its merges join its tail bytes left to right (ids 300, 301, …), then its first byte to them, so at stop 5 the last
+   * step (`tail`) forms it: a live part cut 1 | `tail` by the row end (1 | 1 by default, one merge step).
    */
-  async function rowEndSplit(k: number, ids: readonly number[], last: number): Promise<TokenizationResult> {
+  async function rowEndSplit(k: number, ids: readonly number[], last: number, tail = 1): Promise<TokenizationResult> {
     const { buildResult } = await import('@tsbs/core/model/build-result');
     const { analyzeText } = await import('@tsbs/core/text/analyze');
     const { ALIVE, StepKind } = await import('@tsbs/core/model/result');
     const single = Array.from({ length: k - 1 }, (_, i) => ids[i] ?? 10 + i);
-    const died = new Int32Array(k + 2).fill(ALIVE);
-    died[k] = 1; // the boundary inside the last token, removed by the one merge step
+    const end = k + tail;
+    const died = new Int32Array(end + 1).fill(ALIVE);
+    for (let j = 1; j < tail; j++) died[k + j] = j; // step j joins byte k + j to the tail
+    died[k] = tail; // the row end's boundary inside the last token, removed by the last step
+    const steps = Array.from({ length: tail }, (_, j) =>
+      j < tail - 1 ? { left: k, mid: k + j + 1, end: k + j + 2, id: 300 + j } : { left: k - 1, mid: k, end, id: last },
+    );
     return buildResult({
       tokenizer: 'openai-o200k_base',
       family: 'bytelevel-bpe',
-      analysis: analyzeText('a'.repeat(k + 1)),
-      chunks: { byteStart: [0, k + 1], kind: [0] },
+      analysis: analyzeText('a'.repeat(end)),
+      chunks: { byteStart: [0, end], kind: [0] },
       tokens: {
         id: [...single, last],
-        byteStart: [...single.map((_, i) => i), k - 1, k + 1],
+        byteStart: [...single.map((_, i) => i), k - 1, end],
         kind: Array.from({ length: k }, () => 0),
       },
       timeline: {
-        stepCount: 1,
+        stepCount: tail,
         leadingZeroWidthPart: false,
-        boundaryBorn: new Int32Array(k + 2),
+        boundaryBorn: new Int32Array(end + 1),
         boundaryDied: died,
-        stepKind: Uint8Array.of(StepKind.Merge),
-        stepLeft: Uint32Array.of(k - 1),
-        stepMid: Uint32Array.of(k),
-        stepEnd: Uint32Array.of(k + 1),
-        stepRank: Float32Array.of(last),
-        stepResultId: Int32Array.of(last),
-        stepChunk: Uint32Array.of(0),
+        stepKind: Uint8Array.from(steps, () => StepKind.Merge),
+        stepLeft: Uint32Array.from(steps, (step) => step.left),
+        stepMid: Uint32Array.from(steps, (step) => step.mid),
+        stepEnd: Uint32Array.from(steps, (step) => step.end),
+        stepRank: Float32Array.from(steps, (step) => step.id),
+        stepResultId: Int32Array.from(steps, (step) => step.id),
+        stepChunk: new Uint32Array(tail),
         truncated: false,
       },
     });
@@ -646,22 +653,91 @@ describe('token ids inside every chip (PA-17)', () => {
     });
   }
 
-  it('shrinks a lock beside a 1-column part’s hex, never the hex (Grok-1 digits at stop 4, the 27 px cell)', async () => {
+  for (const [width, size, cellSize] of [
+    [1280, 'S', 27],
+    [768, 'S', 29],
+    [1280, 'M', 30],
+  ] as const) {
+    it(`keeps a 2- and a 3-column part fragment’s hex whole left of the star, without continuation icons, at the ${String(cellSize)} px cell`, async () => {
+      await page.viewport(width, 900);
+      document.documentElement.dataset['cellSize'] = size;
+      expect(cellPx()).toBe(cellSize);
+      for (const tail of [2, 3]) {
+        mounted?.destroy();
+        // The row end cuts the 1 + tail byte part 1 | tail: its continuation fragment (cl100k “ 台” cut 20 | E5 8F).
+        const result = await rowEndSplit(expectedColumns(width), [], 654321, tail);
+        const board = await showAt(appWith(result, { stage: 5, step: tail }), size);
+        await digitsLoaded();
+        const merged = cells(
+          board,
+          `[data-tier="token"][data-variant="part"][data-index="${String(expectedColumns(width) - 1)}"]`,
+        );
+        expect(merged.map((part) => part.getAttribute('aria-colspan'))).toEqual(['1', String(tail)]);
+        const fragment = merged[1] ?? board.grid;
+        const vis = fragment.querySelector('.bd-chip') ?? fragment;
+        const line = vis.querySelector('.bd-chip-line') ?? vis;
+        const text = line.querySelector('.bd-part-text') ?? line;
+        expect(text.textContent).toBe(Array.from({ length: tail }, () => '61').join(' '));
+        expect(vis.matches('.cont-start:not(.cont-end)')).toBe(true);
+        for (const justMerged of [false, true]) {
+          if (justMerged) for (const part of merged) part.dataset['justMerged'] = '';
+          await frames(1);
+          const what = `${String(tail)} columns at ${String(cellSize)} px${justMerged ? ', just merged' : ''}`;
+          expect(text.scrollWidth, what).toBeLessThanOrEqual(text.clientWidth);
+          // Inside the line's content box, which ends where the star's 10 px begin on a just-merged chip.
+          const box = line.getBoundingClientRect();
+          const style = getComputedStyle(line);
+          const content = {
+            ...paddingBox(vis),
+            left: box.left + px(style.paddingLeft),
+            right: box.right - px(style.paddingRight),
+          };
+          expect(px(style.paddingRight), what).toBe(justMerged ? 10 : 0);
+          expectWithin(glyphRun(text), content, `${what}: hex`);
+          expectWithin(glyphRun(text), paddingBox(vis), `${what}: hex`);
+          const icons = [...line.querySelectorAll('svg.bd-icon')];
+          expect(icons.length, what).toBeGreaterThan(0); // the continued mark, in the DOM
+          for (const icon of icons) expect(getComputedStyle(icon).display, what).toBe('none');
+          expect(getComputedStyle(vis, '::after').content === 'none', `${what}: star`).toBe(!justMerged);
+        }
+      }
+    });
+  }
+
+  it('hides a lock beside a part’s hex on 1 and 2 columns, shrinks it ≤ 1.5 px on 3, never the hex (Gemma 2, 27 px)', async () => {
     await page.viewport(1280, 800);
     document.documentElement.dataset['cellSize'] = 'S';
     expect(cellPx()).toBe(27);
-    const board = await showAt(appWith(fixtureResult('xai-grok1', 'zh-date'), { stage: 4 }), 'S');
-    await digitsLoaded();
-    const locked = cells(board, '[data-tier="token"][data-variant="part"].s1 .bd-chip.has-lock');
-    expect(locked.length).toBeGreaterThan(0);
-    for (const vis of locked) {
-      const text = vis.querySelector('.bd-chip-line > .bd-part-text') ?? vis;
-      const lock = vis.querySelector('.bd-chip-line > svg.bd-icon')?.getBoundingClientRect();
-      expect(text.scrollWidth).toBeLessThanOrEqual(text.clientWidth);
-      expectWithin(glyphRun(text), paddingBox(vis), `hex ${text.textContent}`);
-      // 21 px of line: the 13 px hex, the 2 px gap and what is left of the 11 px lock.
-      expect(lock?.width ?? 0).toBeGreaterThan(4);
-      expect(lock?.width ?? 11).toBeLessThan(11);
+    // USER_DEFINED whitespace runs: “\n” (1 column), “\n\n” (2) and three spaces (3), parts at stop 4, tokens at stop 6.
+    for (const [caseName, span, hex] of [
+      ['crlf', 1, '0A'],
+      ['en-contraction-code', 2, '0A 0A'],
+      ['trailing-spaces', 3, '20 20 20'],
+    ] as const) {
+      for (const stage of [4, 6] as const) {
+        mounted?.destroy();
+        const board = await showAt(appWith(fixtureResult('google-gemma2', caseName), { stage }), 'S');
+        await digitsLoaded();
+        const locked = cells(board, `[data-tier="token"].s${String(span)} .bd-chip.has-lock`);
+        expect(locked, `${caseName} at stop ${String(stage)}`).toHaveLength(1);
+        const vis = locked[0] ?? board.grid;
+        const lock = vis.querySelector('svg.bd-icon') ?? vis; // on the line under the id where the chip is stacked
+        const what = `${hex} at stop ${String(stage)}`;
+        if (stage === 6) {
+          expect(lock.getBoundingClientRect().width, what).toBe(11); // final tokens keep their marks
+          continue;
+        }
+        const text = vis.querySelector('.bd-chip-line > .bd-part-text') ?? vis;
+        expect(text.textContent).toBe(hex);
+        // The worst case beside the lock: a just-merged part, whose hex line keeps 10 px for the star.
+        if (vis.parentElement !== null) vis.parentElement.dataset['justMerged'] = '';
+        await frames(1);
+        expect(text.scrollWidth, what).toBeLessThanOrEqual(text.clientWidth);
+        expectWithin(glyphRun(text), paddingBox(vis), what);
+        if (span <= 2) expect(getComputedStyle(lock).display, what).toBe('none');
+        // 75 px of line: the star's 10, the lock's 11 + 2 px gap and the 53.3 px hex: the lock gives 1.33 px.
+        else expect(lock.getBoundingClientRect().width, what).toBeGreaterThanOrEqual(9.5);
+      }
     }
   });
 
