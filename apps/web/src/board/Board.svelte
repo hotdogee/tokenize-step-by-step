@@ -136,6 +136,11 @@
   /** The keyboard hint under the board is shown until the board keys have been used (05 §8). */
   let keysUsed = $state(readStored(STORAGE_KEYS.boardKeysUsed) === 'true');
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
+  /**
+   * Where the mouse last moved (`x,y`, client px; null until it has): a `pointerover` at that very position is the page
+   * scrolling or re-rendering under a resting pointer, which is no hover (05 §5: the most recent input wins).
+   */
+  let pointerAt: string | null = null;
 
   const focusRef = $derived(resolveAnchor(local(focusAnchor)));
   const pinRef = $derived(pinAnchor === null ? null : resolvePin(local(pinAnchor)));
@@ -406,7 +411,7 @@
   // ---- pointer (05 §9) ----
 
   function onPointerOver(event: PointerEvent): void {
-    if (event.pointerType !== 'mouse') return;
+    if (event.pointerType !== 'mouse' || pointerAt === `${String(event.clientX)},${String(event.clientY)}`) return;
     const ref = refOf(event.target);
     clearTimeout(hoverTimer);
     if (ref === null) return;
@@ -556,6 +561,10 @@
       if (event.key === 'Escape' && hoverRef !== null && !(grid?.contains(event.target as Node) ?? false))
         hoverRef = null;
     };
+    // Before the `pointerover` of a move (boundary events come first), so it still holds the previous position.
+    const onDocumentPointerMove = (event: PointerEvent): void => {
+      if (event.pointerType === 'mouse') pointerAt = `${String(event.clientX)},${String(event.clientY)}`;
+    };
     const onDocumentFocusIn = (event: FocusEvent): void => {
       if (selected !== null && (event.target as HTMLElement | null)?.id !== 'text-input') selected = null;
       panelFocused = host?.contains(event.target as Node) ?? false;
@@ -565,6 +574,7 @@
     window.addEventListener('keydown', onWindowKeydown);
     document.addEventListener('selectionchange', onSelectionChange);
     document.addEventListener('pointerdown', onDocumentPointerDown, true);
+    document.addEventListener('pointermove', onDocumentPointerMove, { capture: true, passive: true });
     document.addEventListener('focusin', onDocumentFocusIn);
     return () => {
       for (const type of ENGAGE_EVENTS) document.removeEventListener(type, loadCatalog, true);
@@ -577,6 +587,7 @@
       window.removeEventListener('keydown', onWindowKeydown);
       document.removeEventListener('selectionchange', onSelectionChange);
       document.removeEventListener('pointerdown', onDocumentPointerDown, true);
+      document.removeEventListener('pointermove', onDocumentPointerMove, true);
       document.removeEventListener('focusin', onDocumentFocusIn);
       document.documentElement.style.removeProperty('--sheet-height');
       viewport.destroy();

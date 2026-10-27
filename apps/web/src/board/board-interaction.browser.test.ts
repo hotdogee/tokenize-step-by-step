@@ -4,7 +4,7 @@
  * Esc back, Esc unpins then returns to the textarea, `c` copies; focus persistence by byte offset across
  * re-tokenization and across a long input's window moves (absolute anchors); a tab stop on a lone BOS marker; the inspector region on its three surfaces (the anchored panel below
  * the row, flipped above it near the viewport bottom); hover after 120 ms; keyboard input taking the inspector back from
- * a resting pointer; click pins; textarea selection sync; focus scrolls follow the in-app Reduce motion switch.
+ * a resting pointer, and content scrolling under it no hover; click pins; textarea selection sync; focus scrolls follow the in-app Reduce motion switch.
  */
 import '../theme/base.css';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -276,6 +276,37 @@ describe('inspector region (05 §5, AD-34)', () => {
     await new Promise((resolve) => setTimeout(resolve, 200)); // the pointer has not moved: no hover comes back
     await frames(1);
     expect(document.getElementById('inspector-heading')?.textContent).toBe('Inspector — character 3 of 4');
+  });
+
+  it('content scrolling under a resting pointer is no hover; a move onto a cell is (05 §5)', async () => {
+    await page.viewport(1440, 900);
+    const board = await show(fixtureResult('openai-cl100k_base', 'zh-tw-tainan'));
+    let at = { x: 0, y: 0 };
+    const record = (event: PointerEvent): void => {
+      at = { x: event.clientX, y: event.clientY };
+    };
+    document.addEventListener('pointermove', record);
+    const textarea = document.getElementById('text-input');
+    const token = board.grid.querySelector<HTMLElement>('[data-tier="token"][data-index="2"]');
+    if (textarea === null || token === null) throw new Error('no textarea or token cell');
+    await userEvent.hover(textarea); // the mouse rests over the textarea
+    document.removeEventListener('pointermove', record);
+    board.grid.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
+    await press('{ArrowRight}');
+    expect(document.getElementById('inspector-heading')?.textContent).toBe('Inspector — character 2 of 4');
+    // What a browser sends when the page scrolls a cell under the resting pointer: a pointerover at its position.
+    const over = (clientX: number): boolean =>
+      token.dispatchEvent(
+        new PointerEvent('pointerover', { bubbles: true, pointerType: 'mouse', clientX, clientY: at.y }),
+      );
+    over(at.x);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await frames(1);
+    expect(document.getElementById('inspector-heading')?.textContent).toBe('Inspector — character 2 of 4');
+    over(at.x + 1); // the pointer moved: a hover
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await frames(1);
+    expect(document.getElementById('inspector-heading')?.textContent).toBe('Inspector — token 3 of 5');
   });
 
   it('is an anchored panel beside the active cell at 768–1023 px', async () => {
