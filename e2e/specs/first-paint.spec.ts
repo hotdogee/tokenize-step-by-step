@@ -255,7 +255,10 @@ test.describe('in a desktop window with a classic page scrollbar', () => {
       test.skip(testInfo.project.name !== 'chromium', 'one run: the test launches its own chromium, scrollbars shown');
       const browser = await playwright.chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
       try {
-        const page = await browser.newPage({ baseURL, viewport: { width, height: 780 } });
+        const page = await browser.newPage({
+          ...(baseURL === undefined ? {} : { baseURL }),
+          viewport: { width, height: 780 },
+        });
         await page.addInitScript(() => {
           const w = window as unknown as { __shifts: Array<{ value: number; input: boolean }> };
           w.__shifts = [];
