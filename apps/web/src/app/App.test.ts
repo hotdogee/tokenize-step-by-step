@@ -27,7 +27,7 @@ describe('App shell (server-rendered)', () => {
       i18n.current = locale;
       const body = renderApp();
       expect(body).toContain('<h1 class="wordmark');
-      expect(body).toContain('Tokenize step by step');
+      expect(body).toContain('What is a token?');
       expect(body).toMatch(/<textarea[^>]*id="text-input"/);
       expect(body).toContain('role="listbox"');
       expect(body).toContain('role="grid"');

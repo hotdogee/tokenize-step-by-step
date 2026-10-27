@@ -9,14 +9,13 @@ import type { Catalog } from './en.ts';
 
 export const ja = {
   // ---- App and page meta ----
-  'app.name': 'Tokenize step by step',
-  'meta.main.title': 'Tokenize step by step・トークン化を一歩ずつ',
+  'app.name': 'What is a token?',
+  'meta.main.title': 'What is a token?・トークンとは？',
   'meta.main.description':
-    'テキストがトークンになる過程を表示します。コードポイント、UTF-8 バイト、事前トークン化のチャンク、そして BPE のマージを一つずつ。すべてブラウザー内で動作します。',
-  'meta.about.title': 'このサイトについて・Tokenize step by step',
-  'meta.about.description':
-    'このトークン化ビジュアライザーが示すもの、各トークナイザーの確度、同梱する語彙ファイルのライセンス。',
-  'meta.notFound.title': 'ページが見つかりません・Tokenize step by step',
+    '各ラボの最新トークナイザーがテキストをどう分割するかをバイト単位で比べ、一つのトークナイザーのマージを一歩ずつたどれます。',
+  'meta.about.title': 'このサイトについて・What is a token?',
+  'meta.about.description': 'このサイトが示すもの、各トークナイザーの確度、同梱する語彙ファイルのライセンス。',
+  'meta.notFound.title': 'ページが見つかりません・What is a token?',
   'notFound.heading': 'ページが見つかりません',
   'notFound.body': 'このアドレスには何もありません。',
   'notFound.back': 'トークナイザーに戻る',

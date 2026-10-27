@@ -78,7 +78,7 @@ test('switching theme and language at runtime causes no CSP violation', async ({
   await page.getByRole('button', { name: 'Interface language' }).click();
   await page.getByRole('radio', { name: '日本語' }).check();
   await expect(page.locator('html')).toHaveAttribute('lang', 'ja');
-  await expect(page).toHaveTitle(/トークン化を一歩ずつ/);
+  await expect(page).toHaveTitle(/トークンとは/);
   const { csp } = await read(page);
   expect(csp).toEqual([]);
   expect(consoleViolations).toEqual([]);

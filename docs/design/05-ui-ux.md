@@ -370,17 +370,17 @@ CSS custom properties on `:root` (light), redefined under `@media (prefers-color
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `--bg` / `--surface` / `--surface-2` / `--surface-3` | oklch 0.985 / 0.96 / 0.92 / 0.86 (neutral) | 0.13 / 0.17 / 0.22 / 0.30 | page, panels, cells, brackets |
-| `--fg` / `--fg-muted` | 0.22 / 0.45 | 0.95 / 0.72 | text |
-| `--border` | **L ≤ 0.50** (neutral) | **L ≥ 0.72** | 1 px cell/chip borders — the WCAG 1.4.1 / 1.4.11 **conformance cue**: ≥ 3:1 against all 16 tints and all 4 surfaces (2 px and `--fg` under `prefers-contrast: more`) |
-| `--accent` | oklch(**0.50** 0.12 200) | oklch(0.75 0.12 200) | focus ring, current stop, "just merged" ring and pulse — ≥ 3:1 against every tint and surface |
+| `--bg` / `--surface` / `--surface-2` / `--surface-3` | oklch 0.985 / 0.96 / 0.92 / 0.86 (neutral) | oklch 0.20 / 0.24 / 0.285 / 0.35, C 0.012 / 0.014 / 0.016 / 0.018, hue 255 (cool slate) | page, panels, cells, brackets |
+| `--fg` / `--fg-muted` | 0.22 / 0.45 | oklch 0.94 / 0.74, C 0.008 / 0.014, hue 250 | text |
+| `--border` | **L ≤ 0.50** (neutral) | **L ≥ 0.72**: oklch(0.74 0.02 250) | 1 px cell/chip borders — the WCAG 1.4.1 / 1.4.11 **conformance cue**: ≥ 3:1 against all 16 tints and all 4 surfaces (2 px and `--fg` under `prefers-contrast: more`) |
+| `--accent` | oklch(**0.50** 0.12 200) | oklch(0.80 0.11 200) | focus ring, current stop, "just merged" ring and pulse — ≥ 3:1 against every tint and surface |
 | `--focus` | double ring: `box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent)` | same | `:focus-visible` on every cell and control; the `--bg` halo isolates the ring from the cell's own border and tint, the accent ring is ≥ 3:1 against the halo and against any neighbouring tint; the focused cell gets `z-index: 1` so the ring paints above neighbours |
-| `--tok-h0…h7` | hue 20° + 45°·i, C 0.08, L alternating 0.90 / 0.83 | L alternating 0.30 / 0.38 | token tints (chip text ≥ 4.5:1); adjacent chips differ by ≥ 45° hue and ≥ 0.07 L — **informational, not a WCAG claim** |
+| `--tok-h0…h7` | hue 20° + 45°·i, C 0.08, L alternating 0.90 / 0.83 | C 0.075, L alternating 0.37 / 0.45 | token tints (chip text ≥ 4.5:1); adjacent chips differ by ≥ 45° hue and ≥ 0.07 L — **informational, not a WCAG claim** |
 | `--hatch` | two-tone stripes: `repeating-linear-gradient(45deg, var(--fg) 0 1.5px, var(--tok-hN) 1.5px 3px)` | same | partial cut edges; the `--fg` stripe is ≥ 4.5:1 on its own tint, so the hatch is ≥ 3:1 by construction |
 | `--cell`, `--gap` (2 px), `--row-h`, `--radius` (4 px), `--sheet-height` | per breakpoint (§3.3) | | layout; `--sheet-height` feeds `scroll-padding-block-end` (§5) |
 | `--dur-fast` 120 ms, `--dur` 200 ms, `--dur-slow` 350 ms, `--ease` `cubic-bezier(.2,0,0,1)` | | | motion |
 
-`pnpm -F @tsbs/ui-tokens check` (`check-contrast.mjs`, OKLab → sRGB → WCAG relative luminance, run in CI) asserts, in both themes: chip text (`--fg`) vs each of the 8 tints ≥ 4.5:1; `--border` vs each of the 16 tints and the 4 surfaces ≥ 3:1; the `--fg` hatch stripe vs its own tint ≥ 3:1; `--accent` vs each tint and surface ≥ 3:1 and vs `--bg` (the halo) ≥ 3:1; and, informationally (warning, not failure), adjacent tints ≥ 45° hue and ≥ 0.07 L apart. Approximate check with L ≈ ∛Y: light border L 0.50 vs tint L 0.83 → 3.55:1; dark border L 0.72 vs tint L 0.38 → 4.0:1; light accent L 0.50 vs tint L 0.83 → 3.55:1. `prefers-contrast: more` makes borders 2 px `--fg` and keeps the tints; `forced-colors: active` maps to system colours (borders `CanvasText`, hatches `Highlight`).
+`pnpm -F @tsbs/ui-tokens check` (`check-contrast.mjs`, OKLab → sRGB → WCAG relative luminance, run in CI) asserts, in both themes: chip text (`--fg`) vs each of the 8 tints ≥ 4.5:1; `--border` vs each of the 16 tints and the 4 surfaces ≥ 3:1; the `--fg` hatch stripe vs its own tint ≥ 3:1; `--accent` vs each tint and surface ≥ 3:1 and vs `--bg` (the halo) ≥ 3:1; and, informationally (warning, not failure), adjacent tints ≥ 45° hue and ≥ 0.07 L apart. Approximate check with L ≈ ∛Y: light border L 0.50 vs tint L 0.83 → 3.55:1; dark border L 0.74 vs tint L 0.45 → 3.2:1; light accent L 0.50 vs tint L 0.83 → 3.55:1. The script's worst dark pairs (cool slate, PA-19) are all against `--tok-h3`: chip text and hatch 6.01:1, border 3.11:1, accent 4.00:1; `--fg-muted`, which the script does not cover (axe checks it in e2e), measures 4.90:1 on `--surface-3` and 7.86:1 on `--bg`. `prefers-contrast: more` makes borders 2 px `--fg` and keeps the tints; `forced-colors: active` maps to system colours (borders `CanvasText`, hatches `Highlight`).
 
 ## 12. Loading and empty states
 
