@@ -34,7 +34,7 @@ export function readStaticInput(root: ParentNode): (app: Replayed) => void {
     .map((select) => ({ select, value: select.value }));
   return (app) => {
     if (textarea !== null && text !== undefined && text !== app.text) {
-      // The same value again keeps the caret, and the state's write that follows finds nothing to change.
+      // Written before the state, so the state's own write finds the value current and leaves the caret as set here.
       textarea.value = text;
       textarea.setSelectionRange(start, end);
       app.setText(text);
