@@ -13,9 +13,10 @@
  *    beside it, with a Chromium trace of the 10k typing (no main-thread task > 50 ms). The window is as tall as the table
  *    above the board takes, so the board's first rows are on screen as they were at 900 px before PA-19; at 900 px the
  *    board starts below the fold and mounts less;
- * 3. keystroke → table update at 1k and 10k characters, Advanced closed, five live rows, on the same ceilings, measured
- *    from the `input` event to the frame after the last row's result, with a trace of the 10k typing. That measure holds
- *    the debounce; PA-12's (encode request → frame) and where the time goes are recorded beside it;
+ * 3. keystroke → table update at 1k and 10k characters, Advanced closed, five live rows, on the same ceilings and the
+ *    same measure as the board (PA-12): from the encode request to the frame after the last row's result, with a trace
+ *    of the 10k typing. The `input` event → frame latency, which holds the debounce, and where the time goes are recorded
+ *    beside it;
  * 4. render a board of ≈ 2,000 cells (the text is sized from the board's own `data-cells` count, the cells every row
  *    would mount): the wall time from the board's Worker's `result` to the updated DOM, held to the 06 §3 "≤ 50 ms script"
  *    budget (wall time bounds the script time from above). Since PA-11 such a board is virtualized (above 600 cells or 8
@@ -25,7 +26,7 @@
  *    viewport take part in a FLIP).
  *
  * Budget misses are soft (warnings + `test-results/perf/perf-results.json`, the trend artifact) unless `PERF_STRICT=1`.
- * PA-12: the board's keystroke budget is held from the `encode` request (after the 40 ms `ENCODE_DEBOUNCE_MS` of 05 §6) to
+ * PA-12: the keystroke budgets are held from the `encode` request (after the 40 ms `ENCODE_DEBOUNCE_MS` of 05 §6) to
  * the frame after the update; keystroke → frame, which includes the debounce, is recorded beside it but not asserted.
  */
 import { join } from 'node:path';
@@ -299,23 +300,18 @@ test('keystroke → board update at 10k characters (p95 ≤ 120 ms), no main-thr
   record('board cells mounted while typing, 10k CJK', await mountedCells(page), 'count', null);
 });
 
-/** Holds one table typing run to the keystroke budget (06 §3), input event → the frame after the last row's result. */
+/** Holds one table typing run to the keystroke budget (06 §3), encode request → the frame after the last row's result. */
 function tableBudget(chars: string, typed: Typed, ceiling: number): void {
   const { inputs, rowEncodes, rowResults, tableFrames } = typed;
   const total = latencies(inputs, tableFrames);
   expect(total).toHaveLength(KEYSTROKES);
   const released = inputs.map((t) => rowEncodes.find((e) => e >= t) ?? Number.POSITIVE_INFINITY);
   budget(
-    `keystroke → table update, ${chars}, five live rows, p95 (input → last row's frame)`,
-    percentile(total, 95),
+    `keystroke → table update, ${chars}, five live rows, p95 (encode request → last row's frame, PA-12)`,
+    percentile(latencies(released, tableFrames), 95),
     ceiling,
   );
-  record(
-    `keystroke → table update, ${chars}, p95 (encode request → last row's frame, PA-12's measure)`,
-    percentile(latencies(released, tableFrames), 95),
-    'ms',
-    null,
-  );
+  record(`keystroke → table update, ${chars}, p95 (input → last row's frame)`, percentile(total, 95), 'ms', null);
   record(`keystroke → table update, ${chars}, p50 (input → last row's frame)`, percentile(total, 50), 'ms', null);
   // Where the time goes: the Workers' answers, then the page's render of them.
   const lastResults = inputs.map((t, i) => {

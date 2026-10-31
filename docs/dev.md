@@ -22,7 +22,7 @@ pnpm --filter @tsbs/web preview                     # production bundle with eve
 commands above or in `pnpm e2e`, so a page change can pass all of those and still break them. `pnpm e2e:headers` does
 run in CI: it is the `e2e-headers` job of `ci.yml`, a required check, so running it first only saves a failed CI round.
 `pnpm e2e:perf` runs in no pull-request or push check at all: only `nightly-fuzz.yml` runs it, so what breaks it shows
-up after the merge as a failed night and an issue (PA-19 did: three nights, #3 to #5, until the suite was migrated).
+up after the merge as a failed night and an issue (PA-19 did: every night until the suite was migrated).
 
 `pnpm build` runs `tsbs-vocab build`, which takes its conformance mode from `--conformance`, then from the
 `CONFORMANCE_MODE` environment variable, then defaults to `strict` (AD-32). Both engines exist since wave 2, so every
@@ -70,8 +70,7 @@ Worker heap check fails under `TSBS_PERF=1` instead of skipping, so a green opt-
 - **`pnpm e2e:perf`** (`e2e/perf/`, its own Playwright config, chromium, one worker, port `E2E_PERF_PORT` = 4174) is
   soft: a missed budget is a warning and the numbers go to `e2e/test-results/perf/perf-results.json`; `PERF_STRICT=1`
   makes misses fail, but a test that cannot run fails either way, and the file runs serially, so one failure skips the
-  tests after it. Today that means a strict run stops at the table's missed 1k ceiling (PA-19's follow-up) and the 10k
-  table, render and scrub tests do not run; no workflow sets it. `E2E_PERF_BASE_URL=<url>` runs it against a deployed preview or production instead of a local
+  tests after it. No workflow sets it. `E2E_PERF_BASE_URL=<url>` runs it against a deployed preview or production instead of a local
   `vite preview`. `docs/perf-log.md` keeps the dated results.
 
 ## Tokenizer client (`?mock=1`)
