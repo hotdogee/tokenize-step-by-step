@@ -1,15 +1,18 @@
 /**
  * Perf spec (06 §1 "Performance", §3; WP12) on the production bundle (`vite preview`), chromium, desktop 1440×900 unless
  * a test says otherwise. Since PA-19 the page is the comparison table with the board in the closed Advanced disclosure:
- * the table's tests measure what a visitor lands on, the board's open Advanced, type with all five rows live and wait for
- * the table too, so the table's work on the same keystroke is in their numbers. The budgets kept their meaning.
+ * the table's tests measure what a visitor lands on, the board's open Advanced and type with all five rows live, held to
+ * the later of the board's frame and the table's, so the table's work on the same keystroke is in their numbers. The
+ * budgets kept their ceilings.
  *
  * 1. o200k load end to end under CDP `Network.emulateNetworkConditions` "Fast 4G" (9 Mbps down, 170 ms RTT):
  *    `loaded.ms` (the Worker's download + verify + gunzip + build, read from About's `tsbs:lastLoaded`) ≤ 2.5 s;
  * 2. keystroke → board update at 1k and 10k characters (p95 ≤ 50 / ≤ 120 ms), measured from the encode request the 40 ms
- *    debounce releases (PA-12; the from-keystroke latency is recorded beside it), with a Chromium trace of the 10k typing
- *    (no main-thread task > 50 ms). The window is as tall as the table above the board takes, so the board's first rows
- *    are on screen as they were at 900 px before PA-19; at 900 px the board starts below the fold and mounts less;
+ *    debounce releases (PA-12) to the later of the board's frame and the table's: the board's result is the first of the
+ *    five, so its own frame comes before the other rows answer. That frame and the from-keystroke latencies are recorded
+ *    beside it, with a Chromium trace of the 10k typing (no main-thread task > 50 ms). The window is as tall as the table
+ *    above the board takes, so the board's first rows are on screen as they were at 900 px before PA-19; at 900 px the
+ *    board starts below the fold and mounts less;
  * 3. keystroke → table update at 1k and 10k characters, Advanced closed, five live rows, on the same ceilings, measured
  *    from the `input` event to the frame after the last row's result, with a trace of the 10k typing. That measure holds
  *    the debounce; PA-12's (encode request → frame) and where the time goes are recorded beside it;
@@ -23,11 +26,11 @@
  *
  * Budget misses are soft (warnings + `test-results/perf/perf-results.json`, the trend artifact) unless `PERF_STRICT=1`.
  * PA-12: the board's keystroke budget is held from the `encode` request (after the 40 ms `ENCODE_DEBOUNCE_MS` of 05 §6) to
- * the next presented frame; keystroke → frame, which includes the debounce, is recorded beside it but not asserted.
+ * the frame after the update; keystroke → frame, which includes the debounce, is recorded beside it but not asserted.
  */
 import { join } from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
-import { latencies, mainThreadTasks, percentile, record, STRICT, writeResults } from './metrics.ts';
+import { latencies, mainThreadTasks, nextAfter, percentile, record, STRICT, writeResults } from './metrics.ts';
 import { installProbe, type PerfProbe } from './probe.ts';
 import { boardSource, openAdvanced, rowSource, rowsSettled } from '../specs/shell-helpers.ts';
 
@@ -217,33 +220,60 @@ const BOARD_ON_SCREEN = { width: 1440, height: 1700 } as const;
 const mountedCells = (page: Page): Promise<number> =>
   page.locator('[data-testid="board-grid"] [role="gridcell"]').count();
 
-test('keystroke → board update at 1k characters (p95 ≤ 50 ms)', async ({ page }) => {
-  await page.setViewportSize(BOARD_ON_SCREEN);
-  await openLive(page);
-  await setText(page, mixedText(1000));
-  const { keys, encodes, frames } = await typeLetters(page, KEYSTROKES, BOTH);
-  const total = latencies(keys, frames);
-  const work = latencies(
-    keys.map((k) => encodes.find((e) => e >= k) ?? Number.POSITIVE_INFINITY),
-    frames,
+/**
+ * Holds one board typing run to the keystroke budget (06 §3), encode request → the later of the board's frame and the
+ * table's. The board's own frame is recorded beside it, and both from the keystroke (PA-12: the debounce is not held).
+ */
+function boardBudget(chars: string, typed: Typed, ceiling: number): void {
+  const { keys, encodes, frames, tableFrames } = typed;
+  const table = nextAfter(keys, tableFrames);
+  const whole = nextAfter(keys, frames).map((frame, i) =>
+    Math.max(frame ?? Number.POSITIVE_INFINITY, table[i] ?? Number.POSITIVE_INFINITY),
   );
+  const total = latencies(keys, whole);
   expect(total).toHaveLength(KEYSTROKES);
+  const released = keys.map((k) => encodes.find((e) => e >= k) ?? Number.POSITIVE_INFINITY);
   budget(
-    'keystroke → board update, 1k chars, p95 (encode request → frame, PA-12)',
-    percentile(work, 95),
-    BUDGET.keystroke1kP95Ms,
+    `keystroke → board update, ${chars}, five live rows, p95 (encode request → board's and table's frame, PA-12)`,
+    percentile(latencies(released, whole), 95),
+    ceiling,
   );
   record(
-    'keystroke → board update, 1k chars, p95 (keystroke → frame, incl. 40 ms debounce)',
+    `keystroke → board update, ${chars}, p95 (encode request → the board's own frame)`,
+    percentile(latencies(released, frames), 95),
+    'ms',
+    null,
+  );
+  record(
+    `keystroke → board update, ${chars}, p95 (keystroke → board's and table's frame, incl. 40 ms debounce)`,
     percentile(total, 95),
     'ms',
     null,
   );
-  record('keystroke → board update, 1k chars, p50 (keystroke → frame)', percentile(total, 50), 'ms', null);
+  record(
+    `keystroke → board update, ${chars}, p50 (keystroke → board's and table's frame)`,
+    percentile(total, 50),
+    'ms',
+    null,
+  );
+  record(
+    `keystroke → board update, ${chars}, p95 (keystroke → the board's own frame)`,
+    percentile(latencies(keys, frames), 95),
+    'ms',
+    null,
+  );
+}
+
+test('keystroke → board update at 1k characters (p95 ≤ 50 ms)', async ({ page }) => {
+  await page.setViewportSize(BOARD_ON_SCREEN);
+  await openLive(page);
+  await setText(page, mixedText(1000));
+  const typed = await typeLetters(page, KEYSTROKES, BOTH);
+  boardBudget('1k chars', typed, BUDGET.keystroke1kP95Ms);
   record('board cells mounted while typing, 1k chars', await mountedCells(page), 'count', null);
   record(
     'keystroke → encode request (the debounce), median',
-    percentile(latencies(keys, encodes), 50),
+    percentile(latencies(typed.keys, typed.encodes), 50),
     'ms',
     null,
     `ENCODE_DEBOUNCE_MS = ${String(ENCODE_DEBOUNCE_MS)}`,
@@ -262,24 +292,7 @@ test('keystroke → board update at 10k characters (p95 ≤ 120 ms), no main-thr
   record('paste 10k CJK → board update (recorded)', pasteFrame - pasteStart, 'ms', null);
   const longTasksBefore = (await probeOf(page)).longTasks.length;
   const { value, tasks } = await traced(browser, page, () => typeLetters(page, KEYSTROKES, BOTH));
-  const { keys, encodes, frames } = value;
-  const total = latencies(keys, frames);
-  const work = latencies(
-    keys.map((k) => encodes.find((e) => e >= k) ?? Number.POSITIVE_INFINITY),
-    frames,
-  );
-  expect(total).toHaveLength(KEYSTROKES);
-  budget(
-    'keystroke → board update, 10k CJK, p95 (encode request → frame, PA-12)',
-    percentile(work, 95),
-    BUDGET.keystroke10kP95Ms,
-  );
-  record(
-    'keystroke → board update, 10k CJK, p95 (keystroke → frame, incl. 40 ms debounce)',
-    percentile(total, 95),
-    'ms',
-    null,
-  );
+  boardBudget('10k CJK', value, BUDGET.keystroke10kP95Ms);
   budget('longest main-thread task while typing into 10k CJK (trace)', Math.max(0, ...tasks), BUDGET.longTaskMs);
   const longTasks = (await probeOf(page)).longTasks.slice(longTasksBefore);
   record('long tasks (> 50 ms) while typing into 10k CJK (PerformanceObserver)', longTasks.length, 'count', null);
