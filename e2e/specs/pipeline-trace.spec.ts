@@ -10,6 +10,11 @@
  * - a chromium trace bounds the commit frame — from the start of the keydown task to the end of the task that paints
  *   it — and every later main-thread task while the morph plays.
  *
+ * The text below is free text, so it also starts the other table rows' vocabulary loads, and on a loaded runner they end
+ * around the first morph: a row going stale counts in `document.getAnimations()` for its 420 ms dim, and its encode
+ * results land in the trace. The test measures the settled page: the whole document's animations (the assertion stays
+ * "nothing animates", not "nothing in the board does"), with no row at work.
+ *
  * The bound is per main-thread task, not per presented frame: compositor cadence is not measured (serial headless
  * chromium shows rAF intervals of 33.5–50 ms during this morph, a headless artefact) and WebKit is not traced at all, so
  * 06 §3 leaves Safari to a manual Web Inspector check on the release checklist (`docs/release.md` item 9).
@@ -24,7 +29,7 @@ import process from 'node:process';
 import { expect, test, type Page } from '@playwright/test';
 import { grid } from './board-helpers.ts';
 import { motionReady } from './pipeline-helpers.ts';
-import { openShell } from './shell-helpers.ts';
+import { openShell, rowsSettled } from './shell-helpers.ts';
 
 // The 06 §3 criterion is one desktop chromium trace; the device and viewport projects (DPR 2–2.75, touch emulation) would
 // measure their emulation and, run alongside the whole matrix, the CPU contention.
@@ -155,6 +160,7 @@ test('the stop 2→3 morph at 600 cells: nothing animates in the commit frame, w
   await expect(page.getByTestId('counts')).toContainText('450 bytes');
   await expect(page.locator('#advanced [data-source="live"]')).toBeVisible();
   await expect(grid(page).locator('.bd-cell-char')).toHaveCount(150);
+  await rowsSettled(page);
   await motionReady(page);
   await page.keyboard.press('Digit2');
   await expect(grid(page)).toHaveAttribute('data-stage', '2');
