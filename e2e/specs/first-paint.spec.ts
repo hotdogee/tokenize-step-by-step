@@ -185,7 +185,8 @@ test('Advanced opened before the app runs stays open: it never paints closed, th
   const logged: string[] = [];
   page.on('pageerror', (error) => logged.push(error.message));
   page.on('console', (message) => {
-    if (message.type() === 'warning' || message.type() === 'error') logged.push(message.text());
+    // Not every warning: Firefox warns of a forced layout when Playwright's own calls measure the page this test holds.
+    if (message.type() === 'error' || /hydrat/i.test(message.text())) logged.push(message.text());
   });
   const csp = await recordCsp(page);
   const modules = await holdModules(page);
