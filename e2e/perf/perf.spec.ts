@@ -381,15 +381,17 @@ test.describe('render', () => {
     await openLive(page);
     const k = Number(await page.locator('[data-k]').first().getAttribute('data-k'));
     expect(k).toBeGreaterThanOrEqual(8);
-    // The board under the table (PA-19): at the top of the window, the most rows in view.
-    await page.locator('[data-testid="board-grid"]').evaluate((grid) => {
-      grid.scrollIntoView({ block: 'start' });
-    });
     // Calibration: the cells one row of this text holds (K char cells, K byte cells and the token chips), so the
     // measured text is sized to about RENDER_CELLS cells of the whole board.
     const calibrationRows = 10;
     await setText(page, rowsText(k, calibrationRows, 0), 'frames', 'in place');
     const rows = Math.max(1, Math.round(RENDER_CELLS / ((await boardCells(page)) / calibrationRows)));
+    // The board under the table (PA-19) at the top of the window, the most rows in view. Not before the text is in: the
+    // page is too short until then to scroll that far.
+    const grid = page.locator('[data-testid="board-grid"]');
+    await grid.evaluate((element) => {
+      element.scrollIntoView({ block: 'start' });
+    });
     const walls: number[] = [];
     const frames: number[] = [];
     let cells = 0;
@@ -419,6 +421,11 @@ test.describe('render', () => {
     }
     record(`board cells (K ${String(k)}, ${String(rows)} rows, ${String(rows * k)} characters)`, cells, 'count', null);
     record('board cells mounted (the rows in view of the virtualized board, PA-11)', mounted, 'count', null);
+    const place = await grid.evaluate((element) => ({
+      top: element.getBoundingClientRect().top,
+      header: Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingBlockStart),
+    }));
+    expect(place.top, 'the board at the top of the window, under the header').toBeLessThanOrEqual(place.header + 1);
     expect(cells).toBeGreaterThan(RENDER_CELLS * 0.85);
     expect(cells).toBeLessThan(RENDER_CELLS * 1.15);
     budget(
