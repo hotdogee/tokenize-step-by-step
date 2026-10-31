@@ -333,6 +333,21 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   through the inspector at 320 px no longer hands it to the token chip a scroll brought under the pointer, whose
   re-render dropped the focused copy button. Measured on the round's final build: Main JS **77.36 kB** brotli, i18n
   chunk **9.54 kB**, CSS **14.93 kB**, `index.html` **8.58 kB** brotli-11; every other budget unchanged.
+  *Follow-up* (2026-10-31): the push run of 4a1c03d failed two shards the pull request had passed, and the nightly
+  failed every night (#3 to #5), since `e2e/perf` runs in no pull-request check. Causes: the perf suite armed the board's
+  observer on a page whose board mounts only in Advanced (four of its five tests never ran); a **product defect**,
+  Advanced clicked before hydration opened natively and hydration closed it with no body, and the same audit found a
+  row's `<select>` reverted, the caret thrown to the end of the text and the header box out of step with rows scrolled
+  sideways (`static-input.ts` reads the three before `hydrate()` and replays them after its effects, in the same task,
+  and CompareTable joins a static scroll); `pipeline-trace` counted the rows' delayed dim (`getAnimations()` equals the
+  rows stale in the commit frame; it now measures settled rows); `integration-long-input` polled a token the board keeps
+  mounted wherever its window is. The suite also measures the default page now. Three runs each, Windows / Linux at 4
+  CPUs (`docs/perf-log.md`): the board with Advanced open and five live rows 1k p95 22–26 / 12–13 ms (≤ 50), 10k 34–36 /
+  34–38 ms (≤ 120), longest task 15–18 / 18–19 ms (≤ 50), render 12 / 12–13 ms (≤ 50); the table with Advanced closed 10k
+  p95 67–72 / 67–81 ms (≤ 120), longest task 11–13 / 12–16 ms (≤ 50), and **1k p95 67–80 / 66–67 ms against ≤ 50 ms,
+  open**: from the `input` event, the debounce PA-12 keeps takes 41–47 ms of that ceiling, while from the encode request,
+  PA-12's measure, the table takes 24–34 / 25–27 ms. The planner's choice: hold the table on PA-12's measure, or send
+  an idle page's first keystroke at once and debounce only what follows, which reopens PA-12 and 05 §6's IME pair.
 
 ## D. Owner answers to the open questions (2026-10-25)
 
