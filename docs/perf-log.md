@@ -488,40 +488,46 @@ transferred, layer gzip"). Feature probe in chromium: Cache API, `Intl.Segmenter
 merge (`no board grid`, four of five tests skipped). The suite now opens Advanced for the board's tests and adds two
 tests of the default page. This is the first measurement of the page PA-19 shipped.
 
-**Where:** the development machine at 1a26189, `pnpm build`, three runs of `pnpm e2e:perf` against `vite preview`
+**Where:** the development machine at c3f25da, `pnpm build`, three runs of `pnpm e2e:perf` against `vite preview`
 (chromium, no CPU throttling), Windows and the Linux image `mcr.microsoft.com/playwright:v1.64.1-noble` limited to 4
-CPUs, nothing else running. Board tests: Advanced open, five live rows, each keystroke waits for the table too.
-Table tests: Advanced closed, five live rows, 1440 × 900.
+CPUs, nothing else running. Board tests: Advanced open, five live rows, held to the later of the board's frame and
+the table's, since the board's result comes first and its own frame lands before the other four rows answer (recorded
+beside it), in a 1440 × 1700 window. Table tests: Advanced closed, five live rows, 1440 × 900.
 
-| Metric                                                                   | Windows       | Linux, 4 CPUs | 06 §3 budget    |     |
-| ------------------------------------------------------------------------ | ------------- | ------------- | --------------- | --- |
-| o200k load, `loaded.ms` (CDP Fast 4G)                                    | 1,189–1,195   | 1,155–1,160   | ≤ 2.5 s desktop | ✓   |
-| keystroke → board, 1k chars, p95, encode request → frame (PA-12)         | 22.2–25.5     | 11.8–12.7     | ≤ 50 ms         | ✓   |
-| keystroke → board, 1k chars, p95, keystroke → frame (recorded)           | 69.3–70.9     | 53.3–54.1     | (recorded)      |     |
-| keystroke → board, 10k CJK, p95, encode request → frame (PA-12)          | 34.3–36.0     | 34.1–37.7     | ≤ 120 ms        | ✓   |
-| keystroke → board, 10k CJK, p95, keystroke → frame (recorded)            | 81.4–83.6     | 77.0–79.8     | (recorded)      |     |
-| longest main-thread task typing into 10k CJK, board + table (trace)      | 15.2–17.6     | 18.4–19.1     | ≤ 50 ms         | ✓   |
-| keystroke → encode request (the 40 ms debounce), median                  | 46.3–46.9     | 41.2–41.4     | (recorded)      |     |
-| **keystroke → table, 1k chars, p95, input → last row's frame**           | **66.7–80.3** | **65.7–67.1** | ≤ 50 ms         | ✗   |
-| keystroke → table, 1k chars, p50, input → last row's frame               | 65.0–65.5     | 64.8–65.2     | (recorded)      |     |
-| keystroke → table, 1k chars, p95, encode request → last row's frame      | 24.1–34.3     | 25.3–26.8     | (recorded)      |     |
-| of which encode request → last Worker result, p95                        | 19.9–20.8     | 14.1–16.1     | (recorded)      |     |
-| of which last Worker result → last row's frame, p95                      | 13.9–14.5     | 12.2–13.6     | (recorded)      |     |
-| keystroke → table, 10k CJK, p95, input → last row's frame                | 66.7–71.5     | 66.6–81.3     | ≤ 120 ms        | ✓   |
-| keystroke → table, 10k CJK, p95, encode request → last row's frame       | 24.4–29.6     | 26.0–40.5     | (recorded)      |     |
-| longest main-thread task typing into 10k CJK, table only (trace)         | 11.3–12.8     | 11.8–15.5     | ≤ 50 ms         | ✓   |
-| render ≈ 2,000 board cells (788 mounted), wall time result → DOM, median | 11.5–12.3     | 12.1–13.4     | ≤ 50 ms script  | ✓   |
-| scrub one merge step at stop 5, keydown → frame, p95                     | 32.7–40.2     | 34.0–34.3     | (recorded)      |     |
-| longest main-thread task while scrubbing (trace)                         | 17.3–34.1     | 20.5–25.4     | ≤ 50 ms         | ✓   |
+| Metric                                                                               | Windows       | Linux, 4 CPUs | 06 §3 budget    |     |
+| ------------------------------------------------------------------------------------ | ------------- | ------------- | --------------- | --- |
+| o200k load, `loaded.ms` (CDP Fast 4G)                                                | 1,188–1,190   | 1,158–1,164   | ≤ 2.5 s desktop | ✓   |
+| keystroke → board, 1k chars, p95, encode request → board's and table's frame (PA-12) | 25.6–27.1     | 27.6–28.6     | ≤ 50 ms         | ✓   |
+| keystroke → board, 1k chars, p95, encode request → the board's own frame             | 23.0–23.5     | 12.1–20.5     | (recorded)      |     |
+| keystroke → board, 1k chars, p95, keystroke → board's and table's frame              | 69.3–74.1     | 68.9–71.2     | (recorded)      |     |
+| keystroke → board, 1k chars, p95, keystroke → the board's own frame                  | 69.3–69.8     | 53.5–61.6     | (recorded)      |     |
+| keystroke → board, 10k CJK, p95, encode request → board's and table's frame (PA-12)  | 42.4–52.8     | 52.0–58.3     | ≤ 120 ms        | ✓   |
+| keystroke → board, 10k CJK, p95, encode request → the board's own frame              | 36.0–36.6     | 33.7–37.4     | (recorded)      |     |
+| keystroke → board, 10k CJK, p95, keystroke → board's and table's frame               | 88.7–97.6     | 94.4–100.9    | (recorded)      |     |
+| keystroke → board, 10k CJK, p95, keystroke → the board's own frame                   | 83.3–88.7     | 75.9–79.8     | (recorded)      |     |
+| longest main-thread task typing into 10k CJK, board + table (trace)                  | 14.9–19.0     | 16.7–20.1     | ≤ 50 ms         | ✓   |
+| keystroke → encode request (the 40 ms debounce), median                              | 46.5–46.8     | 41.4          | (recorded)      |     |
+| **keystroke → table, 1k chars, p95, input → last row's frame**                       | **66.8–78.4** | **65.5–65.7** | ≤ 50 ms         | ✗   |
+| keystroke → table, 1k chars, p50, input → last row's frame                           | 65.3–65.5     | 64.8–64.9     | (recorded)      |     |
+| keystroke → table, 1k chars, p95, encode request → last row's frame                  | 24.1–33.9     | 25.1–25.2     | (recorded)      |     |
+| of which encode request → last Worker result, p95                                    | 19.8–21.6     | 14.8–16.8     | (recorded)      |     |
+| of which last Worker result → last row's frame, p95                                  | 13.2–13.5     | 12.7–13.0     | (recorded)      |     |
+| keystroke → table, 10k CJK, p95, input → last row's frame                            | 73.2–81.5     | 80.5–83.3     | ≤ 120 ms        | ✓   |
+| keystroke → table, 10k CJK, p95, encode request → last row's frame                   | 23.8–34.6     | 39.6–42.4     | (recorded)      |     |
+| longest main-thread task typing into 10k CJK, table only (trace)                     | 12.5–18.6     | 13.2–16.0     | ≤ 50 ms         | ✓   |
+| render ≈ 2,000 board cells (1,180 mounted), wall time result → DOM, median           | 16.8–17.3     | 18.8–19.4     | ≤ 50 ms script  | ✓   |
+| scrub one merge step at stop 5, keydown → frame, p95                                 | 32.0–33.8     | 32.2–35.1     | (recorded)      |     |
+| longest main-thread task while scrubbing (trace)                                     | 16.9–22.2     | 20.7–21.7     | ≤ 50 ms         | ✓   |
 
 All times in ms. **The table's 1k ceiling is missed, and the debounce is most of why.** From the `input` event the measure holds the
-40 ms debounce (41–47 ms measured), which leaves 3–9 ms of the 50 ms for five Workers and the next frame; the lightest
-update on the page, the board alone at 1k, takes 53–71 ms on the same measure. This is finding 2 of the WP12 baseline
-again, which PA-12 settled for the board by holding its budget from the encode request and keeping the debounce (IME
-`compositionend` + `input` pairs, fast typists). On that measure the table takes 24–34 ms at 1k, well inside 50 ms, and
-24–41 ms at 10k. Its own work is small: its longest main-thread task is 11–16 ms. The choice is in PA-19's follow-up
+40 ms debounce (41–47 ms measured), which leaves 3–9 ms of the 50 ms for five Workers and the next frame; even the
+first thing the page shows after a keystroke, the board's own frame at 1k with five rows live, takes 54–70 ms from
+`keydown`. This is finding 2 of the WP12 baseline again, which PA-12 settled for the board by holding its budget from
+the encode request and keeping the debounce (IME `compositionend` + `input` pairs, fast typists). On that measure the table takes 24–34 ms at 1k, well inside 50 ms, and
+24–42 ms at 10k. Its own work is small: its longest main-thread task is 13–19 ms. The choice is in PA-19's follow-up
 (`docs/design/00-decisions.md`).
 
 The scrub numbers read higher than the entries before PA-19 (19.7 ms, longest task 11.7 ms in wave 4a) because the test
 now keeps the rail and the board on screen under the table, where the rows take part in the FLIP: with the board below
-the fold the same test read 23.2 ms. The render reads lower (15.2 ms then).
+the fold the same test read 23.2 ms. The render reads higher than before PA-19 (15.2 ms, 938 cells mounted) because it
+mounts more: at the top of the window, with no text box above it, 1,180 of the 1,961 cells are in view or overscan.

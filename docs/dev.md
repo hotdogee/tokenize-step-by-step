@@ -70,7 +70,8 @@ Worker heap check fails under `TSBS_PERF=1` instead of skipping, so a green opt-
 - **`pnpm e2e:perf`** (`e2e/perf/`, its own Playwright config, chromium, one worker, port `E2E_PERF_PORT` = 4174) is
   soft: a missed budget is a warning and the numbers go to `e2e/test-results/perf/perf-results.json`; `PERF_STRICT=1`
   makes misses fail, but a test that cannot run fails either way, and the file runs serially, so one failure skips the
-  tests after it. `E2E_PERF_BASE_URL=<url>` runs it against a deployed preview or production instead of a local
+  tests after it. Today that means a strict run stops at the table's missed 1k ceiling (PA-19's follow-up) and the 10k
+  table, render and scrub tests do not run; no workflow sets it. `E2E_PERF_BASE_URL=<url>` runs it against a deployed preview or production instead of a local
   `vite preview`. `docs/perf-log.md` keeps the dated results.
 
 ## Tokenizer client (`?mock=1`)
