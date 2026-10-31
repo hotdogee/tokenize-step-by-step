@@ -1,25 +1,35 @@
 /**
- * Perf spec (06 §1 "Performance", §3; WP12) on the production bundle (`vite preview`), chromium, desktop 1440×900:
+ * Perf spec (06 §1 "Performance", §3; WP12) on the production bundle (`vite preview`), chromium, desktop 1440×900 unless
+ * a test says otherwise. Since PA-19 the page is the comparison table with the board in the closed Advanced disclosure:
+ * the table's tests measure what a visitor lands on, the board's open Advanced, type with all five rows live and wait for
+ * the table too, so the table's work on the same keystroke is in their numbers. The budgets kept their meaning.
  *
  * 1. o200k load end to end under CDP `Network.emulateNetworkConditions` "Fast 4G" (9 Mbps down, 170 ms RTT):
  *    `loaded.ms` (the Worker's download + verify + gunzip + build, read from About's `tsbs:lastLoaded`) ≤ 2.5 s;
  * 2. keystroke → board update at 1k and 10k characters (p95 ≤ 50 / ≤ 120 ms), measured from the encode request the 40 ms
  *    debounce releases (PA-12; the from-keystroke latency is recorded beside it), with a Chromium trace of the 10k typing
- *    (no main-thread task > 50 ms);
- * 3. render a board of ≈ 2,000 cells (the text is sized from the board's own `data-cells` count, the cells every row
- *    would mount): the wall time from the Worker's `result` to the updated DOM, held to the 06 §3 "≤ 50 ms script"
+ *    (no main-thread task > 50 ms). The window is as tall as the table above the board takes, so the board's first rows
+ *    are on screen as they were at 900 px before PA-19; at 900 px the board starts below the fold and mounts less;
+ * 3. keystroke → table update at 1k and 10k characters, Advanced closed, five live rows, on the same ceilings, measured
+ *    from the `input` event to the frame after the last row's result, with a trace of the 10k typing. That measure holds
+ *    the debounce; PA-12's (encode request → frame) and where the time goes are recorded beside it;
+ * 4. render a board of ≈ 2,000 cells (the text is sized from the board's own `data-cells` count, the cells every row
+ *    would mount): the wall time from the board's Worker's `result` to the updated DOM, held to the 06 §3 "≤ 50 ms script"
  *    budget (wall time bounds the script time from above). Since PA-11 such a board is virtualized (above 600 cells or 8
- *    rows) and renders once per text change, so only the rows in view are mounted;
- * 4. scrub: `.` through the merge steps at stop 5 with a trace (recorded).
+ *    rows) and renders once per text change, so only the rows in view are mounted: the board is scrolled to the top of
+ *    the window, the text written in place, so the most rows are;
+ * 5. scrub: `.` through the merge steps at stop 5 with a trace, the rail and the board on screen (only rows in the
+ *    viewport take part in a FLIP).
  *
  * Budget misses are soft (warnings + `test-results/perf/perf-results.json`, the trend artifact) unless `PERF_STRICT=1`.
- * PA-12: the keystroke budget is held from the `encode` request (after the 40 ms `ENCODE_DEBOUNCE_MS` of 05 §6) to the
- * next presented frame; keystroke → frame, which includes the debounce, is recorded beside it but not asserted.
+ * PA-12: the board's keystroke budget is held from the `encode` request (after the 40 ms `ENCODE_DEBOUNCE_MS` of 05 §6) to
+ * the next presented frame; keystroke → frame, which includes the debounce, is recorded beside it but not asserted.
  */
 import { join } from 'node:path';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { latencies, mainThreadTasks, percentile, record, STRICT, writeResults } from './metrics.ts';
 import { installProbe, type PerfProbe } from './probe.ts';
+import { boardSource, openAdvanced, rowSource, rowsSettled } from '../specs/shell-helpers.ts';
 
 /** 06 §3. */
 const BUDGET = {
@@ -65,42 +75,81 @@ const probeOf = (page: Page): Promise<PerfProbe> =>
     return probe;
   });
 
-/** Opens `/` with the probe installed and waits for the live o200k result; `subtree` arms the scrub observer. */
-async function openLive(page: Page, subtree = false): Promise<void> {
+/** A probe list that grows once per update the page shows. */
+type Shown = 'frames' | 'tableFrames';
+
+/** Waits for the OpenAI row's live o200k result on the page people land on, Advanced closed; arms the table's observer. */
+async function openTable(page: Page): Promise<void> {
   await page.addInitScript(installProbe);
   await page.goto('/?lang=en');
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: 60_000 });
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: 60_000 });
+  await expect(page.locator('details#advanced')).not.toHaveAttribute('open', '');
+  await page.evaluate(() => {
+    window.__tsbsWatchTable?.();
+  });
+}
+
+/** `openTable`, then opens Advanced and waits for the board's live result; `subtree` arms the scrub observer. */
+async function openLive(page: Page, subtree = false): Promise<void> {
+  await openTable(page);
+  await openAdvanced(page);
+  await expect(boardSource(page)).toHaveAttribute('data-source', 'live', { timeout: 60_000 });
   await page.evaluate((s) => {
     window.__tsbsWatchBoard?.(s);
   }, subtree);
 }
 
-/** Replaces the text and waits until the board shows its result (one more board update). */
-async function setText(page: Page, text: string): Promise<void> {
-  const before = (await probeOf(page)).frames.length;
-  await page.locator('#text-input').fill(text);
-  await page.waitForFunction((n) => (window.__tsbsPerf?.frames.length ?? 0) > n, before, { timeout: 60_000 });
+/**
+ * Replaces the text and waits until `shown` has one more update, then until all five rows answer it live: the first free
+ * text loads the other rows' vocabularies, and what the budgets describe is typing with every tokenizer on screen ready.
+ * `place: 'in place'` writes the text without focusing the box, so the page does not scroll back up to it.
+ */
+async function setText(page: Page, text: string, shown: Shown = 'frames', place?: 'in place'): Promise<void> {
+  const before = (await probeOf(page))[shown].length;
+  const box = page.locator('#text-input');
+  if (place === undefined) await box.fill(text);
+  else
+    await box.evaluate((element, value) => {
+      (element as HTMLTextAreaElement).value = value;
+      element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertReplacementText' }));
+    }, text);
+  await page.waitForFunction(([key, n]) => (window.__tsbsPerf?.[key].length ?? 0) > n, [shown, before] as const, {
+    timeout: 60_000,
+  });
+  await rowsSettled(page);
 }
 
-/** Types `count` letters at the end of the text, each after the previous one's board update. */
-async function typeLetters(
-  page: Page,
-  count: number,
-): Promise<{ keys: number[]; encodes: number[]; frames: number[] }> {
+/** What `typeLetters` reports: the probe's lists over the keystrokes. */
+type Typed = Pick<PerfProbe, 'keys' | 'inputs' | 'encodes' | 'rowEncodes' | 'rowResults' | 'frames' | 'tableFrames'>;
+
+/** Types `count` letters at the end of the text, each after the previous one's `shown` updates. */
+async function typeLetters(page: Page, count: number, shown: readonly Shown[]): Promise<Typed> {
   await page.locator('#text-input').press('End');
   const start = await probeOf(page);
   for (let i = 0; i < count; i++) {
-    const frames = (await probeOf(page)).frames.length;
+    const before = await probeOf(page);
     await page.keyboard.press(LETTERS.charAt(i % LETTERS.length));
-    await page.waitForFunction((n) => (window.__tsbsPerf?.frames.length ?? 0) > n, frames, { timeout: 30_000 });
+    await page.waitForFunction(
+      (lists) => lists.every(([key, n]) => (window.__tsbsPerf?.[key].length ?? 0) > n),
+      shown.map((key) => [key, before[key].length] as const),
+      { timeout: 30_000 },
+    );
   }
   const end = await probeOf(page);
+  const since = (key: keyof Typed): number[] => end[key].slice(start[key].length);
   return {
-    keys: end.keys.slice(start.keys.length),
-    encodes: end.encodes.slice(start.encodes.length),
-    frames: end.frames.slice(start.frames.length),
+    keys: since('keys'),
+    inputs: since('inputs'),
+    encodes: since('encodes'),
+    rowEncodes: since('rowEncodes'),
+    rowResults: since('rowResults'),
+    frames: since('frames'),
+    tableFrames: since('tableFrames'),
   };
 }
+
+/** The board's keystrokes wait for the table too: its work on the same keystroke is the board's cost since PA-19. */
+const BOTH: readonly Shown[] = ['frames', 'tableFrames'];
 
 /** Holds `value` to `budget` (soft unless PERF_STRICT=1). */
 function budget(metric: string, value: number, limit: number, note?: string): void {
@@ -148,7 +197,7 @@ test('o200k loads end to end within 2.5 s on Fast 4G (loaded.ms)', async ({ page
       });
   });
   await page.goto('/?lang=en');
-  await expect(page.locator('[data-source="live"]')).toBeVisible({ timeout: 60_000 });
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: 60_000 });
   const navToLive = await page.evaluate(() => performance.now());
   const stored = await page.evaluate(() => sessionStorage.getItem('tsbs:lastLoaded'));
   expect(stored).not.toBeNull();
@@ -161,10 +210,18 @@ test('o200k loads end to end within 2.5 s on Fast 4G (loaded.ms)', async ({ page
   if (binBytes > 0) record('o200k .bin transferred', binBytes, 'count', null, 'bytes');
 });
 
+/** Tall enough for the board's first rows under the table and the 8-row text box, as 900 px showed them before PA-19. */
+const BOARD_ON_SCREEN = { width: 1440, height: 1700 } as const;
+
+/** Cells of the board actually mounted (the rows in view of a virtualized board). */
+const mountedCells = (page: Page): Promise<number> =>
+  page.locator('[data-testid="board-grid"] [role="gridcell"]').count();
+
 test('keystroke → board update at 1k characters (p95 ≤ 50 ms)', async ({ page }) => {
+  await page.setViewportSize(BOARD_ON_SCREEN);
   await openLive(page);
   await setText(page, mixedText(1000));
-  const { keys, encodes, frames } = await typeLetters(page, KEYSTROKES);
+  const { keys, encodes, frames } = await typeLetters(page, KEYSTROKES, BOTH);
   const total = latencies(keys, frames);
   const work = latencies(
     keys.map((k) => encodes.find((e) => e >= k) ?? Number.POSITIVE_INFINITY),
@@ -183,6 +240,7 @@ test('keystroke → board update at 1k characters (p95 ≤ 50 ms)', async ({ pag
     null,
   );
   record('keystroke → board update, 1k chars, p50 (keystroke → frame)', percentile(total, 50), 'ms', null);
+  record('board cells mounted while typing, 1k chars', await mountedCells(page), 'count', null);
   record(
     'keystroke → encode request (the debounce), median',
     percentile(latencies(keys, encodes), 50),
@@ -196,13 +254,14 @@ test('keystroke → board update at 10k characters (p95 ≤ 120 ms), no main-thr
   page,
   browser,
 }) => {
+  await page.setViewportSize(BOARD_ON_SCREEN);
   await openLive(page);
   const pasteStart = await page.evaluate(() => performance.now());
   await setText(page, cjkText(10_000));
   const pasteFrame = (await probeOf(page)).frames.at(-1) ?? pasteStart;
   record('paste 10k CJK → board update (recorded)', pasteFrame - pasteStart, 'ms', null);
   const longTasksBefore = (await probeOf(page)).longTasks.length;
-  const { value, tasks } = await traced(browser, page, () => typeLetters(page, KEYSTROKES));
+  const { value, tasks } = await traced(browser, page, () => typeLetters(page, KEYSTROKES, BOTH));
   const { keys, encodes, frames } = value;
   const total = latencies(keys, frames);
   const work = latencies(
@@ -224,6 +283,68 @@ test('keystroke → board update at 10k characters (p95 ≤ 120 ms), no main-thr
   budget('longest main-thread task while typing into 10k CJK (trace)', Math.max(0, ...tasks), BUDGET.longTaskMs);
   const longTasks = (await probeOf(page)).longTasks.slice(longTasksBefore);
   record('long tasks (> 50 ms) while typing into 10k CJK (PerformanceObserver)', longTasks.length, 'count', null);
+  record('board cells mounted while typing, 10k CJK', await mountedCells(page), 'count', null);
+});
+
+/** Holds one table typing run to the keystroke budget (06 §3), input event → the frame after the last row's result. */
+function tableBudget(chars: string, typed: Typed, ceiling: number): void {
+  const { inputs, rowEncodes, rowResults, tableFrames } = typed;
+  const total = latencies(inputs, tableFrames);
+  expect(total).toHaveLength(KEYSTROKES);
+  const released = inputs.map((t) => rowEncodes.find((e) => e >= t) ?? Number.POSITIVE_INFINITY);
+  budget(
+    `keystroke → table update, ${chars}, five live rows, p95 (input → last row's frame)`,
+    percentile(total, 95),
+    ceiling,
+  );
+  record(
+    `keystroke → table update, ${chars}, p95 (encode request → last row's frame, PA-12's measure)`,
+    percentile(latencies(released, tableFrames), 95),
+    'ms',
+    null,
+  );
+  record(`keystroke → table update, ${chars}, p50 (input → last row's frame)`, percentile(total, 50), 'ms', null);
+  // Where the time goes: the Workers' answers, then the page's render of them.
+  const lastResults = inputs.map((t, i) => {
+    const next = inputs[i + 1] ?? Number.POSITIVE_INFINITY;
+    return Math.max(...rowResults.filter((r) => r >= t && r < next));
+  });
+  record(
+    `  of which encode request → last Worker result, ${chars}, p95`,
+    percentile(
+      lastResults.map((r, i) => r - (released[i] ?? r)),
+      95,
+    ),
+    'ms',
+    null,
+  );
+  record(
+    `  of which last Worker result → last row's frame, ${chars}, p95`,
+    percentile(latencies(lastResults, tableFrames), 95),
+    'ms',
+    null,
+  );
+}
+
+test('keystroke → table update at 1k characters, Advanced closed (p95 ≤ 50 ms)', async ({ page }) => {
+  await openTable(page);
+  await setText(page, mixedText(1000), 'tableFrames');
+  tableBudget('1k chars', await typeLetters(page, KEYSTROKES, ['tableFrames']), BUDGET.keystroke1kP95Ms);
+});
+
+test('keystroke → table update at 10k characters, Advanced closed (p95 ≤ 120 ms), no main-thread task > 50 ms while typing', async ({
+  page,
+  browser,
+}) => {
+  await openTable(page);
+  await setText(page, cjkText(10_000), 'tableFrames');
+  const { value, tasks } = await traced(browser, page, () => typeLetters(page, KEYSTROKES, ['tableFrames']));
+  tableBudget('10k CJK', value, BUDGET.keystroke10kP95Ms);
+  budget(
+    'longest main-thread task while typing into 10k CJK, table only (trace)',
+    Math.max(0, ...tasks),
+    BUDGET.longTaskMs,
+  );
 });
 
 test.describe('render', () => {
@@ -239,9 +360,6 @@ test.describe('render', () => {
   /** Cells the board would mount with every row (its `data-cells`, the PA-11 virtualization measure). */
   const boardCells = async (page: Page): Promise<number> =>
     Number(await page.locator('[data-testid="board-grid"]').getAttribute('data-cells'));
-  /** Cells actually mounted (the rows in view of a virtualized board). */
-  const mountedCells = (page: Page): Promise<number> =>
-    page.locator('[data-testid="board-grid"] [role="gridcell"]').count();
 
   test('render ≈ 2,000 board cells: wall time from the Worker result to the updated DOM ≤ 50 ms (06 §3 script budget)', async ({
     page,
@@ -250,10 +368,14 @@ test.describe('render', () => {
     await openLive(page);
     const k = Number(await page.locator('[data-k]').first().getAttribute('data-k'));
     expect(k).toBeGreaterThanOrEqual(8);
+    // The board under the table (PA-19): at the top of the window, the most rows in view.
+    await page.locator('[data-testid="board-grid"]').evaluate((grid) => {
+      grid.scrollIntoView({ block: 'start' });
+    });
     // Calibration: the cells one row of this text holds (K char cells, K byte cells and the token chips), so the
     // measured text is sized to about RENDER_CELLS cells of the whole board.
     const calibrationRows = 10;
-    await setText(page, rowsText(k, calibrationRows, 0));
+    await setText(page, rowsText(k, calibrationRows, 0), 'frames', 'in place');
     const rows = Math.max(1, Math.round(RENDER_CELLS / ((await boardCells(page)) / calibrationRows)));
     const walls: number[] = [];
     const frames: number[] = [];
@@ -265,11 +387,11 @@ test.describe('render', () => {
       const text = rowsText(k, rows, i + 1);
       const before = await probeOf(page);
       if (i === 6) {
-        const { tasks } = await traced(browser, page, () => setText(page, text));
+        const { tasks } = await traced(browser, page, () => setText(page, text, 'frames', 'in place'));
         record(`render, longest main-thread task under a trace`, Math.max(0, ...tasks), 'ms', null);
         break;
       }
-      await setText(page, text);
+      await setText(page, text, 'frames', 'in place');
       const after = await probeOf(page);
       const result = after.results.slice(before.results.length).at(-1);
       const update = after.updates.slice(before.updates.length).at(-1);
@@ -306,6 +428,9 @@ test('scrub trace: `.` through the merge steps at stop 5', async ({ page, browse
   // From stop 6, `5` lands on the last merge (WP09: stop 6 ≡ stop 5 at step = stepCount), where `.` would leave for
   // stop 6; the walk starts at step 0 instead (Home on the scrubber; `.` keeps working with the scrubber focused).
   const scrubber = page.getByTestId('scrubber');
+  await scrubber.evaluate((element) => {
+    element.scrollIntoView({ block: 'start' }); // the rail and the board on screen: only rows in view take part in a FLIP
+  });
   await scrubber.focus();
   await page.keyboard.press('Home');
   await expect(scrubber).toHaveValue('0');
