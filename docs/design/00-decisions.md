@@ -333,6 +333,23 @@ These override the matching text elsewhere in `docs/design/` and are binding for
   through the inspector at 320 px no longer hands it to the token chip a scroll brought under the pointer, whose
   re-render dropped the focused copy button. Measured on the round's final build: Main JS **77.36 kB** brotli, i18n
   chunk **9.54 kB**, CSS **14.93 kB**, `index.html` **8.58 kB** brotli-11; every other budget unchanged.
+  *Follow-up* (2026-10-31): the push run of 4a1c03d failed two shards the pull request had passed, and the nightly
+  failed every night from 2026-10-28, since `e2e/perf` runs in no pull-request check. Causes: the perf suite armed the board's
+  observer on a page whose board mounts only in Advanced (four of its five tests never ran); a **product defect**,
+  Advanced clicked before hydration opened natively and hydration closed it with no body, and the same audit found a
+  row's `<select>` reverted, the caret thrown to the end of the text and the header box out of step with rows scrolled
+  sideways (`static-input.ts` reads the three before `hydrate()` and replays them after its effects, in the same task,
+  and CompareTable joins a static scroll); `pipeline-trace` counted the rows' delayed dim (`getAnimations()` equals the
+  rows stale in the commit frame; it now measures settled rows); `integration-long-input` polled a token the board keeps
+  mounted wherever its window is. The suite also measures the default page now. Three runs each, Windows / Linux at 4
+  CPUs (`docs/perf-log.md`): the board with Advanced open and five live rows, to the later of its frame and the table's,
+  1k p95 26–27 / 28–29 ms (≤ 50), 10k 42–53 / 52–58 ms (≤ 120), longest task 15–19 / 17–20 ms (≤ 50), render of 1,180
+  mounted cells 17 / 19 ms (≤ 50); the table with Advanced closed 10k p95 73–82 / 81–83 ms (≤ 120), longest task 13–19 /
+  13–16 ms (≤ 50), and 1k p95 24–34 / 25 ms (≤ 50). **Decision:** the table's keystroke budget is held on PA-12's measure,
+  from the encode request, as the board's is. From the `input` event it reads 67–78 / 66 ms at 1k, because the debounce
+  PA-12 keeps takes 41–47 ms of it, which no change to the table can win back; that latency stays recorded beside the
+  budget. Sending an idle page's first keystroke at once and debouncing only what follows would save about 45 ms, but it
+  reopens PA-12 and 05 §6's IME pair, so it was not taken.
 
 ## D. Owner answers to the open questions (2026-10-25)
 

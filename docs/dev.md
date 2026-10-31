@@ -18,6 +18,12 @@ pnpm build                     # vocab:build (strict conformance) → vite build
 pnpm --filter @tsbs/web preview                     # production bundle with every _headers line, CSP included
 ```
 
+**A change that moves UI also runs `pnpm e2e:headers` and `pnpm e2e:perf` before its pull request.** Neither is in the
+commands above or in `pnpm e2e`, so a page change can pass all of those and still break them. `pnpm e2e:headers` does
+run in CI: it is the `e2e-headers` job of `ci.yml`, a required check, so running it first only saves a failed CI round.
+`pnpm e2e:perf` runs in no pull-request or push check at all: only `nightly-fuzz.yml` runs it, so what breaks it shows
+up after the merge as a failed night and an issue (PA-19 did: every night until the suite was migrated).
+
 `pnpm build` runs `tsbs-vocab build`, which takes its conformance mode from `--conformance`, then from the
 `CONFORMANCE_MODE` environment variable, then defaults to `strict` (AD-32). Both engines exist since wave 2, so every
 asset is checked against its fixture before it is written, and CI's repository variable of the same name is `strict`
@@ -36,7 +42,7 @@ pnpm test:fuzz --seed 20261026 --n 10000         # what nightly-fuzz.yml runs wi
 pnpm test:fuzz --tokenizer google-gemma4 --no-write
 TSBS_PERF=1 NODE_OPTIONS=--expose-gc pnpm test:perf   # the opt-in Node ceilings + memory checks, one file at a time
 TSBS_PERF=1 pnpm bench                           # vitest bench (vocab init, 10k/20k CJK encode) + the 06 §3 ceilings
-pnpm build && pnpm e2e:perf                      # Playwright perf spec on vite preview (Fast 4G load, keystrokes, render, scrub)
+pnpm build && pnpm e2e:perf                      # Playwright perf spec on vite preview (Fast 4G load, keystrokes on the board and the table, render, scrub)
 ```
 
 PowerShell: `$env:TSBS_PERF = '1'; $env:NODE_OPTIONS = '--expose-gc'; pnpm test:perf`. Without `--expose-gc` the
@@ -63,7 +69,8 @@ Worker heap check fails under `TSBS_PERF=1` instead of skipping, so a green opt-
   (`check-bench.ts`); with `TSBS_PERF=1` a median over its ceiling fails. Without it the table is a report.
 - **`pnpm e2e:perf`** (`e2e/perf/`, its own Playwright config, chromium, one worker, port `E2E_PERF_PORT` = 4174) is
   soft: a missed budget is a warning and the numbers go to `e2e/test-results/perf/perf-results.json`; `PERF_STRICT=1`
-  makes misses fail. `E2E_PERF_BASE_URL=<url>` runs it against a deployed preview or production instead of a local
+  makes misses fail, but a test that cannot run fails either way, and the file runs serially, so one failure skips the
+  tests after it. No workflow sets it. `E2E_PERF_BASE_URL=<url>` runs it against a deployed preview or production instead of a local
   `vite preview`. `docs/perf-log.md` keeps the dated results.
 
 ## Tokenizer client (`?mock=1`)
@@ -108,7 +115,9 @@ every view and owns the pool of clients:
   classes; `scroll-sync.ts` keeps the three scrollers in step. `App.svelte` starts `hub.prefetchIdle` for the other
   default rows once `app.start()` has loaded the board's tokenizer (10 s later, skipped under Save-Data).
 - **Startup.** The precomputed default rows (台灣台南 on each lab's primary tokenizer, inlined) seed the hub and are on
-  screen in the table at first paint (one static template per locale, PA-15), badge "precomputed". The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
+  screen in the table at first paint (one static template per locale, PA-15), badge "precomputed". That page is live HTML
+  until main.js hydrates it, so `static-input.ts` carries what a visitor does meanwhile across `hydrate()`: the text and
+  its caret, Advanced opened, a row's `<select>`. The tokenizer client is imported and `load` posted only after `DOMContentLoaded`, `document.fonts.ready`,
   the first paint entry (`largest-contentful-paint`, else `paint`) and two animation frames (`load-trigger.ts`, 06 §3);
   `integration-load.spec.ts` asserts the Worker script and the `.bin` start after the last LCP entry. While a tokenizer
   loads, an example chip answers from the precomputed examples (`precomputed.ts`); the engine's first answer replaces a

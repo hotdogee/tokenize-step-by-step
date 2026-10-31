@@ -165,6 +165,106 @@ test('text typed into the static text box before the app runs is kept', async ({
   await expect(page.getByTestId('compare-head')).toContainText('13');
 });
 
+test('text typed mid-line before the app runs keeps its caret: the next key lands there', async ({ page }) => {
+  const modules = await holdModules(page);
+  await page.goto('/', { waitUntil: 'commit' });
+  await firstContentfulPaint(page);
+  const textbox = page.locator('#text-input');
+  await textbox.click();
+  await textbox.press('Home');
+  await textbox.pressSequentially('ab');
+  await modules.release();
+  await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
+  await textbox.pressSequentially('c');
+  await expect(textbox).toHaveValue('abc台灣台南');
+});
+
+test('Advanced opened before the app runs stays open: it never paints closed, the board loads, the URL follows', async ({
+  page,
+}) => {
+  const logged: string[] = [];
+  page.on('pageerror', (error) => logged.push(error.message));
+  page.on('console', (message) => {
+    // Not every warning: Firefox warns of a forced layout when Playwright's own calls measure the page this test holds.
+    if (message.type() === 'error' || /hydrat/i.test(message.text())) logged.push(message.text());
+  });
+  const csp = await recordCsp(page);
+  const modules = await holdModules(page);
+  await page.goto('/?lang=en', { waitUntil: 'commit' });
+  await firstContentfulPaint(page);
+  const advanced = page.locator('details#advanced');
+  const summary = page.getByTestId('advanced-summary');
+  await summary.click();
+  await expect(advanced).toHaveAttribute('open', '');
+  const before = await summary.boundingBox();
+  // Every frame from here on: hydration closes the element, and a frame painted in that state is the snap the visitor saw.
+  await advanced.evaluate((details) => {
+    const frames: boolean[] = [];
+    (window as unknown as { __open: boolean[] }).__open = frames;
+    const tick = (): void => {
+      frames.push((details as HTMLDetailsElement).open);
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
+  await modules.release();
+  await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
+  await expect(advanced).toHaveAttribute('open', '');
+  await expect(page.getByTestId('board-grid')).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __open: boolean[] }).__open)).not.toContain(false);
+  expect(await summary.boundingBox()).toEqual(before); // the body grew below the summary; nothing moved it
+  // The same URL as a click on the hydrated page: `t` and `s` while it is open, gone when it closes.
+  await expect.poll(() => new URL(page.url()).searchParams.get('s')).toBe('6');
+  expect(new URL(page.url()).searchParams.get('t')).toBe('openai-o200k_base');
+  await summary.click();
+  await expect(advanced).not.toHaveAttribute('open', '');
+  await expect.poll(() => new URL(page.url()).searchParams.has('s')).toBe(false);
+  expect(new URL(page.url()).searchParams.has('t')).toBe(false);
+  expect(logged).toEqual([]);
+  expect(await csp()).toEqual([]);
+});
+
+test('a row switched before the app runs stays switched: it loads, answers and persists', async ({ page }) => {
+  const modules = await holdModules(page);
+  await page.goto('/?lang=en', { waitUntil: 'commit' });
+  await firstContentfulPaint(page);
+  const select = page.getByTestId('row-select-openai');
+  await select.selectOption('openai-cl100k_base');
+  await modules.release();
+  await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
+  await expect(select).toHaveValue('openai-cl100k_base');
+  const row = page.locator('[data-testid="compare"] [data-row="openai"]');
+  await expect(row).toHaveAttribute('data-tokenizer', 'openai-cl100k_base');
+  await expect(row.locator('.cmp-cap')).toContainText('5 tokens');
+  await expect(rowSource(page)).toHaveAttribute('data-source', 'live', { timeout: LIVE_READY_TIMEOUT_MS });
+  expect(await page.evaluate(() => localStorage.getItem('tsbs:rows'))).toBe('openai-cl100k_base');
+  await expect.poll(() => new URL(page.url()).searchParams.get('r')).toBe('openai-cl100k_base');
+});
+
+test.describe('at 320 px', () => {
+  test.use({ viewport: { width: 320, height: 700 } });
+
+  test('rows scrolled sideways before the app runs keep the header box in step once it does', async ({ page }) => {
+    const modules = await holdModules(page);
+    await page.goto('/?lang=en', { waitUntil: 'commit' });
+    await firstContentfulPaint(page);
+    const lefts = (): Promise<number[]> =>
+      page.evaluate(() =>
+        ['.cmp-thead', '.cmp-tbody', '.cmp-sbar'].map((selector) =>
+          Math.round(document.querySelector(selector)?.scrollLeft ?? -1),
+        ),
+      );
+    await page.evaluate(() => {
+      const rows = document.querySelector('.cmp-tbody');
+      if (rows !== null) rows.scrollLeft = 60;
+    });
+    expect(await lefts()).toEqual([0, 60, 0]);
+    await modules.release();
+    await expect(page.locator('#app')).toHaveAttribute('data-boot', 'hydrated');
+    await expect.poll(lefts).toEqual([60, 60, 60]);
+  });
+});
+
 test('a page that starts in another state mounts from scratch', async ({ page }) => {
   await page.goto('/?b=dec');
   await expect(page.locator('#app')).toHaveAttribute('data-boot', 'mounted');

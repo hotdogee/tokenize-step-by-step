@@ -29,6 +29,19 @@ export const LIVE_READY_TIMEOUT_MS = 15_000;
 export const rowSource = (page: Page, lab = 'openai'): Locator =>
   page.locator(`[data-testid="compare"] [data-row="${lab}"] [data-source]`);
 
+/**
+ * Waits until every row of the table shows the live result of the text on screen, so no row loads, encodes or dims any
+ * more. The first free-text edit loads the other rows' vocabularies, and each then re-encodes: until that has ended, a
+ * measurement of something else can catch a row's work — its dim is a delayed CSS transition, which
+ * `document.getAnimations()` counts from the moment the row goes stale, and its results are main-thread tasks.
+ */
+export async function rowsSettled(page: Page): Promise<void> {
+  const rows = page.locator('[data-testid="compare"] .cmp-rowgroup');
+  await expect(rows.locator('[data-source="live"]')).toHaveCount(await rows.count(), {
+    timeout: LIVE_READY_TIMEOUT_MS,
+  });
+}
+
 /** The counts line's source badge (the board's tokenizer; inside the Advanced disclosure since PA-19). */
 export const boardSource = (page: Page): Locator => page.locator('#advanced [data-source]');
 

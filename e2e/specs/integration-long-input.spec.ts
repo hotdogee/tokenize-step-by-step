@@ -134,7 +134,18 @@ test('the board is a window of the whole-text result: ids at both window edges e
   await grid(page).evaluate((el) => {
     el.scrollIntoView({ block: 'start' });
   });
-  await expect.poll(async () => (await mountedIds(page)).has(0)).toBe(true);
+  /**
+   * Waits for the board's window to reach `indices`, a frame or two after the scroll: their count, not one token's
+   * presence, since the board keeps the row of its focus cell mounted wherever the window is, and that is token 0's row.
+   */
+  const reached = async (indices: readonly number[]): Promise<void> => {
+    await expect
+      .poll(async () => {
+        const ids = await mountedIds(page);
+        return indices.filter((i) => ids.has(i)).length;
+      })
+      .toBeGreaterThanOrEqual(3);
+  };
   /** Compares the mounted tokens among `indices` (a narrow phone mounts fewer) with the whole-text tokens. */
   const compare = (ids: Map<number, number>, indices: readonly number[], edge: string): void => {
     const mounted = indices.filter((i) => ids.has(i));
@@ -145,22 +156,19 @@ test('the board is a window of the whole-text result: ids at both window edges e
         expect(ids.get(i), `token ${String(i)} at the window ${edge}`).toBe(want.id);
     }
   };
-  compare(
-    await mountedIds(page),
-    Array.from({ length: 12 }, (_, i) => i),
-    'start',
-  );
+  const startTokens = Array.from({ length: 12 }, (_, i) => i);
+  await reached(startTokens);
+  compare(await mountedIds(page), startTokens, 'start');
   // Window end: the last rows.
   const count = last - first + 1;
   await grid(page).evaluate((el) => {
     el.scrollIntoView({ block: 'end' });
   });
+  const endTokens = Array.from({ length: 12 }, (_, i) => count - 12 + i);
+  await reached(endTokens);
+  // `reached` takes any three of the edge's twelve; the window's last token has to be on the board too.
   await expect.poll(async () => (await mountedIds(page)).has(count - 1)).toBe(true);
-  compare(
-    await mountedIds(page),
-    Array.from({ length: 12 }, (_, i) => count - 12 + i),
-    'end',
-  );
+  compare(await mountedIds(page), endTokens, 'end');
   await expect(counts(page)).toContainText(`${expected.length.toLocaleString('en-US')} tokens`);
 });
 
