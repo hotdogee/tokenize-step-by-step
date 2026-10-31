@@ -373,6 +373,9 @@
     sync = syncScroll(scrollers, (left) => {
       scrollLeft = left;
     });
+    // A sideways scroll of the static first paint, which nothing kept in step: the other scrollers join it.
+    const scrolled = Math.max(...scrollers.map((element) => element.scrollLeft));
+    if (scrolled > 0) scrollLeft = sync.to(scrolled);
     measure();
     let frame = 0;
     const schedule = (): void => {
