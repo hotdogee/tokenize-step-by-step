@@ -166,6 +166,8 @@ test('the board is a window of the whole-text result: ids at both window edges e
   });
   const endTokens = Array.from({ length: 12 }, (_, i) => count - 12 + i);
   await reached(endTokens);
+  // `reached` takes any three of the edge's twelve; the window's last token has to be on the board too.
+  await expect.poll(async () => (await mountedIds(page)).has(count - 1)).toBe(true);
   compare(await mountedIds(page), endTokens, 'end');
   await expect(counts(page)).toContainText(`${expected.length.toLocaleString('en-US')} tokens`);
 });
