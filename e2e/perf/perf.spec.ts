@@ -182,7 +182,7 @@ test.afterAll(({ browser }) => {
   writeResults(join(test.info().project.outputDir, 'perf-results.json'), {
     date: new Date().toISOString(),
     browser: `chromium ${browser.version()}`,
-    viewport: '1440×900',
+    viewport: '1440×900; board typing 1440×1700; render 2560×1440',
     strict: STRICT,
     network: { load: 'CDP Fast 4G 9 Mbps / 170 ms', others: 'unthrottled' },
   });
